@@ -2,28 +2,22 @@
 import React from 'react';
 import {
   AppRoot,
-  Panel,
-  Group,
-  Header,
-  Title,
-  Caption,
+  Placeholder,
 } from '@telegram-apps/telegram-ui';
 
-function App() {
-  return (
-    <AppRoot>
-      <Panel>
-        <Group header={<Header>Connected Booking — тест</Header>}>
-          <Title level="2" weight="2">
-            Если ты видишь этот текст — React работает.
-          </Title>
-          <Caption level="1" style={{ marginTop: 8 }}>
-            Потом сюда вернём загрузку услуг и бронирование.
-          </Caption>
-        </Group>
-      </Panel>
-    </AppRoot>
-  );
-}
+const App: React.FC = () => (
+  <AppRoot>
+    <Placeholder
+      header="Connected Booking"
+      description="Мини‑апп запущено через Telegram UI Kit"
+    >
+      <img
+        alt="Telegram sticker"
+        src="https://xelene.me/telegram.gif"
+        style={{ display: 'block', width: '144px', height: '144px' }}
+      />
+    </Placeholder>
+  </AppRoot>
+);
 
 export default App;

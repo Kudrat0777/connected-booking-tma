@@ -42,7 +42,7 @@ export default defineConfig({
     // Прокси: все запросы к /api → на Django (localhost:8000)
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        target: 'http://0.0.0.0:8000/',
         changeOrigin: true,
       },
     },
