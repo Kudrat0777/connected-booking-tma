@@ -6,13 +6,7 @@ import App from './App';
 import '@telegram-apps/telegram-ui/dist/styles.css';
 import './index.css';
 
-// (опционально) Telegram Analytics — включишь, когда будет токен
-// import telegramAnalytics from '@telegram-apps/analytics';
-//
-// telegramAnalytics.init({
-//   token: 'YOUR_TOKEN',          // токен из @DataChief_bot / TON Builders
-//   appName: 'CONNECTED_BOOKING', // идентификатор приложения
-// });
+console.log('### index.tsx loaded');
 
 const rootElement = document.getElementById('root');
 
