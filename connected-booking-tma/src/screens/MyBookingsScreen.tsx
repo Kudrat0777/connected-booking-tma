@@ -3,9 +3,12 @@ import type { Booking } from '../helpers/api';
 import { fetchMyBookings, cancelBooking } from '../helpers/api';
 import { ScreenLayout } from '../components/ScreenLayout';
 import { SectionCard } from '../components/SectionCard';
-import { ListItem } from '../components/ListItem';
 import { Button } from '@telegram-apps/telegram-ui';
 import { StatusBadge } from '../components/StatusBadge';
+import {
+  Icon20UserOutline,
+  Icon20RecentOutline,
+} from '@vkontakte/icons';
 import '../css/MyBookingsScreen.css';
 
 type Props = {
@@ -21,13 +24,6 @@ function formatDateTime(iso: string): string {
     hour: '2-digit',
     minute: '2-digit',
   });
-}
-
-function statusLabel(status: Booking['status']): string {
-  if (status === 'pending') return 'Ожидает подтверждения';
-  if (status === 'confirmed') return 'Подтверждена';
-  if (status === 'rejected') return 'Отклонена';
-  return status;
 }
 
 type Segment = 'upcoming' | 'past';
@@ -128,7 +124,7 @@ export const MyBookingsScreen: React.FC<Props> = ({
 
   return (
     <ScreenLayout title="Мои записи" onBack={onBack}>
-      {/* Кастомный SegmentedControl-свитч */}
+      {/* Кастомный переключатель Предстоящие/Прошедшие */}
       <div className="mybookings-segment-root">
         <button
           type="button"
@@ -175,37 +171,45 @@ export const MyBookingsScreen: React.FC<Props> = ({
 
           {segment === 'upcoming' &&
             currentList.map((b) => (
-              <div
-                key={b.id}
-                style={{
-                  marginBottom: 8,
-                  paddingBottom: 8,
-                  borderBottom:
-                    '1px solid rgba(255,255,255,0.04)',
-                }}
-              >
-                <ListItem
-                  title={
-                    b.service_name ||
-                    b.slot.service?.name ||
-                    'Услуга'
-                  }
-                  subtitle={
-                    <>
-                      <div>
-                        Мастер:{' '}
-                        {b.master_name ||
-                          b.slot.service?.master_name ||
-                          '—'}
-                      </div>
-                      <div>
-                        Время: {formatDateTime(b.slot.time)}</div>
-                      <div style={{ marginTop: 4 }}>
-                        <StatusBadge status={b.status} />
-                      </div>
-                    </>
-                  }
-                />
+              <div key={b.id} className="mybookings-card">
+                <div className="mybookings-card-header">
+                  <div className="mybookings-card-title">
+                    {b.service_name ||
+                      b.slot.service?.name ||
+                      'Услуга'}
+                  </div>
+                  <div className="mybookings-status-chip-wrapper">
+                    <span
+                      className={
+                        'mybookings-status-chip ' +
+                        `mybookings-status-chip_${b.status}`
+                      }
+                    >
+                      <StatusBadge status={b.status} />
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mybookings-row">
+                  <span className="mybookings-row-icon">
+                    <Icon20UserOutline />
+                  </span>
+                  <span className="mybookings-row-text">
+                    {b.master_name ||
+                      b.slot.service?.master_name ||
+                      'Мастер не указан'}
+                  </span>
+                </div>
+
+                <div className="mybookings-row">
+                  <span className="mybookings-row-icon">
+                    <Icon20RecentOutline />
+                  </span>
+                  <span className="mybookings-row-text">
+                    {formatDateTime(b.slot.time)}
+                  </span>
+                </div>
+
                 <Button
                   size="m"
                   mode="outline"
@@ -213,7 +217,7 @@ export const MyBookingsScreen: React.FC<Props> = ({
                   disabled={cancellingId === b.id}
                   style={{
                     width: '100%',
-                    marginTop: 4,
+                    marginTop: 10,
                   }}
                 >
                   {cancellingId === b.id
@@ -225,37 +229,44 @@ export const MyBookingsScreen: React.FC<Props> = ({
 
           {segment === 'past' &&
             currentList.map((b) => (
-              <div
-                key={b.id}
-                style={{
-                  marginBottom: 8,
-                  paddingBottom: 8,
-                  borderBottom:
-                    '1px solid rgba(255,255,255,0.04)',
-                }}
-              >
-                <ListItem
-                  title={
-                    b.service_name ||
-                    b.slot.service?.name ||
-                    'Услуга'
-                  }
-                  subtitle={
-                    <>
-                      <div>
-                        Мастер:{' '}
-                        {b.master_name ||
-                          b.slot.service?.master_name ||
-                          '—'}
-                      </div>
-                      <div>
-                        Время: {formatDateTime(b.slot.time)}</div>
-                      <div style={{ marginTop: 4 }}>
-                        <StatusBadge status={b.status} />
-                      </div>
-                    </>
-                  }
-                />
+              <div key={b.id} className="mybookings-card">
+                <div className="mybookings-card-header">
+                  <div className="mybookings-card-title">
+                    {b.service_name ||
+                      b.slot.service?.name ||
+                      'Услуга'}
+                  </div>
+                  <div className="mybookings-status-chip-wrapper">
+                    <span
+                      className={
+                        'mybookings-status-chip ' +
+                        `mybookings-status-chip_${b.status}`
+                      }
+                    >
+                      <StatusBadge status={b.status} />
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mybookings-row">
+                  <span className="mybookings-row-icon">
+                    <Icon20UserOutline />
+                  </span>
+                  <span className="mybookings-row-text">
+                    {b.master_name ||
+                      b.slot.service?.master_name ||
+                      'Мастер не указан'}
+                  </span>
+                </div>
+
+                <div className="mybookings-row">
+                  <span className="mybookings-row-icon">
+                    <Icon20RecentOutline />
+                  </span>
+                  <span className="mybookings-row-text">
+                    {formatDateTime(b.slot.time)}
+                  </span>
+                </div>
               </div>
             ))}
         </SectionCard>

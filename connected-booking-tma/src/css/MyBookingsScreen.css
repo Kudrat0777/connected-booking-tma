@@ -1,3 +1,4 @@
+/* Сегмент переключателя — как мы делали раньше */
 .mybookings-segment-root {
   display: flex;
   background-color: rgba(255, 255, 255, 0.06);
@@ -22,4 +23,75 @@
 .mybookings-segment-item_active {
   background-color: #2a9df4;
   color: #ffffff;
+}
+
+/* Карточка записи */
+.mybookings-card {
+  margin-bottom: 10px;
+  padding: 10px 10px 12px;
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Заголовок + статус на одной линии */
+.mybookings-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.mybookings-card-title {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+/* Строки "мастер" и "время" */
+.mybookings-row {
+  display: flex;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.mybookings-row-icon {
+  font-size: 14px;
+  width: 18px;
+}
+
+.mybookings-row-text {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* Обёртка под статусный чип */
+.mybookings-status-chip-wrapper {
+  flex-shrink: 0;
+}
+
+/* Базовый вид чипа статуса */
+.mybookings-status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+/* Цвета по статусам — подбирай под свои значения Booking['status'] */
+.mybookings-status-chip_pending {
+  background-color: rgba(255, 196, 0, 0.15);
+  color: #ffc400;
+}
+
+.mybookings-status-chip_confirmed {
+  background-color: rgba(76, 175, 80, 0.16);
+  color: #4caf50;
+}
+
+.mybookings-status-chip_rejected,
+.mybookings-status-chip_canceled {
+  background-color: rgba(244, 67, 54, 0.16);
+  color: #f44336;
 }
