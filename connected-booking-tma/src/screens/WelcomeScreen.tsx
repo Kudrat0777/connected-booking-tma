@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Placeholder,
   Button,
   Text,
 } from '@telegram-apps/telegram-ui';
+import lottie, { AnimationItem } from 'lottie-web';
 import '../css/WelcomeScreen.css';
 
 type Props = {
@@ -12,26 +13,26 @@ type Props = {
 };
 
 type Slide = {
-  emoji: string;
   title: string;
   description: string;
+  lottieSrc: string;    // путь к Lottie JSON (распакованный .tgs)
 };
 
 const SLIDES: Slide[] = [
   {
-    emoji: '📅',
+    lottieSrc: '/stickers/booking.json',
     title: 'Лучшая система бронирования',
     description:
       'Привет! Это удобный сервис записи к мастерам. Выбирай услугу и время — всё остальное мы сделаем сами.',
   },
   {
-    emoji: '💬',
+    lottieSrc: '/stickers/notifications.json',
     title: 'Все уведомления в Telegram',
     description:
       'Подтверждение записи, напоминания и изменения — сразу в твоём любимом мессенджере.',
   },
   {
-    emoji: '⭐️',
+    lottieSrc: '/stickers/favorites.json',
     title: 'Любимые мастера под рукой',
     description:
       'Сохраняй мастеров, оставляй отзывы и возвращайся к тем, кто тебе понравился.',
@@ -45,6 +46,35 @@ export const WelcomeScreen: React.FC<Props> = ({
   const [index, setIndex] = useState(0);
   const slide = SLIDES[index];
 
+  const lottieContainerRef = useRef<HTMLDivElement | null>(null);
+  const lottieInstanceRef = useRef<AnimationItem | null>(null);
+
+  // Поднимаем / обновляем Lottie-анимацию при смене слайда
+  useEffect(() => {
+    if (lottieInstanceRef.current) {
+      lottieInstanceRef.current.destroy();
+      lottieInstanceRef.current = null;
+    }
+
+    if (!slide.lottieSrc || !lottieContainerRef.current) {
+      return;
+    }
+
+    const anim = lottie.loadAnimation({
+      container: lottieContainerRef.current,
+      renderer: 'svg',
+      loop: true,
+      autoplay: true,
+      path: slide.lottieSrc,
+    });
+
+    lottieInstanceRef.current = anim;
+
+    return () => {
+      anim.destroy();
+    };
+  }, [slide.lottieSrc]);
+
   const nextSlide = () => setIndex((prev) => (prev + 1) % SLIDES.length);
   const goTo = (i: number) => setIndex(i);
 
@@ -52,7 +82,7 @@ export const WelcomeScreen: React.FC<Props> = ({
     <div className="welcome-root">
       <div className="HIJtihMA8FHczS02iWF5 welcome-container">
         <Placeholder
-          header=""      // текст рисуем сами
+          header=""
           description=""
           action={
             <div className="welcome-actions">
@@ -79,14 +109,19 @@ export const WelcomeScreen: React.FC<Props> = ({
             </div>
           }
         >
+          {/* Lottie-стикер. Клик по нему листает слайды */}
           <div
             className="welcome-sticker-wrapper"
             onClick={nextSlide}
             style={{ cursor: 'pointer' }}
           >
-            {slide.emoji}
+            <div
+              ref={lottieContainerRef}
+              style={{ width: 150, height: 150 }}
+            />
           </div>
 
+          {/* Заголовок и описание */}
           <div className="welcome-text-block">
             <Text weight="1">{slide.title}</Text>
           </div>
@@ -94,6 +129,7 @@ export const WelcomeScreen: React.FC<Props> = ({
             <Text weight="3">{slide.description}</Text>
           </div>
 
+          {/* Пейджер-точки */}
           <div className="welcome-pagination">
             {SLIDES.map((_, i) => (
               <div
