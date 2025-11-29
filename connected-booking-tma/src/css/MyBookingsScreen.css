@@ -1,0 +1,25 @@
+.mybookings-segment-root {
+  display: flex;
+  background-color: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  padding: 2px;
+  margin-bottom: 12px;
+}
+
+.mybookings-segment-item {
+  flex: 1;
+  border: none;
+  border-radius: 999px;
+  padding: 8px 0;
+  font-size: 14px;
+  line-height: 18px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: background-color 0.16s ease-out, color 0.16s ease-out;
+}
+
+.mybookings-segment-item_active {
+  background-color: #2a9df4;
+  color: #ffffff;
+}

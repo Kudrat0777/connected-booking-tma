@@ -17,9 +17,12 @@
   "dependencies": {
     "@telegram-apps/analytics": "^1.4.4",
     "@telegram-apps/telegram-ui": "^2.1.13",
+    "@telegram-mini-apps/ui": "^0.0.10",
     "@tma.js/sdk-react": "^3.0.8",
     "@tonconnect/ui-react": "^2.2.0",
+    "@vkontakte/icons": "^3.27.0",
     "eruda": "^3.4.3",
+    "lottie-web": "^5.13.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.30.1"
