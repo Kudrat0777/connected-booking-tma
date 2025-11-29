@@ -118,3 +118,17 @@ export async function fetchMyBookings(
   }
   return res.json();
 }
+
+
+export async function cancelBooking(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/bookings/${id}/`, {
+    method: 'DELETE',
+  });
+
+  if (!res.ok && res.status !== 204) {
+    const text = await res.text().catch(() => '');
+    throw new Error(
+      `Failed to cancel booking: ${res.status} ${res.statusText} ${text}`,
+    );
+  }
+}

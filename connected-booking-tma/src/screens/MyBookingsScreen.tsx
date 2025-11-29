@@ -1,7 +1,7 @@
 // src/screens/MyBookingsScreen.tsx
 import React, { useEffect, useMemo, useState } from 'react';
 import type { Booking } from '../helpers/api';
-import { fetchMyBookings } from '../helpers/api';
+import { fetchMyBookings, cancelBooking } from '../helpers/api';
 
 type Props = {
   telegramId: number;
@@ -32,11 +32,26 @@ export const MyBookingsScreen: React.FC<Props> = ({
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<number | null>(null);
+
+  const load = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await fetchMyBookings(telegramId);
+      setBookings(data);
+    } catch (e) {
+      console.error(e);
+      setError('Не удалось загрузить ваши записи. Попробуйте позже.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
 
-    async function load() {
+    (async () => {
       try {
         setLoading(true);
         setError(null);
@@ -47,23 +62,22 @@ export const MyBookingsScreen: React.FC<Props> = ({
       } catch (e) {
         if (!cancelled) {
           console.error(e);
-          setError('Не удалось загрузить ваши записи. Попробуйте позже.');
+          setError(
+            'Не удалось загрузить ваши записи. Попробуйте позже.',
+          );
         }
       } finally {
         if (!cancelled) {
           setLoading(false);
         }
       }
-    }
-
-    load();
+    })();
 
     return () => {
       cancelled = true;
     };
   }, [telegramId]);
 
-  const now = useMemo(() => new Date(), []);
   const { upcoming, past } = useMemo(() => {
     const now = new Date();
     const up: Booking[] = [];
@@ -77,6 +91,28 @@ export const MyBookingsScreen: React.FC<Props> = ({
 
     return { upcoming: up, past: pa };
   }, [bookings]);
+
+  const handleCancel = async (b: Booking) => {
+    if (!confirm('Отменить эту запись?')) return;
+
+    try {
+      setCancellingId(b.id);
+      setError(null);
+      await cancelBooking(b.id);
+      // перезагружаем список после отмены
+      await load();
+    } catch (e: any) {
+      console.error(e);
+      // пробуем вытащить текст ошибки с бэка (например, про 30 минут)
+      const msg =
+        e?.message?.includes('Нельзя отменить позже')
+          ? 'Нельзя отменить позже, чем за 30 минут до записи.'
+          : 'Не удалось отменить запись. Попробуйте позже.';
+      setError(msg);
+    } finally {
+      setCancellingId(null);
+    }
+  };
 
   return (
     <div style={{ padding: 20 }}>
@@ -142,6 +178,27 @@ export const MyBookingsScreen: React.FC<Props> = ({
                     >
                       Статус: {statusLabel(b.status)}
                     </div>
+
+                    <button
+                      onClick={() => handleCancel(b)}
+                      disabled={cancellingId === b.id}
+                      style={{
+                        marginTop: 8,
+                        padding: '6px 10px',
+                        borderRadius: 8,
+                        border: 'none',
+                        cursor:
+                          cancellingId === b.id ? 'default' : 'pointer',
+                        background:
+                          cancellingId === b.id ? '#555' : '#b3261e',
+                        color: '#fff',
+                        fontSize: 13,
+                      }}
+                    >
+                      {cancellingId === b.id
+                        ? 'Отмена...'
+                        : 'Отменить'}
+                    </button>
                   </li>
                 ))}
               </ul>
