@@ -1,4 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, {
+  useEffect,
+  useRef,
+  useState,
+  PointerEvent,
+  TouchEvent,
+  CSSProperties,
+} from 'react';
 import {
   Placeholder,
   Button,
@@ -15,7 +22,7 @@ type Props = {
 type Slide = {
   title: string;
   description: string;
-  lottieSrc: string;    // путь к Lottie JSON (распакованный .tgs)
+  lottieSrc: string;
 };
 
 const SLIDES: Slide[] = [
@@ -39,6 +46,9 @@ const SLIDES: Slide[] = [
   },
 ];
 
+const SWIPE_THRESHOLD = 40;
+const AUTO_SLIDE_INTERVAL = 4000;
+
 export const WelcomeScreen: React.FC<Props> = ({
   onContinue,
   onOpenMyBookings,
@@ -49,7 +59,13 @@ export const WelcomeScreen: React.FC<Props> = ({
   const lottieContainerRef = useRef<HTMLDivElement | null>(null);
   const lottieInstanceRef = useRef<AnimationItem | null>(null);
 
-  // Поднимаем / обновляем Lottie-анимацию при смене слайда
+  const swipeStartXRef = useRef<number | null>(null);
+  const [swipeDeltaX, setSwipeDeltaX] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  const autoSlideTimerRef = useRef<number | null>(null);
+
+  // Lottie
   useEffect(() => {
     if (lottieInstanceRef.current) {
       lottieInstanceRef.current.destroy();
@@ -75,8 +91,129 @@ export const WelcomeScreen: React.FC<Props> = ({
     };
   }, [slide.lottieSrc]);
 
-  const nextSlide = () => setIndex((prev) => (prev + 1) % SLIDES.length);
+  const nextSlide = () =>
+    setIndex((prev) => (prev + 1) % SLIDES.length);
+
+  const prevSlide = () =>
+    setIndex((prev) =>
+      prev === 0 ? SLIDES.length - 1 : prev - 1,
+    );
+
   const goTo = (i: number) => setIndex(i);
+
+  // --- Авто-слайдер ---
+  const resetAutoSlideTimer = () => {
+    if (autoSlideTimerRef.current != null) {
+      window.clearInterval(autoSlideTimerRef.current);
+      autoSlideTimerRef.current = null;
+    }
+    autoSlideTimerRef.current = window.setInterval(
+      () => {
+        setIndex((prev) => (prev + 1) % SLIDES.length);
+      },
+      AUTO_SLIDE_INTERVAL,
+    );
+  };
+
+  useEffect(() => {
+    resetAutoSlideTimer();
+
+    return () => {
+      if (autoSlideTimerRef.current != null) {
+        window.clearInterval(autoSlideTimerRef.current);
+        autoSlideTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    resetAutoSlideTimer();
+  }, [index]);
+
+  // --- SWIPE: pointer ---
+  const handlePointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    if (isAnimating) return;
+    swipeStartXRef.current = e.clientX;
+    setSwipeDeltaX(0);
+  };
+
+  const handlePointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    if (swipeStartXRef.current == null || isAnimating) return;
+    const dx = e.clientX - swipeStartXRef.current;
+    setSwipeDeltaX(dx);
+  };
+
+  const finishSwipe = (dx: number) => {
+    if (isAnimating) return;
+
+    if (dx > SWIPE_THRESHOLD) {
+      // вправо → предыдущий
+      setIsAnimating(true);
+      setSwipeDeltaX(80); // небольшой финальный сдвиг
+      setTimeout(() => {
+        setSwipeDeltaX(0);
+        prevSlide();
+        setIsAnimating(false);
+      }, 150);
+    } else if (dx < -SWIPE_THRESHOLD) {
+      // влево → следующий
+      setIsAnimating(true);
+      setSwipeDeltaX(-80);
+      setTimeout(() => {
+        setSwipeDeltaX(0);
+        nextSlide();
+        setIsAnimating(false);
+      }, 150);
+    } else {
+      // возвращаемся в центр
+      setIsAnimating(true);
+      setSwipeDeltaX(0);
+      setTimeout(() => {
+        setIsAnimating(false);
+      }, 150);
+    }
+  };
+
+  const handlePointerUp = () => {
+    if (swipeStartXRef.current == null) return;
+    const dx = swipeDeltaX;
+    swipeStartXRef.current = null;
+    finishSwipe(dx);
+  };
+
+  const handlePointerCancel = () => {
+    if (swipeStartXRef.current == null) return;
+    swipeStartXRef.current = null;
+    finishSwipe(swipeDeltaX);
+  };
+
+  // --- SWIPE: touch ---
+  const handleTouchStart = (e: TouchEvent<HTMLDivElement>) => {
+    if (isAnimating) return;
+    const touch = e.touches[0];
+    swipeStartXRef.current = touch.clientX;
+    setSwipeDeltaX(0);
+  };
+
+  const handleTouchMove = (e: TouchEvent<HTMLDivElement>) => {
+    if (swipeStartXRef.current == null || isAnimating) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - swipeStartXRef.current;
+    setSwipeDeltaX(dx);
+  };
+
+  const handleTouchEnd = () => {
+    if (swipeStartXRef.current == null) return;
+    const dx = swipeDeltaX;
+    swipeStartXRef.current = null;
+    finishSwipe(dx);
+  };
+
+  // стиль для плавного движения слайда
+  const slideAreaStyle: CSSProperties = {
+    transform: `translateX(${swipeDeltaX}px)`,
+    transition: isAnimating ? 'transform 0.15s ease-out' : 'none',
+  };
 
   return (
     <div className="welcome-root">
@@ -109,27 +246,36 @@ export const WelcomeScreen: React.FC<Props> = ({
             </div>
           }
         >
-          {/* Lottie-стикер. Клик по нему листает слайды */}
           <div
-            className="welcome-sticker-wrapper"
-            onClick={nextSlide}
-            style={{ cursor: 'pointer' }}
+            className="welcome-slide-area"
+            style={slideAreaStyle}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
           >
             <div
-              ref={lottieContainerRef}
-              style={{ width: 150, height: 150 }}
-            />
+              className="welcome-sticker-wrapper"
+              style={{ cursor: 'pointer' }}
+              onClick={nextSlide}
+            >
+              <div
+                ref={lottieContainerRef}
+                style={{ width: 180, height: 180 }}
+              />
+            </div>
+
+            <div className="welcome-text-block">
+              <Text weight="1">{slide.title}</Text>
+            </div>
+            <div className="welcome-text-block">
+              <Text weight="3">{slide.description}</Text>
+            </div>
           </div>
 
-          {/* Заголовок и описание */}
-          <div className="welcome-text-block">
-            <Text weight="1">{slide.title}</Text>
-          </div>
-          <div className="welcome-text-block">
-            <Text weight="3">{slide.description}</Text>
-          </div>
-
-          {/* Пейджер-точки */}
           <div className="welcome-pagination">
             {SLIDES.map((_, i) => (
               <div
