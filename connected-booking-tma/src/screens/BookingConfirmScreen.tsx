@@ -3,11 +3,20 @@ import React, { useState } from 'react';
 import type { Service, Slot, Booking } from '../helpers/api';
 import { createBooking } from '../helpers/api';
 
+type TelegramUser = {
+  id: number;
+  username?: string;
+  photo_url?: string;
+  first_name?: string;
+  last_name?: string;
+};
+
 type Props = {
   service: Service;
   slot: Slot;
   onBack: () => void;
   onSuccess: (booking: Booking) => void;
+  user: TelegramUser | null;
 };
 
 function formatTime(iso: string): string {
@@ -28,10 +37,16 @@ export const BookingConfirmScreen: React.FC<Props> = ({
   slot,
   onBack,
   onSuccess,
+  user,
 }) => {
-  const [name, setName] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+    const defaultName =
+      user?.first_name ||
+      user?.username ||
+      [user?.first_name, user?.last_name].filter(Boolean).join(' ') ||
+      (user?.username ? user.username : '');
+    const [name, setName] = useState(defaultName);
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,11 +62,13 @@ export const BookingConfirmScreen: React.FC<Props> = ({
       const booking = await createBooking({
         name: name.trim(),
         slot_id: slot.id,
-        // TODO: позже подставим реальные данные из Telegram WebApp initData
-        telegram_id: null,
-        username: null,
-        photo_url: null,
+        telegram_id: user?.id ?? null,
+        username: user?.username ?? null,
+        photo_url: user?.photo_url ?? null,
+
       });
+  console.log('BookingConfirmScreen user:', user);
+    console.log('BookingConfirmScreen defaultName:', defaultName);
 
       onSuccess(booking);
     } catch (err) {
@@ -122,6 +139,12 @@ export const BookingConfirmScreen: React.FC<Props> = ({
             placeholder="Как к тебе обращаться?"
           />
         </label>
+
+        {user?.username && (
+          <p style={{ fontSize: 12, opacity: 0.7 }}>
+            Telegram: @{user.username}
+          </p>
+        )}
 
         {error && <p style={{ color: 'red' }}>{error}</p>}
 

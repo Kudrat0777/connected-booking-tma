@@ -1,17 +1,21 @@
+// src/hooks/useTelegramWebApp.ts
 import { useEffect, useState } from 'react';
 
 type TelegramWebApp = typeof window.Telegram.WebApp | null;
+
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp?: any;
+    };
+  }
+}
 
 export function useTelegramWebApp() {
   const [webApp, setWebApp] = useState<TelegramWebApp>(null);
 
   useEffect(() => {
-    // просто чтобы точно увидеть, что есть в window
-    // eslint-disable-next-line no-console
-    console.log('window.Telegram:', window.Telegram);
-
     if (!window.Telegram || !window.Telegram.WebApp) {
-      console.warn('Telegram WebApp object is not available');
       return;
     }
 
@@ -21,7 +25,7 @@ export function useTelegramWebApp() {
     try {
       wa.ready();
     } catch (e) {
-      console.warn('Error calling WebApp.ready()', e);
+      // ignore
     }
   }, []);
 

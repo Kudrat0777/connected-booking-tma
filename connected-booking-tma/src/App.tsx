@@ -1,15 +1,31 @@
 // src/App.tsx
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { AppRoot } from '@telegram-apps/telegram-ui';
 import { WelcomeScreen } from './screens/WelcomeScreen';
 import { ServicesScreen } from './screens/ServicesScreen';
 import { SlotsScreen } from './screens/SlotsScreen';
 import { BookingConfirmScreen } from './screens/BookingConfirmScreen';
 import type { Service, Slot, Booking } from './helpers/api';
+import { useTelegramWebApp } from './hooks/useTelegramWebApp';
+import {
+  resolveTelegramUser,
+  type TelegramUser,
+} from './helpers/telegramUser';
 
 type Screen = 'welcome' | 'services' | 'slots' | 'bookingConfirm' | 'bookingDone';
 
 const App: React.FC = () => {
+  const webApp = useTelegramWebApp();
+
+  const user: TelegramUser | null = useMemo(() => {
+    // webApp нужен лишь для того, чтобы Telegram.WebApp уже был инициализирован.
+    // Реальное извлечение user делаем так же, как в старом фронте.
+    const u = resolveTelegramUser();
+    // можно раскомментировать для проверки:
+    // console.log('Resolved Telegram user:', u);
+    return u;
+  }, [webApp]);
+
   const [screen, setScreen] = useState<Screen>('welcome');
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
@@ -65,6 +81,7 @@ const App: React.FC = () => {
           slot={selectedSlot}
           onBack={() => setScreen('slots')}
           onSuccess={handleBookingSuccess}
+          user={user}
         />
       )}
 
@@ -75,14 +92,11 @@ const App: React.FC = () => {
             Мастер: {createdBooking.master_name || selectedService?.master_name}
           </p>
           <p>
-            Услуга:{' '}
-            {createdBooking.service_name || selectedService?.name}
+            Услуга: {createdBooking.service_name || selectedService?.name}
           </p>
           <p>
             Время:{' '}
-            {new Date(
-              createdBooking.slot.time,
-            ).toLocaleString('ru-RU', {
+            {new Date(createdBooking.slot.time).toLocaleString('ru-RU', {
               day: '2-digit',
               month: '2-digit',
               hour: '2-digit',
