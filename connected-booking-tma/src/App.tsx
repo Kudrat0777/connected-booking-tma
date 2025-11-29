@@ -5,6 +5,7 @@ import { WelcomeScreen } from './screens/WelcomeScreen';
 import { ServicesScreen } from './screens/ServicesScreen';
 import { SlotsScreen } from './screens/SlotsScreen';
 import { BookingConfirmScreen } from './screens/BookingConfirmScreen';
+import { MyBookingsScreen } from './screens/MyBookingsScreen';
 import type { Service, Slot, Booking } from './helpers/api';
 import { useTelegramWebApp } from './hooks/useTelegramWebApp';
 import {
@@ -12,17 +13,19 @@ import {
   type TelegramUser,
 } from './helpers/telegramUser';
 
-type Screen = 'welcome' | 'services' | 'slots' | 'bookingConfirm' | 'bookingDone';
+type Screen =
+  | 'welcome'
+  | 'services'
+  | 'slots'
+  | 'bookingConfirm'
+  | 'bookingDone'
+  | 'myBookings';
 
 const App: React.FC = () => {
   const webApp = useTelegramWebApp();
 
   const user: TelegramUser | null = useMemo(() => {
-    // webApp нужен лишь для того, чтобы Telegram.WebApp уже был инициализирован.
-    // Реальное извлечение user делаем так же, как в старом фронте.
     const u = resolveTelegramUser();
-    // можно раскомментировать для проверки:
-    // console.log('Resolved Telegram user:', u);
     return u;
   }, [webApp]);
 
@@ -57,7 +60,13 @@ const App: React.FC = () => {
   return (
     <AppRoot>
       {screen === 'welcome' && (
-        <WelcomeScreen onContinue={() => setScreen('services')} />
+        <WelcomeScreen
+          onContinue={() => setScreen('services')}
+          // добавим кнопку "Мои записи", если знаем telegram_id
+          onOpenMyBookings={
+            user?.id ? () => setScreen('myBookings') : undefined
+          }
+        />
       )}
 
       {screen === 'services' && (
@@ -117,6 +126,13 @@ const App: React.FC = () => {
             На главный экран
           </button>
         </div>
+      )}
+
+      {screen === 'myBookings' && user?.id && (
+        <MyBookingsScreen
+          telegramId={user.id}
+          onBack={() => setScreen('welcome')}
+        />
       )}
     </AppRoot>
   );

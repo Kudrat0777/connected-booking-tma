@@ -1,4 +1,5 @@
 // src/helpers/api.ts
+
 const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
 export type Service = {
@@ -29,7 +30,7 @@ export async function fetchServices(masterId?: number): Promise<Service[]> {
 
 export type Slot = {
   id: number;
-  time: string; // ISO-строка
+  time: string; // ISO
   is_booked: boolean;
   service: {
     id: number;
@@ -45,17 +46,16 @@ export type Slot = {
 export async function fetchSlotsForService(serviceId: number): Promise<Slot[]> {
   const url = new URL(`${API_BASE}/slots/for_service/`, window.location.origin);
   url.searchParams.set('service', String(serviceId));
-  // по умолчанию бэкенд отфильтрует прошедшие слоты
 
   const res = await fetch(url.toString());
   if (!res.ok) {
     throw new Error(`Failed to fetch slots: ${res.status}`);
   }
   const data = await res.json();
-  // API /for_service возвращает массив SlotSerializer, без обёртки
   return data as Slot[];
 }
 
+// --------- БРОНИ ---------
 
 export type Booking = {
   id: number;
@@ -102,5 +102,19 @@ export async function createBooking(
     );
   }
 
+  return res.json();
+}
+
+// список броней для клиента
+export async function fetchMyBookings(
+  telegramId: number,
+): Promise<Booking[]> {
+  const url = new URL(`${API_BASE}/bookings/`, window.location.origin);
+  url.searchParams.set('telegram_id', String(telegramId));
+
+  const res = await fetch(url.toString());
+  if (!res.ok) {
+    throw new Error(`Failed to fetch bookings: ${res.status}`);
+  }
   return res.json();
 }

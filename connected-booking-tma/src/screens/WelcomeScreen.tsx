@@ -1,32 +1,39 @@
 // src/screens/WelcomeScreen.tsx
 import React from 'react';
-import { Placeholder, Button } from '@telegram-apps/telegram-ui';
+import { Button, Placeholder } from '@telegram-apps/telegram-ui';
 
 type Props = {
   onContinue: () => void;
+  onOpenMyBookings?: () => void;
 };
 
-export const WelcomeScreen: React.FC<Props> = ({ onContinue }) => {
+export const WelcomeScreen: React.FC<Props> = ({
+  onContinue,
+  onOpenMyBookings,
+}) => {
   return (
-    <div style={{ padding: 16, height: '100%', boxSizing: 'border-box' }}>
+    <div style={{ padding: 20 }}>
       <Placeholder
-        header="Connected Booking"
-        description="Добро пожаловать! Здесь позже появится запись к мастерам и список услуг."
+        header="Сервис записи"
+        action={
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <Button size="l" mode="primary" onClick={onContinue}>
+              Записаться к мастеру
+            </Button>
+            {onOpenMyBookings && (
+              <Button
+                size="l"
+                mode="outline"
+                onClick={onOpenMyBookings}
+              >
+                Мои записи
+              </Button>
+            )}
+          </div>
+        }
       >
-        <img
-          alt="Telegram sticker"
-          src="https://xelene.me/telegram.gif"
-          style={{
-            display: 'block',
-            width: 144,
-            height: 144,
-            marginBottom: 16,
-          }}
-        />
-
-        <Button size="l" mode="primary" onClick={onContinue}>
-          Продолжить
-        </Button>
+        Добро пожаловать! Здесь можно выбрать услугу и забронировать удобное
+        время.
       </Placeholder>
     </div>
   );
