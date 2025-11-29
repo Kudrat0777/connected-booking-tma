@@ -1,35 +1,70 @@
 // src/screens/ServicesScreen.tsx
-import React from 'react';
-
-type Service = {
-  id: number;
-  name: string;
-  durationMinutes: number;
-  price: number;
-};
+import React, { useEffect, useState } from 'react';
+import { Service, fetchServices } from '../helpers/api';
 
 type Props = {
   onBack: () => void;
 };
 
-const MOCK_SERVICES: Service[] = [
-  { id: 1, name: 'Маникюр классический', durationMinutes: 60, price: 800 },
-  { id: 2, name: 'Маникюр + покрытие гель‑лак', durationMinutes: 90, price: 1200 },
-  { id: 3, name: 'Коррекция бровей', durationMinutes: 30, price: 500 },
-];
-
 export const ServicesScreen: React.FC<Props> = ({ onBack }) => {
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await fetchServices(); // пока без фильтра по мастеру
+        if (!cancelled) {
+          setServices(data);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          console.error(e);
+          setError('Не удалось загрузить услуги. Попробуй еще раз позже.');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div style={{ padding: 20 }}>
       <h1>Услуги</h1>
 
-      <ul>
-        {MOCK_SERVICES.map((s) => (
-          <li key={s.id}>
-            <strong>{s.name}</strong> — {s.durationMinutes} мин, {s.price} ₽
-          </li>
-        ))}
-      </ul>
+      {loading && <p>Загрузка...</p>}
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+
+      {!loading && !error && services.length === 0 && (
+        <p>Пока нет ни одной услуги.</p>
+      )}
+
+      {!loading && !error && services.length > 0 && (
+        <ul>
+          {services.map((s) => (
+            <li key={s.id} style={{ marginBottom: 8 }}>
+              <strong>{s.name}</strong>
+              {s.master_name && <> — мастер: {s.master_name}</>}
+              <br />
+              {s.duration && <span>Длительность: {s.duration} мин. </span>}
+              {s.price != null && <span>Цена: {s.price} ₽</span>}
+            </li>
+          ))}
+        </ul>
+      )}
 
       <button
         onClick={onBack}
