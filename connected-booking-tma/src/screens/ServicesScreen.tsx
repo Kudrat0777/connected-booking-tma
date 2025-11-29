@@ -1,6 +1,9 @@
-// src/screens/ServicesScreen.tsx
 import React, { useEffect, useState } from 'react';
-import { Service, fetchServices } from '../helpers/api';
+import type { Service } from '../helpers/api';
+import { fetchServices } from '../helpers/api';
+import { ScreenLayout } from '../components/ScreenLayout';
+import { SectionCard } from '../components/SectionCard';
+import { ListItem } from '../components/ListItem';
 
 type Props = {
   onBack: () => void;
@@ -29,7 +32,7 @@ export const ServicesScreen: React.FC<Props> = ({
       } catch (e) {
         if (!cancelled) {
           console.error(e);
-          setError('Не удалось загрузить услуги. Попробуй ещё раз позже.');
+          setError('Не удалось загрузить услуги. Попробуйте позже.');
         }
       } finally {
         if (!cancelled) {
@@ -46,56 +49,38 @@ export const ServicesScreen: React.FC<Props> = ({
   }, []);
 
   return (
-    <div style={{ padding: 20 }}>
-      <button
-        onClick={onBack}
-        style={{
-          marginBottom: 12,
-          padding: '4px 10px',
-          borderRadius: 8,
-          border: 'none',
-          cursor: 'pointer',
-        }}
-      >
-        ← Назад
-      </button>
+    <ScreenLayout title="Услуги" onBack={onBack}>
+      <SectionCard>
+        {loading && <div>Загрузка...</div>}
+        {error && <div style={{ color: 'red' }}>{error}</div>}
 
-      <h1>Услуги</h1>
+        {!loading && !error && services.length === 0 && (
+          <div>Пока нет ни одной услуги.</div>
+        )}
 
-      {loading && <p>Загрузка...</p>}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-
-      {!loading && !error && services.length === 0 && (
-        <p>Пока нет ни одной услуги.</p>
-      )}
-
-      {!loading && !error && services.length > 0 && (
-        <ul style={{ listStyle: 'none', padding: 0 }}>
-          {services.map((s) => (
-            <li key={s.id} style={{ marginBottom: 8 }}>
-              <button
-                onClick={() => onServiceSelected(s)}
-                style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  padding: '8px 12px',
-                  borderRadius: 8,
-                  border: '1px solid #444',
-                  background: '#222',
-                  color: '#fff',
-                  cursor: 'pointer',
-                }}
-              >
-                <strong>{s.name}</strong>
-                {s.master_name && <> — мастер: {s.master_name}</>}
-                <br />
-                {s.duration && <span>Длительность: {s.duration} мин. </span>}
-                {s.price != null && <span>Цена: {s.price} ₽</span>}
-              </button>
-            </li>
+        {!loading &&
+          !error &&
+          services.map((s) => (
+            <ListItem
+              key={s.id}
+              onClick={() => onServiceSelected(s)}
+              title={s.name}
+              subtitle={
+                <>
+                  {s.master_name && <span>Мастер: {s.master_name}</span>}
+                  {(s.duration || s.price != null) && (
+                    <span>
+                      {' '}
+                      ·{' '}
+                      {s.duration ? `${s.duration} мин` : ''}
+                      {s.price != null ? ` · ${s.price} ₽` : ''}
+                    </span>
+                  )}
+                </>
+              }
+            />
           ))}
-        </ul>
-      )}
-    </div>
+      </SectionCard>
+    </ScreenLayout>
   );
 };

@@ -1,7 +1,9 @@
-// src/screens/BookingConfirmScreen.tsx
 import React, { useState } from 'react';
 import type { Service, Slot, Booking } from '../helpers/api';
 import { createBooking } from '../helpers/api';
+import { ScreenLayout } from '../components/ScreenLayout';
+import { SectionCard } from '../components/SectionCard';
+import { Button } from '@telegram-apps/telegram-ui';
 
 type TelegramUser = {
   id: number;
@@ -29,7 +31,7 @@ function formatTime(iso: string): string {
     hour: '2-digit',
     minute: '2-digit',
   });
-  return `${day} ${time}`;
+  return `${day} • ${time}`;
 }
 
 export const BookingConfirmScreen: React.FC<Props> = ({
@@ -39,14 +41,15 @@ export const BookingConfirmScreen: React.FC<Props> = ({
   onSuccess,
   user,
 }) => {
-    const defaultName =
-      user?.first_name ||
-      user?.username ||
-      [user?.first_name, user?.last_name].filter(Boolean).join(' ') ||
-      (user?.username ? user.username : '');
-    const [name, setName] = useState(defaultName);
-    const [submitting, setSubmitting] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+  const defaultName =
+    user?.first_name ||
+    user?.username ||
+    [user?.first_name, user?.last_name].filter(Boolean).join(' ') ||
+    '';
+
+  const [name, setName] = useState(defaultName);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,105 +68,100 @@ export const BookingConfirmScreen: React.FC<Props> = ({
         telegram_id: user?.id ?? null,
         username: user?.username ?? null,
         photo_url: user?.photo_url ?? null,
-
       });
-  console.log('BookingConfirmScreen user:', user);
-    console.log('BookingConfirmScreen defaultName:', defaultName);
 
       onSuccess(booking);
     } catch (err) {
       console.error(err);
-      setError('Не удалось создать бронь. Попробуй ещё раз позже.');
+      setError('Не удалось создать бронь. Попробуйте позже.');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div style={{ padding: 20 }}>
-      <button
-        onClick={onBack}
-        style={{
-          marginBottom: 12,
-          padding: '4px 10px',
-          borderRadius: 8,
-          border: 'none',
-          cursor: 'pointer',
-        }}
-        disabled={submitting}
-      >
-        ← Назад к слотам
-      </button>
+    <ScreenLayout title="Подтверждение записи" onBack={onBack}>
+      <SectionCard header="Детали записи">
+        <div style={{ marginBottom: 4 }}>
+          <strong>Услуга:</strong> {service.name}
+        </div>
+        {service.master_name && (
+          <div style={{ marginBottom: 4 }}>
+            <strong>Мастер:</strong> {service.master_name}
+          </div>
+        )}
+        <div style={{ marginBottom: 4 }}>
+          <strong>Время:</strong> {formatTime(slot.time)}
+        </div>
+        {service.duration && (
+          <div style={{ marginBottom: 4 }}>
+            <strong>Длительность:</strong> {service.duration} мин.
+          </div>
+        )}
+        {service.price != null && (
+          <div>
+            <strong>Цена:</strong> {service.price} ₽
+          </div>
+        )}
+      </SectionCard>
 
-      <h2>Подтверждение записи</h2>
-
-      <p>
-        <strong>Услуга:</strong> {service.name}
-      </p>
-      {service.master_name && (
-        <p>
-          <strong>Мастер:</strong> {service.master_name}
-        </p>
-      )}
-      <p>
-        <strong>Время:</strong> {formatTime(slot.time)}
-      </p>
-      {service.duration && (
-        <p>
-          <strong>Длительность:</strong> {service.duration} мин.
-        </p>
-      )}
-      {service.price != null && (
-        <p>
-          <strong>Цена:</strong> {service.price} ₽
-        </p>
-      )}
-
-      <form onSubmit={handleSubmit} style={{ marginTop: 16 }}>
-        <label style={{ display: 'block', marginBottom: 8 }}>
-          Имя:
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+      <SectionCard header="Данные клиента">
+        <form onSubmit={handleSubmit}>
+          <label
             style={{
               display: 'block',
-              width: '100%',
-              marginTop: 4,
-              padding: '6px 8px',
-              borderRadius: 6,
-              border: '1px solid #444',
-              background: '#111',
-              color: '#fff',
+              marginBottom: 10,
+              fontSize: 14,
             }}
-            placeholder="Как к тебе обращаться?"
-          />
-        </label>
+          >
+            Имя:
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Как к тебе обращаться?"
+              style={{
+                display: 'block',
+                width: '100%',
+                marginTop: 4,
+                padding: '8px 10px',
+                borderRadius: 8,
+                border: '1px solid rgba(255,255,255,0.12)',
+                background: 'transparent',
+                color: 'inherit',
+                fontSize: 14,
+                boxSizing: 'border-box',
+              }}
+            />
+          </label>
 
-        {user?.username && (
-          <p style={{ fontSize: 12, opacity: 0.7 }}>
-            Telegram: @{user.username}
-          </p>
-        )}
+          {user?.username && (
+            <div
+              style={{
+                fontSize: 12,
+                opacity: 0.7,
+                marginBottom: 8,
+              }}
+            >
+              Telegram: @{user.username}
+            </div>
+          )}
 
-        {error && <p style={{ color: 'red' }}>{error}</p>}
+          {error && (
+            <div style={{ color: 'red', marginBottom: 8 }}>{error}</div>
+          )}
 
-        <button
-          type="submit"
-          disabled={submitting}
-          style={{
-            marginTop: 12,
-            padding: '8px 16px',
-            borderRadius: 8,
-            border: 'none',
-            cursor: submitting ? 'default' : 'pointer',
-            background: submitting ? '#555' : '#2ea44f',
-            color: '#fff',
-          }}
-        >
-          {submitting ? 'Создаём бронь...' : 'Записаться'}
-        </button>
-      </form>
-    </div>
+          <Button
+            size="l"
+            mode="bezeled"
+            type="submit"
+            disabled={submitting}
+            style={{ width: '100%', marginTop: 4 }}
+          >
+            {submitting ? 'Создаём бронь...' : 'Записаться'}
+          </Button>
+        </form>
+      </SectionCard>
+    </ScreenLayout>
   );
 };

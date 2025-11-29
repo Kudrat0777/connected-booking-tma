@@ -1,7 +1,11 @@
-// src/screens/MyBookingsScreen.tsx
 import React, { useEffect, useMemo, useState } from 'react';
 import type { Booking } from '../helpers/api';
 import { fetchMyBookings, cancelBooking } from '../helpers/api';
+import { ScreenLayout } from '../components/ScreenLayout';
+import { SectionCard } from '../components/SectionCard';
+import { ListItem } from '../components/ListItem';
+import { Button } from '@telegram-apps/telegram-ui';
+import { StatusBadge } from '../components/StatusBadge';
 
 type Props = {
   telegramId: number;
@@ -99,11 +103,9 @@ export const MyBookingsScreen: React.FC<Props> = ({
       setCancellingId(b.id);
       setError(null);
       await cancelBooking(b.id);
-      // перезагружаем список после отмены
       await load();
     } catch (e: any) {
       console.error(e);
-      // пробуем вытащить текст ошибки с бэка (например, про 30 минут)
       const msg =
         e?.message?.includes('Нельзя отменить позже')
           ? 'Нельзя отменить позже, чем за 30 минут до записи.'
@@ -115,141 +117,99 @@ export const MyBookingsScreen: React.FC<Props> = ({
   };
 
   return (
-    <div style={{ padding: 20 }}>
-      <button
-        onClick={onBack}
-        style={{
-          marginBottom: 12,
-          padding: '4px 10px',
-          borderRadius: 8,
-          border: 'none',
-          cursor: 'pointer',
-        }}
-      >
-        ← Назад
-      </button>
-
-      <h2>Мои записи</h2>
-
-      {loading && <p>Загрузка...</p>}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+    <ScreenLayout title="Мои записи" onBack={onBack}>
+      {loading && <div>Загрузка...</div>}
+      {error && <div style={{ color: 'red' }}>{error}</div>}
 
       {!loading && !error && bookings.length === 0 && (
-        <p>Пока нет ни одной записи.</p>
+        <div>Пока нет ни одной записи.</div>
       )}
 
-      {!loading && !error && bookings.length > 0 && (
+      {!loading && !error && (
         <>
           {upcoming.length > 0 && (
-            <>
-              <h3 style={{ marginTop: 16 }}>Предстоящие</h3>
-              <ul style={{ listStyle: 'none', padding: 0 }}>
-                {upcoming.map((b) => (
-                  <li
-                    key={b.id}
+            <SectionCard header="Предстоящие">
+              {upcoming.map((b) => (
+                <div
+                  key={b.id}
+                  style={{
+                    marginBottom: 6,
+                    paddingBottom: 6,
+                    borderBottom: '1px solid rgba(255,255,255,0.04)',
+                  }}
+                >
+                  <ListItem
+                      title={
+                        b.service_name ||
+                        b.slot.service?.name ||
+                        'Услуга'
+                      }
+                      subtitle={
+                        <>
+                          <div>
+                            Мастер:{' '}
+                            {b.master_name ||
+                              b.slot.service?.master_name ||
+                              '—'}
+                          </div>
+                          <div>Время: {formatDateTime(b.slot.time)}</div>
+                          <div style={{ marginTop: 4 }}>
+                            <StatusBadge status={b.status} />
+                          </div>
+                        </>
+                      }
+                    />
+                  <Button
+                    size="m"
+                    mode="outline"
+                    onClick={() => handleCancel(b)}
+                    disabled={cancellingId === b.id}
                     style={{
-                      marginBottom: 8,
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      border: '1px solid #444',
-                      background: '#111',
+                      width: '100%',
+                      marginTop: 4,
                     }}
                   >
-                    <div style={{ fontWeight: 600 }}>
-                      {b.service_name ||
-                        b.slot.service?.name ||
-                        'Услуга'}
-                    </div>
-                    <div style={{ fontSize: 13, opacity: 0.8 }}>
-                      Мастер:{' '}
-                      {b.master_name ||
-                        b.slot.service?.master_name ||
-                        '—'}
-                    </div>
-                    <div style={{ marginTop: 4 }}>
-                      Время: {formatDateTime(b.slot.time)}
-                    </div>
-                    <div
-                      style={{
-                        marginTop: 4,
-                        fontSize: 13,
-                        opacity: 0.8,
-                      }}
-                    >
-                      Статус: {statusLabel(b.status)}
-                    </div>
-
-                    <button
-                      onClick={() => handleCancel(b)}
-                      disabled={cancellingId === b.id}
-                      style={{
-                        marginTop: 8,
-                        padding: '6px 10px',
-                        borderRadius: 8,
-                        border: 'none',
-                        cursor:
-                          cancellingId === b.id ? 'default' : 'pointer',
-                        background:
-                          cancellingId === b.id ? '#555' : '#b3261e',
-                        color: '#fff',
-                        fontSize: 13,
-                      }}
-                    >
-                      {cancellingId === b.id
-                        ? 'Отмена...'
-                        : 'Отменить'}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </>
+                    {cancellingId === b.id
+                      ? 'Отмена...'
+                      : 'Отменить запись'}
+                  </Button>
+                </div>
+              ))}
+            </SectionCard>
           )}
 
           {past.length > 0 && (
-            <>
-              <h3 style={{ marginTop: 16 }}>Прошедшие</h3>
-              <ul style={{ listStyle: 'none', padding: 0 }}>
-                {past.map((b) => (
-                  <li
-                    key={b.id}
-                    style={{
-                      marginBottom: 8,
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      border: '1px solid #333',
-                      background: '#080808',
-                    }}
-                  >
-                    <div style={{ fontWeight: 600 }}>
-                      {b.service_name ||
-                        b.slot.service?.name ||
-                        'Услуга'}
-                    </div>
-                    <div style={{ fontSize: 13, opacity: 0.8 }}>
-                      Мастер:{' '}
-                      {b.master_name ||
-                        b.slot.service?.master_name ||
-                        '—'}
-                    </div>
-                    <div style={{ marginTop: 4 }}>
-                      Время: {formatDateTime(b.slot.time)}
-                    </div>
-                    <div
-                      style={{
-                        marginTop: 4,
-                        fontSize: 13,
-                        opacity: 0.8,
-                      }}
-                    >
-                      Статус: {statusLabel(b.status)}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </>
+            <SectionCard header="Прошедшие">
+              {past.map((b) => (
+                <ListItem
+                  key={b.id}
+                  title={
+                    b.service_name ||
+                    b.slot.service?.name ||
+                    'Услуга'
+                  }
+                  subtitle={
+                    <>
+                      <div>
+                        Мастер:{' '}
+                        {b.master_name ||
+                          b.slot.service?.master_name ||
+                          '—'}
+                      </div>
+                      <div>
+                        Время: {formatDateTime(b.slot.time)}
+                      </div>
+                      <div style={{ marginTop: 4 }}>
+                        <StatusBadge status={b.status} />
+                      </div>
+                    </>
+                  }
+                />
+              ))}
+            </SectionCard>
           )}
         </>
       )}
-    </div>
+    </ScreenLayout>
   );
 };

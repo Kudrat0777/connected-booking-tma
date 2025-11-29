@@ -1,7 +1,9 @@
-// src/screens/SlotsScreen.tsx
 import React, { useEffect, useState } from 'react';
 import type { Service, Slot } from '../helpers/api';
 import { fetchSlotsForService } from '../helpers/api';
+import { ScreenLayout } from '../components/ScreenLayout';
+import { SectionCard } from '../components/SectionCard';
+import { ListItem } from '../components/ListItem';
 
 type Props = {
   service: Service;
@@ -19,7 +21,7 @@ function formatTime(iso: string): string {
     hour: '2-digit',
     minute: '2-digit',
   });
-  return `${day} ${time}`;
+  return `${day} • ${time}`;
 }
 
 export const SlotsScreen: React.FC<Props> = ({
@@ -45,7 +47,7 @@ export const SlotsScreen: React.FC<Props> = ({
       } catch (e) {
         if (!cancelled) {
           console.error(e);
-          setError('Не удалось загрузить слоты. Попробуй ещё раз позже.');
+          setError('Не удалось загрузить слоты. Попробуйте позже.');
         }
       } finally {
         if (!cancelled) {
@@ -62,60 +64,43 @@ export const SlotsScreen: React.FC<Props> = ({
   }, [service.id]);
 
   return (
-    <div style={{ padding: 20 }}>
-      <button
-        onClick={onBack}
-        style={{
-          marginBottom: 12,
-          padding: '4px 10px',
-          borderRadius: 8,
-          border: 'none',
-          cursor: 'pointer',
-        }}
-      >
-        ← Назад к услугам
-      </button>
+    <ScreenLayout title={service.name} onBack={onBack}>
+      <SectionCard header="Детали услуги">
+        {service.master_name && (
+          <div style={{ fontSize: 14, marginBottom: 4 }}>
+            <strong>Мастер:</strong> {service.master_name}
+          </div>
+        )}
+        {service.duration && (
+          <div style={{ fontSize: 14, marginBottom: 4 }}>
+            <strong>Длительность:</strong> {service.duration} мин.
+          </div>
+        )}
+        {service.price != null && (
+          <div style={{ fontSize: 14 }}>
+            <strong>Цена:</strong> {service.price} ₽
+          </div>
+        )}
+      </SectionCard>
 
-      <h2>{service.name}</h2>
-      {service.master_name && <p>Мастер: {service.master_name}</p>}
-      {service.duration && <p>Длительность: {service.duration} мин.</p>}
-      {service.price != null && <p>Цена: {service.price} ₽</p>}
+      <SectionCard header="Свободные слоты">
+        {loading && <div>Загрузка...</div>}
+        {error && <div style={{ color: 'red' }}>{error}</div>}
 
-      <h3 style={{ marginTop: 16 }}>Свободные слоты</h3>
+        {!loading && !error && slots.length === 0 && (
+          <div>Пока нет доступных слотов для этой услуги.</div>
+        )}
 
-      {loading && <p>Загрузка...</p>}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-
-      {!loading && !error && slots.length === 0 && (
-        <p>Пока нет доступных слотов для этой услуги.</p>
-      )}
-
-      {!loading && !error && slots.length > 0 && (
-        <ul style={{ listStyle: 'none', padding: 0 }}>
-          {slots.map((slot) => (
-          <li key={slot.id} style={{ marginBottom: 8 }}>
-            <button
-              onClick={() => {
-                console.log('КЛИК ПО СЛОТУ В SlotsScreen', slot);
-                onSlotSelected(slot);
-              }}
-              style={{
-                width: '100%',
-                textAlign: 'left',
-                padding: '8px 12px',
-                borderRadius: 8,
-                border: '1px solid #444',
-                background: '#222',
-                color: '#fff',
-                cursor: 'pointer',
-              }}
-            >
-              {formatTime(slot.time)}
-            </button>
-          </li>
-        ))}
-        </ul>
-      )}
-    </div>
+        {!loading &&
+          !error &&
+          slots.map((slot) => (
+            <ListItem
+              key={slot.id}
+              title={formatTime(slot.time)}
+              onClick={() => onSlotSelected(slot)}
+            />
+          ))}
+      </SectionCard>
+    </ScreenLayout>
   );
 };
