@@ -24,3 +24,34 @@ export async function fetchServices(masterId?: number): Promise<Service[]> {
   }
   return res.json();
 }
+
+// --------- СЛОТЫ ---------
+
+export type Slot = {
+  id: number;
+  time: string; // ISO-строка
+  is_booked: boolean;
+  service: {
+    id: number;
+    name: string;
+    price: number | null;
+    duration: number | null;
+    description: string;
+    master: number;
+    master_name: string;
+  };
+};
+
+export async function fetchSlotsForService(serviceId: number): Promise<Slot[]> {
+  const url = new URL(`${API_BASE}/slots/for_service/`, window.location.origin);
+  url.searchParams.set('service', String(serviceId));
+  // по умолчанию бэкенд отфильтрует прошедшие слоты
+
+  const res = await fetch(url.toString());
+  if (!res.ok) {
+    throw new Error(`Failed to fetch slots: ${res.status}`);
+  }
+  const data = await res.json();
+  // API /for_service возвращает массив SlotSerializer, без обёртки
+  return data as Slot[];
+}
