@@ -55,3 +55,52 @@ export async function fetchSlotsForService(serviceId: number): Promise<Slot[]> {
   // API /for_service возвращает массив SlotSerializer, без обёртки
   return data as Slot[];
 }
+
+
+export type Booking = {
+  id: number;
+  name: string;
+  slot: Slot;
+  created_at: string;
+  telegram_id: number | null;
+  username: string | null;
+  photo_url: string | null;
+  status: 'pending' | 'confirmed' | 'rejected';
+  master_name: string | null;
+  service_name: string | null;
+};
+
+export type CreateBookingPayload = {
+  name: string;
+  slot_id: number;
+  telegram_id?: number | null;
+  username?: string | null;
+  photo_url?: string | null;
+};
+
+export async function createBooking(
+  payload: CreateBookingPayload,
+): Promise<Booking> {
+  const res = await fetch(`${API_BASE}/bookings/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name: payload.name,
+      slot_id: payload.slot_id,
+      telegram_id: payload.telegram_id ?? null,
+      username: payload.username ?? null,
+      photo_url: payload.photo_url ?? null,
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(
+      `Failed to create booking: ${res.status} ${res.statusText} ${text}`,
+    );
+  }
+
+  return res.json();
+}
