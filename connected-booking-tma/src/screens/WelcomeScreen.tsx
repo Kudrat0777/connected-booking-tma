@@ -45,7 +45,7 @@ const SLIDES: Slide[] = [
       'Сохраняй мастеров, оставляй отзывы и возвращайся к тем, кто тебе понравился.',
   },
   {
-    lottieSrc: '/stickers/duck_money.json',
+    lottieSrc: '/stickers/duck_wallet.json',
     title: 'Современные платежи — просто',
     description:
       'Оплачивайте услуги картами или инновационными способами: TON и Stars. Будущее уже здесь!',

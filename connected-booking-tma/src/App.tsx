@@ -64,6 +64,11 @@ const App: React.FC = () => {
     null,
   );
 
+  // НОВОЕ: выбранный мастер (по имени) для фильтрации услуг
+  const [selectedMasterName, setSelectedMasterName] = useState<string | null>(
+    null,
+  );
+
   const handleServiceSelected = (service: Service) => {
     setSelectedService(service);
     setSelectedSlot(null);
@@ -84,6 +89,7 @@ const App: React.FC = () => {
     setSelectedService(null);
     setSelectedSlot(null);
     setCreatedBooking(null);
+    setSelectedMasterName(null);
     setScreen('welcome');
   };
 
@@ -91,7 +97,10 @@ const App: React.FC = () => {
     <AppRoot>
       {screen === 'welcome' && (
         <WelcomeScreen
-          onContinue={() => setScreen('services')}
+          onContinue={() => {
+            setSelectedMasterName(null);
+            setScreen('services');
+          }}
           onOpenMyBookings={() => {
             setMainTab('bookings');
             setScreen('profile');
@@ -103,6 +112,7 @@ const App: React.FC = () => {
         <ServicesScreen
           onBack={() => setScreen('welcome')}
           onServiceSelected={handleServiceSelected}
+          selectedMasterName={selectedMasterName}
         />
       )}
 
@@ -169,8 +179,12 @@ const App: React.FC = () => {
         <ProfileScreen
           telegramId={user.id}
           initialTab={mainTab}
-          onGoToServices={() => setScreen('services')}
           onBack={() => setScreen('welcome')}
+          // НОВОЕ: при переходе из профиля на услуги запоминаем мастера
+          onGoToServices={(masterName) => {
+            setSelectedMasterName(masterName || null);
+            setScreen('services');
+          }}
         />
       )}
     </AppRoot>

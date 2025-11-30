@@ -18,7 +18,8 @@ type Props = {
   telegramId: number;
   initialTab?: MainTab;
   onBack: () => void;
-  onGoToServices?: () => void;
+  // НОВОЕ: можем передать имя мастера, чтобы отфильтровать услуги
+  onGoToServices?: (masterName?: string) => void;
 };
 
 type Master = {
@@ -81,8 +82,9 @@ export const ProfileScreen: React.FC<Props> = ({
   const [masters] = useState<Master[]>(MOCK_MASTERS);
 
   const handleMasterBook = (master: Master) => {
-    // Здесь позже можно включить реальный флоу записи
-    alert(`Запись к мастеру: ${master.name}`);
+    if (onGoToServices) {
+      onGoToServices(master.name);
+    }
   };
 
   const renderMastersContent = () => {
@@ -190,9 +192,9 @@ export const ProfileScreen: React.FC<Props> = ({
     if (currentTab === 'bookings') {
       return (
         <MyBookingsScreen
-            telegramId={telegramId}
-            onBack={onBack}
-            onGoToServices={onGoToServices}
+          telegramId={telegramId}
+          onBack={onBack}
+          onGoToServices={onGoToServices}
         />
       );
     }

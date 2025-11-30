@@ -10,6 +10,8 @@ export type Service = {
   duration: number | null;
   description: string;
   master_name: string;
+  masterId?: number;
+  master_name?: string;
 };
 
 export async function fetchServices(masterId?: number): Promise<Service[]> {
