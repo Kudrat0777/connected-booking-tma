@@ -44,6 +44,12 @@ const SLIDES: Slide[] = [
     description:
       'Сохраняй мастеров, оставляй отзывы и возвращайся к тем, кто тебе понравился.',
   },
+  {
+    lottieSrc: '/stickers/duck_money.json',
+    title: 'Современные платежи — просто',
+    description:
+      'Оплачивайте услуги картами или инновационными способами: TON и Stars. Будущее уже здесь!',
+  },
 ];
 
 const SWIPE_THRESHOLD = 40;
@@ -263,9 +269,15 @@ export const WelcomeScreen: React.FC<Props> = ({
               onClick={nextSlide}
             >
               <div
-                ref={lottieContainerRef}
-                style={{ width: 180, height: 180 }}
-              />
+                  ref={lottieContainerRef}
+                  style={{
+                    width: 200,
+                    height: 200,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                />
             </div>
 
             <div className="welcome-text-block">

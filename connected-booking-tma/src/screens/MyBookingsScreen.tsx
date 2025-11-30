@@ -15,6 +15,7 @@ import { UpcomingEmptyState } from '../components/UpcomingEmptyState';
 type Props = {
   telegramId: number;
   onBack: () => void;
+  onGoToServices?: () => void;
 };
 
 function formatDateTime(iso: string): string {
@@ -32,6 +33,7 @@ type Segment = 'upcoming' | 'past';
 export const MyBookingsScreen: React.FC<Props> = ({
   telegramId,
   onBack,
+  onGoToServices,
 }) => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -162,18 +164,17 @@ export const MyBookingsScreen: React.FC<Props> = ({
 
       {!loading && !error && bookings.length > 0 && (
         <SectionCard header={currentHeader}>
-          {/* Пустое состояние для сегментов */}
           {currentList.length === 0 && (
-            <>
-              {segment === 'upcoming' ? (
-                <UpcomingEmptyState />
-              ) : (
-                <div style={{ padding: '8px 0' }}>
-                  Нет прошедших записей.
-                </div>
-              )}
-            </>
-          )}
+              <>
+                {segment === 'upcoming' ? (
+                  <UpcomingEmptyState onGoToServices={onGoToServices} />
+                ) : (
+                  <div style={{ padding: '8px 0' }}>
+                    Нет прошедших записей.
+                  </div>
+                )}
+              </>
+            )}
 
           {/* ПРЕДСТОЯЩИЕ */}
           {segment === 'upcoming' &&

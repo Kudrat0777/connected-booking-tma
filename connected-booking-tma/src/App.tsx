@@ -169,6 +169,7 @@ const App: React.FC = () => {
         <ProfileScreen
           telegramId={user.id}
           initialTab={mainTab}
+          onGoToServices={() => setScreen('services')}
           onBack={() => setScreen('welcome')}
         />
       )}

@@ -18,6 +18,7 @@ type Props = {
   telegramId: number;
   initialTab?: MainTab;
   onBack: () => void;
+  onGoToServices?: () => void;
 };
 
 type Master = {
@@ -74,6 +75,7 @@ export const ProfileScreen: React.FC<Props> = ({
   telegramId,
   initialTab = 'bookings',
   onBack,
+  onGoToServices,
 }) => {
   const [currentTab, setCurrentTab] = useState<MainTab>(initialTab);
   const [masters] = useState<Master[]>(MOCK_MASTERS);
@@ -187,7 +189,11 @@ export const ProfileScreen: React.FC<Props> = ({
   const renderContent = () => {
     if (currentTab === 'bookings') {
       return (
-        <MyBookingsScreen telegramId={telegramId} onBack={onBack} />
+        <MyBookingsScreen
+            telegramId={telegramId}
+            onBack={onBack}
+            onGoToServices={onGoToServices}
+        />
       );
     }
 
