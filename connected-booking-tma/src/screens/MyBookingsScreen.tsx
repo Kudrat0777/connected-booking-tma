@@ -10,6 +10,7 @@ import {
   Icon20RecentOutline,
 } from '@vkontakte/icons';
 import '../css/MyBookingsScreen.css';
+import { UpcomingEmptyState } from '../components/UpcomingEmptyState';
 
 type Props = {
   telegramId: number;
@@ -161,14 +162,20 @@ export const MyBookingsScreen: React.FC<Props> = ({
 
       {!loading && !error && bookings.length > 0 && (
         <SectionCard header={currentHeader}>
+          {/* Пустое состояние для сегментов */}
           {currentList.length === 0 && (
-            <div style={{ padding: '8px 0' }}>
-              {segment === 'upcoming'
-                ? 'Нет предстоящих записей.'
-                : 'Нет прошедших записей.'}
-            </div>
+            <>
+              {segment === 'upcoming' ? (
+                <UpcomingEmptyState />
+              ) : (
+                <div style={{ padding: '8px 0' }}>
+                  Нет прошедших записей.
+                </div>
+              )}
+            </>
           )}
 
+          {/* ПРЕДСТОЯЩИЕ */}
           {segment === 'upcoming' &&
             currentList.map((b) => (
               <div key={b.id} className="mybookings-card">
@@ -227,7 +234,9 @@ export const MyBookingsScreen: React.FC<Props> = ({
               </div>
             ))}
 
+          {/* ПРОШЕДШИЕ */}
           {segment === 'past' &&
+            currentList.length > 0 &&
             currentList.map((b) => (
               <div key={b.id} className="mybookings-card">
                 <div className="mybookings-card-header">
