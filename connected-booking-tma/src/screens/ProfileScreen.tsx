@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Tabbar,
   Button,
   Avatar,
+  List,
+  Input,
 } from '@telegram-apps/telegram-ui';
 import { ScreenLayout } from '../components/ScreenLayout';
 import { MyBookingsScreen } from './MyBookingsScreen';
@@ -18,7 +20,6 @@ type Props = {
   telegramId: number;
   initialTab?: MainTab;
   onBack: () => void;
-  // НОВОЕ: можем передать имя мастера, чтобы отфильтровать услуги
   onGoToServices?: (masterName?: string) => void;
 };
 
@@ -80,6 +81,7 @@ export const ProfileScreen: React.FC<Props> = ({
 }) => {
   const [currentTab, setCurrentTab] = useState<MainTab>(initialTab);
   const [masters] = useState<Master[]>(MOCK_MASTERS);
+  const [search, setSearch] = useState<string>('');
 
   const handleMasterBook = (master: Master) => {
     if (onGoToServices) {
@@ -87,18 +89,50 @@ export const ProfileScreen: React.FC<Props> = ({
     }
   };
 
+  // Поиск по имени, спецу и описанию (регистр не важен)
+  const filteredMasters = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return masters;
+    return masters.filter((m) => {
+      const inName = m.name.toLowerCase().includes(q);
+      const inSpec = m.specialty.toLowerCase().includes(q);
+      const inDesc = m.description
+        ? m.description.toLowerCase().includes(q)
+        : false;
+      return inName || inSpec || inDesc;
+    });
+  }, [masters, search]);
+
   const renderMastersContent = () => {
-    if (masters.length === 0) {
+    const list = filteredMasters;
+
+    if (list.length === 0) {
       return (
         <div style={{ padding: 16 }}>
-          Пока мастера не добавлены. Обратитесь к администратору.
+          По запросу «{search}» мастера не найдены.
         </div>
       );
     }
 
     return (
       <div style={{ padding: 12 }}>
-        {masters.map((m) => (
+        {/* Поисковая строка */}
+        <List
+          style={{
+            marginBottom: 12,
+            background: 'var(--tgui--secondary_bg_color)',
+            borderRadius: 12,
+          }}
+        >
+          <Input
+            header="Поиск по мастерам и услугам"
+            placeholder="Имя, услуга, описание..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </List>
+
+        {list.map((m) => (
           <div
             key={m.id}
             style={{
@@ -111,16 +145,13 @@ export const ProfileScreen: React.FC<Props> = ({
               gap: 10,
             }}
           >
-            {/* Аватар через TelegramUI Avatar */}
             <Avatar
               size={48}
               src={m.avatarUrl}
               fallbackName={m.name}
             />
 
-            {/* Контент карточки */}
             <div style={{ flex: 1, minWidth: 0 }}>
-              {/* Имя + маленький рейтинг одной строкой */}
               <div
                 style={{
                   display: 'flex',
@@ -143,7 +174,6 @@ export const ProfileScreen: React.FC<Props> = ({
                 {renderTinyRating(m.rating)}
               </div>
 
-              {/* Специализация */}
               <div
                 style={{
                   fontSize: 13,
@@ -154,7 +184,6 @@ export const ProfileScreen: React.FC<Props> = ({
                 {m.specialty}
               </div>
 
-              {/* Короткое описание, максимум 2 строки */}
               {m.description && (
                 <div
                   style={{
@@ -172,7 +201,6 @@ export const ProfileScreen: React.FC<Props> = ({
                 </div>
               )}
 
-              {/* Кнопка действия */}
               <Button
                 mode="filled"
                 size="s"
