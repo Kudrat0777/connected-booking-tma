@@ -5,12 +5,10 @@ import { ScreenLayout } from '../components/ScreenLayout';
 import { SectionCard } from '../components/SectionCard';
 import { Button } from '@telegram-apps/telegram-ui';
 import { StatusBadge } from '../components/StatusBadge';
-import {
-  Icon20UserOutline,
-  Icon20RecentOutline,
-} from '@vkontakte/icons';
+import { Icon20UserOutline, Icon20RecentOutline } from '@vkontakte/icons';
 import '../css/MyBookingsScreen.css';
 import { UpcomingEmptyState } from '../components/UpcomingEmptyState';
+import { Tab } from '@headlessui/react';
 
 type Props = {
   telegramId: number;
@@ -38,9 +36,7 @@ export const MyBookingsScreen: React.FC<Props> = ({
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [cancellingId, setCancellingId] = useState<number | null>(
-    null,
-  );
+  const [cancellingId, setCancellingId] = useState<number | null>(null);
   const [segment, setSegment] = useState<Segment>('upcoming');
 
   const load = async () => {
@@ -71,9 +67,7 @@ export const MyBookingsScreen: React.FC<Props> = ({
       } catch (e) {
         if (!cancelled) {
           console.error(e);
-          setError(
-            'Не удалось загрузить ваши записи. Попробуйте позже.',
-          );
+          setError('Не удалось загрузить ваши записи. Попробуйте позже.');
         }
       } finally {
         if (!cancelled) {
@@ -122,37 +116,31 @@ export const MyBookingsScreen: React.FC<Props> = ({
   };
 
   const currentList = segment === 'upcoming' ? upcoming : past;
-  const currentHeader =
-    segment === 'upcoming' ? 'Предстоящие' : 'Прошедшие';
+  const currentHeader = segment === 'upcoming' ? 'Предстоящие' : 'Прошедшие';
 
   return (
     <ScreenLayout title="Мои записи" onBack={onBack}>
-      {/* Кастомный переключатель Предстоящие/Прошедшие */}
-      <div className="mybookings-segment-root">
-        <button
-          type="button"
-          className={
-            'mybookings-segment-item' +
-            (segment === 'upcoming'
-              ? ' mybookings-segment-item_active'
-              : '')
-          }
-          onClick={() => setSegment('upcoming')}
+      {/* HeadlessUI Tab.Group — controlled via selectedIndex */}
+      <div className="hb-tabs-wrapper">
+        <Tab.Group
+          selectedIndex={segment === 'upcoming' ? 0 : 1}
+          onChange={(index) => setSegment(index === 0 ? 'upcoming' : 'past')}
         >
-          Предстоящие
-        </button>
-        <button
-          type="button"
-          className={
-            'mybookings-segment-item' +
-            (segment === 'past'
-              ? ' mybookings-segment-item_active'
-              : '')
-          }
-          onClick={() => setSegment('past')}
-        >
-          Прошедшие
-        </button>
+          <div className="hb-tabs-center">
+            <Tab.List className="hb-tabs-list" role="tablist" aria-label="Мои записи">
+              <Tab className={({ selected }) =>
+                selected ? 'hb-tab hb-tab--selected' : 'hb-tab'
+              }>
+                Предстоящие
+              </Tab>
+              <Tab className={({ selected }) =>
+                selected ? 'hb-tab hb-tab--selected' : 'hb-tab'
+              }>
+                Прошедшие
+              </Tab>
+            </Tab.List>
+          </div>
+        </Tab.Group>
       </div>
 
       {loading && <div>Загрузка...</div>}
@@ -163,122 +151,54 @@ export const MyBookingsScreen: React.FC<Props> = ({
       )}
 
       {!loading && !error && bookings.length > 0 && (
-        <SectionCard header={currentHeader}>
+        <SectionCard header={currentHeader} className="sectioncard--tight">
           {currentList.length === 0 && (
-              <>
-                {segment === 'upcoming' ? (
-                  <UpcomingEmptyState onGoToServices={onGoToServices} />
-                ) : (
-                  <div style={{ padding: '8px 0' }}>
-                    Нет прошедших записей.
-                  </div>
-                )}
-              </>
-            )}
+            <>
+              {segment === 'upcoming' ? (
+                <UpcomingEmptyState onGoToServices={onGoToServices} />
+              ) : (
+                <div style={{ padding: '8px 0' }}>Нет прошедших записей.</div>
+              )}
+            </>
+          )}
 
-          {/* ПРЕДСТОЯЩИЕ */}
-          {segment === 'upcoming' &&
-            currentList.map((b) => (
-              <div key={b.id} className="mybookings-card">
-                <div className="mybookings-card-header">
-                  <div className="mybookings-card-title">
-                    {b.service_name ||
-                      b.slot.service?.name ||
-                      'Услуга'}
-                  </div>
-                  <div className="mybookings-status-chip-wrapper">
-                    <span
-                      className={
-                        'mybookings-status-chip ' +
-                        `mybookings-status-chip_${b.status}`
-                      }
-                    >
-                      <StatusBadge status={b.status} />
-                    </span>
-                  </div>
+          {/* Список записей */}
+          {currentList.map((b) => (
+            <div key={b.id} className="mybookings-card">
+              <div className="mybookings-card-header">
+                <div className="mybookings-card-title">
+                  {b.service_name || b.slot.service?.name || 'Услуга'}
                 </div>
-
-                <div className="mybookings-row">
-                  <span className="mybookings-row-icon">
-                    <Icon20UserOutline />
-                  </span>
-                  <span className="mybookings-row-text">
-                    {b.master_name ||
-                      b.slot.service?.master_name ||
-                      'Мастер не указан'}
+                <div className="mybookings-status-chip-wrapper">
+                  <span className={'mybookings-status-chip ' + `mybookings-status-chip_${b.status}`}>
+                    <StatusBadge status={b.status} />
                   </span>
                 </div>
+              </div>
 
-                <div className="mybookings-row">
-                  <span className="mybookings-row-icon">
-                    <Icon20RecentOutline />
-                  </span>
-                  <span className="mybookings-row-text">
-                    {formatDateTime(b.slot.time)}
-                  </span>
-                </div>
+              <div className="mybookings-row">
+                <span className="mybookings-row-icon">
+                  <Icon20UserOutline />
+                </span>
+                <span className="mybookings-row-text">
+                  {b.master_name || b.slot.service?.master_name || 'Мастер не указан'}
+                </span>
+              </div>
 
-                <Button
-                  size="m"
-                  mode="outline"
-                  onClick={() => handleCancel(b)}
-                  disabled={cancellingId === b.id}
-                  style={{
-                    width: '100%',
-                    marginTop: 10,
-                  }}
-                >
-                  {cancellingId === b.id
-                    ? 'Отмена...'
-                    : 'Отменить запись'}
+              <div className="mybookings-row">
+                <span className="mybookings-row-icon">
+                  <Icon20RecentOutline />
+                </span>
+                <span className="mybookings-row-text">{formatDateTime(b.slot.time)}</span>
+              </div>
+
+              {segment === 'upcoming' && (
+                <Button size="m" mode="outline" onClick={() => handleCancel(b)} disabled={cancellingId === b.id} style={{ width: '100%', marginTop: 10 }}>
+                  {cancellingId === b.id ? 'Отмена...' : 'Отменить запись'}
                 </Button>
-              </div>
-            ))}
-
-          {/* ПРОШЕДШИЕ */}
-          {segment === 'past' &&
-            currentList.length > 0 &&
-            currentList.map((b) => (
-              <div key={b.id} className="mybookings-card">
-                <div className="mybookings-card-header">
-                  <div className="mybookings-card-title">
-                    {b.service_name ||
-                      b.slot.service?.name ||
-                      'Услуга'}
-                  </div>
-                  <div className="mybookings-status-chip-wrapper">
-                    <span
-                      className={
-                        'mybookings-status-chip ' +
-                        `mybookings-status-chip_${b.status}`
-                      }
-                    >
-                      <StatusBadge status={b.status} />
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mybookings-row">
-                  <span className="mybookings-row-icon">
-                    <Icon20UserOutline />
-                  </span>
-                  <span className="mybookings-row-text">
-                    {b.master_name ||
-                      b.slot.service?.master_name ||
-                      'Мастер не указан'}
-                  </span>
-                </div>
-
-                <div className="mybookings-row">
-                  <span className="mybookings-row-icon">
-                    <Icon20RecentOutline />
-                  </span>
-                  <span className="mybookings-row-text">
-                    {formatDateTime(b.slot.time)}
-                  </span>
-                </div>
-              </div>
-            ))}
+              )}
+            </div>
+          ))}
         </SectionCard>
       )}
     </ScreenLayout>

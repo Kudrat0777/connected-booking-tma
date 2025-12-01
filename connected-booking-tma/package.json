@@ -15,6 +15,7 @@
     "predeploy": "npm run build"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.9",
     "@telegram-apps/analytics": "^1.4.4",
     "@telegram-apps/telegram-ui": "^2.1.13",
     "@telegram-mini-apps/ui": "^0.0.10",
