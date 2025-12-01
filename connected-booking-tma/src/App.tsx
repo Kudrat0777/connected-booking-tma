@@ -1,77 +1,89 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { AppRoot } from '@telegram-apps/telegram-ui';
 import { WelcomeScreen } from './screens/WelcomeScreen';
 import { ServicesScreen } from './screens/ServicesScreen';
 import { SlotsScreen } from './screens/SlotsScreen';
 import { BookingConfirmScreen } from './screens/BookingConfirmScreen';
-import type { Service, Slot, Booking } from './helpers/api';
-import { useTelegramWebApp } from './hooks/useTelegramWebApp';
-import { getUserFromQuery } from './helpers/telegramQueryUser';
 import { ProfileScreen } from './screens/ProfileScreen';
+import { SettingsScreen } from './screens/SettingsScreen';
+import type { Service, Slot, Booking } from './helpers/api';
+import { getUserFromQuery } from './helpers/telegramQueryUser';
 
-type Screen =
-  | 'welcome'
-  | 'services'
-  | 'slots'
-  | 'bookingConfirm'
-  | 'bookingDone'
-  | 'profile';
-
+type Screen = 'welcome' | 'services' | 'slots' | 'bookingConfirm' | 'bookingDone' | 'profile' | 'settings';
 type MainTab = 'bookings' | 'masters' | 'settings';
 
-type TelegramUser = {
-  id: number;
-  username?: string;
-  photo_url?: string;
-  first_name?: string;
-  last_name?: string;
-};
-
 const App: React.FC = () => {
-  const webApp = useTelegramWebApp();
-  const queryUser = getUserFromQuery();
+  const tg = (window as any).Telegram?.WebApp;
+  const [appearance, setAppearance] = useState<'light' | 'dark'>('light');
 
-  const user: TelegramUser | null = useMemo(() => {
-    const raw = (webApp as any)?.initDataUnsafe?.user;
-    if (raw) {
-      return {
-        id: raw.id,
-        username: raw.username,
-        photo_url: raw.photo_url,
-        first_name: raw.first_name,
-        last_name: raw.last_name,
-      };
-    }
+  useEffect(() => {
+    if (!tg) return;
 
-    if (queryUser) {
-      return {
-        id: queryUser.id,
-        username: queryUser.username,
-      };
-    }
+    // Эта функция берет цвета из Telegram (themeParams)
+    const bindThemeParams = () => {
+      const params = tg.themeParams;
+      const root = document.documentElement;
 
-    return null;
-  }, [webApp, queryUser]);
+      // 1. Определяем, темная ли тема (для пропса appearance)
+      const isDark = tg.colorScheme === 'dark';
+      setAppearance(isDark ? 'dark' : 'light');
 
+      if (params.bg_color) {
+        document.body.style.backgroundColor = params.bg_color;
+        root.style.setProperty('background-color', params.bg_color);
+      }
+
+      if (params.bg_color) {
+        root.style.setProperty('--tgui--bg_color', params.bg_color);
+        root.style.setProperty('--tgui--secondary_bg_color', params.secondary_bg_color || params.bg_color);
+      }
+
+      if (params.text_color) {
+        root.style.setProperty('--tgui--text_color', params.text_color);
+        root.style.setProperty('--tgui--subtitle_text_color', params.hint_color || '#888');
+      }
+
+      if (params.hint_color) {
+        root.style.setProperty('--tgui--hint_color', params.hint_color);
+      }
+
+      if (params.button_color) {
+        root.style.setProperty('--tgui--button_color', params.button_color);
+        root.style.setProperty('--tgui--button_text_color', params.button_text_color || '#fff');
+      }
+
+      if (params.link_color) {
+        root.style.setProperty('--tgui--link_color', params.link_color);
+      }
+
+      tg.setHeaderColor(params.bg_color);
+      tg.setBackgroundColor(params.bg_color);
+    };
+
+    tg.ready();
+    tg.expand();
+    bindThemeParams();
+
+    tg.onEvent('themeChanged', bindThemeParams);
+    return () => tg.offEvent('themeChanged', bindThemeParams);
+  }, [tg]);
+  // ---------------------------
+
+  const user = useMemo(() => {
+    if (tg?.initDataUnsafe?.user) return tg.initDataUnsafe.user;
+    return getUserFromQuery();
+  }, [tg]);
+
+  // Навигация
   const [screen, setScreen] = useState<Screen>('welcome');
   const [mainTab, setMainTab] = useState<MainTab>('bookings');
-
-  const [selectedService, setSelectedService] = useState<Service | null>(
-    null,
-  );
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
-  const [createdBooking, setCreatedBooking] = useState<Booking | null>(
-    null,
-  );
-
-  // НОВОЕ: выбранный мастер (по имени) для фильтрации услуг
-  const [selectedMasterName, setSelectedMasterName] = useState<string | null>(
-    null,
-  );
+  const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
+  const [selectedMasterName, setSelectedMasterName] = useState<string | null>(null);
 
   const handleServiceSelected = (service: Service) => {
     setSelectedService(service);
-    setSelectedSlot(null);
     setScreen('slots');
   };
 
@@ -93,8 +105,16 @@ const App: React.FC = () => {
     setScreen('welcome');
   };
 
+  // Платформа
+  const platform = tg?.platform || 'base';
+  const isIos = ['macos', 'ios'].includes(platform);
+
   return (
-    <AppRoot>
+    <AppRoot
+      appearance={appearance}
+      platform={isIos ? 'ios' : 'base'}
+    >
+      {/* ЭКРАНЫ */}
       {screen === 'welcome' && (
         <WelcomeScreen
           onContinue={() => {
@@ -124,49 +144,37 @@ const App: React.FC = () => {
         />
       )}
 
-      {screen === 'bookingConfirm' &&
-        selectedService &&
-        selectedSlot && (
-          <BookingConfirmScreen
-            service={selectedService}
-            slot={selectedSlot}
-            onBack={() => setScreen('slots')}
-            onSuccess={handleBookingSuccess}
-            user={user}
-          />
-        )}
+      {screen === 'bookingConfirm' && selectedService && selectedSlot && (
+        <BookingConfirmScreen
+          service={selectedService}
+          slot={selectedSlot}
+          onBack={() => setScreen('slots')}
+          onSuccess={handleBookingSuccess}
+          user={user}
+        />
+      )}
 
       {screen === 'bookingDone' && createdBooking && (
-        <div style={{ padding: 20 }}>
-          <h2>Бронь создана!</h2>
-          <p>
-            Мастер:{' '}
-            {createdBooking.master_name || selectedService?.master_name}
+        <div style={{ padding: 20, minHeight: '100vh', background: 'var(--tgui--bg_color)' }}>
+          <h2 style={{ color: 'var(--tgui--text_color)' }}>Бронь создана!</h2>
+          <p style={{ color: 'var(--tgui--text_color)' }}>
+            Мастер: {createdBooking.master_name || selectedService?.master_name}
           </p>
-          <p>
-            Услуга:{' '}
-            {createdBooking.service_name || selectedService?.name}
+          <p style={{ color: 'var(--tgui--text_color)' }}>
+             Услуга: {createdBooking.service_name || selectedService?.name}
           </p>
-          <p>
-            Время:{' '}
-            {new Date(createdBooking.slot.time).toLocaleString(
-              'ru-RU',
-              {
-                day: '2-digit',
-                month: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-              },
-            )}
+          <p style={{ color: 'var(--tgui--text_color)' }}>
+             Время: {new Date(createdBooking.slot.time).toLocaleString('ru-RU')}
           </p>
-
           <button
             onClick={resetToStart}
             style={{
               marginTop: 16,
-              padding: '8px 16px',
+              padding: '10px 20px',
               borderRadius: 8,
               border: 'none',
+              background: 'var(--tgui--button_color)',
+              color: 'var(--tgui--button_text_color)',
               cursor: 'pointer',
             }}
           >
@@ -180,11 +188,17 @@ const App: React.FC = () => {
           telegramId={user.id}
           initialTab={mainTab}
           onBack={() => setScreen('welcome')}
-          // НОВОЕ: при переходе из профиля на услуги запоминаем мастера
           onGoToServices={(masterName) => {
             setSelectedMasterName(masterName || null);
             setScreen('services');
           }}
+        />
+      )}
+
+      {screen === 'settings' && user && (
+        <SettingsScreen
+          telegramId={user.id}
+          onBack={() => setScreen('profile')}
         />
       )}
     </AppRoot>

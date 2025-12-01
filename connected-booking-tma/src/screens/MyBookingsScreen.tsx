@@ -1,14 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import {
+  List,
+  Section,
+  Cell,
+  Button,
+  SegmentedControl,
+  Placeholder,
+  Text,
+  Spinner
+} from '@telegram-apps/telegram-ui';
+import { Icon20UserOutline, Icon20RecentOutline } from '@vkontakte/icons';
+
 import type { Booking } from '../helpers/api';
 import { fetchMyBookings, cancelBooking } from '../helpers/api';
 import { ScreenLayout } from '../components/ScreenLayout';
-import { SectionCard } from '../components/SectionCard';
-import { Button } from '@telegram-apps/telegram-ui';
 import { StatusBadge } from '../components/StatusBadge';
-import { Icon20UserOutline, Icon20RecentOutline } from '@vkontakte/icons';
-import '../css/MyBookingsScreen.css';
-import { UpcomingEmptyState } from '../components/UpcomingEmptyState';
-import { Tab } from '@headlessui/react';
 
 type Props = {
   telegramId: number;
@@ -20,7 +26,7 @@ function formatDateTime(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleString('ru-RU', {
     day: '2-digit',
-    month: '2-digit',
+    month: 'long',
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -47,159 +53,142 @@ export const MyBookingsScreen: React.FC<Props> = ({
       setBookings(data);
     } catch (e) {
       console.error(e);
-      setError('Не удалось загрузить ваши записи. Попробуйте позже.');
+      setError('Не удалось загрузить ваши записи.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await fetchMyBookings(telegramId);
-        if (!cancelled) {
-          setBookings(data);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          console.error(e);
-          setError('Не удалось загрузить ваши записи. Попробуйте позже.');
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
+    load();
   }, [telegramId]);
 
   const { upcoming, past } = useMemo(() => {
     const now = new Date();
     const up: Booking[] = [];
     const pa: Booking[] = [];
-
     bookings.forEach((b) => {
       const t = new Date(b.slot.time);
       if (t.getTime() >= now.getTime()) up.push(b);
       else pa.push(b);
     });
+    // Сортируем
+    up.sort((a, b) => new Date(a.slot.time).getTime() - new Date(b.slot.time).getTime());
+    pa.sort((a, b) => new Date(b.slot.time).getTime() - new Date(a.slot.time).getTime());
 
     return { upcoming: up, past: pa };
   }, [bookings]);
 
   const handleCancel = async (b: Booking) => {
-    if (!confirm('Отменить эту запись?')) return;
-
+    if (!window.confirm('Отменить эту запись?')) return;
     try {
       setCancellingId(b.id);
-      setError(null);
       await cancelBooking(b.id);
       await load();
     } catch (e: any) {
-      console.error(e);
-      const msg =
-        e?.message?.includes('Нельзя отменить позже')
-          ? 'Нельзя отменить позже, чем за 30 минут до записи.'
-          : 'Не удалось отменить запись. Попробуйте позже.';
-      setError(msg);
+      alert('Не удалось отменить запись. Возможно, до начала осталось меньше 30 минут.');
     } finally {
       setCancellingId(null);
     }
   };
 
   const currentList = segment === 'upcoming' ? upcoming : past;
-  const currentHeader = segment === 'upcoming' ? 'Предстоящие' : 'Прошедшие';
 
   return (
     <ScreenLayout title="Мои записи" onBack={onBack}>
-      {/* HeadlessUI Tab.Group — controlled via selectedIndex */}
-      <div className="hb-tabs-wrapper">
-        <Tab.Group
-          selectedIndex={segment === 'upcoming' ? 0 : 1}
-          onChange={(index) => setSegment(index === 0 ? 'upcoming' : 'past')}
+      <div style={{ padding: '10px 16px' }}>
+        <SegmentedControl
+          size="m"
         >
-          <div className="hb-tabs-center">
-            <Tab.List className="hb-tabs-list" role="tablist" aria-label="Мои записи">
-              <Tab className={({ selected }) =>
-                selected ? 'hb-tab hb-tab--selected' : 'hb-tab'
-              }>
-                Предстоящие
-              </Tab>
-              <Tab className={({ selected }) =>
-                selected ? 'hb-tab hb-tab--selected' : 'hb-tab'
-              }>
-                Прошедшие
-              </Tab>
-            </Tab.List>
-          </div>
-        </Tab.Group>
+          <SegmentedControl.Item
+            selected={segment === 'upcoming'}
+            onClick={() => setSegment('upcoming')}
+          >
+            Предстоящие
+          </SegmentedControl.Item>
+          <SegmentedControl.Item
+            selected={segment === 'past'}
+            onClick={() => setSegment('past')}
+          >
+            Прошедшие
+          </SegmentedControl.Item>
+        </SegmentedControl>
       </div>
 
-      {loading && <div>Загрузка...</div>}
-      {error && <div style={{ color: 'red' }}>{error}</div>}
-
-      {!loading && !error && bookings.length === 0 && (
-        <div>Пока нет ни одной записи.</div>
+      {loading && (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: 20 }}>
+           <Spinner size="m" />
+        </div>
       )}
 
-      {!loading && !error && bookings.length > 0 && (
-        <SectionCard header={currentHeader} className="sectioncard--tight">
-          {currentList.length === 0 && (
-            <>
-              {segment === 'upcoming' ? (
-                <UpcomingEmptyState onGoToServices={onGoToServices} />
-              ) : (
-                <div style={{ padding: '8px 0' }}>Нет прошедших записей.</div>
-              )}
-            </>
+      {!loading && error && (
+         <Placeholder header="Ошибка" description={error}>
+            <Button size="s" onClick={load}>Повторить</Button>
+         </Placeholder>
+      )}
+
+      {!loading && !error && currentList.length === 0 && (
+        <Placeholder
+          header={segment === 'upcoming' ? 'Нет записей' : 'История пуста'}
+          description={
+            segment === 'upcoming'
+              ? 'У вас нет предстоящих визитов.'
+              : 'Здесь появятся ваши завершенные услуги.'
+          }
+        >
+          {segment === 'upcoming' && onGoToServices && (
+             <Button size="m" onClick={onGoToServices}>Записаться</Button>
           )}
+        </Placeholder>
+      )}
 
-          {/* Список записей */}
-          {currentList.map((b) => (
-            <div key={b.id} className="mybookings-card">
-              <div className="mybookings-card-header">
-                <div className="mybookings-card-title">
-                  {b.service_name || b.slot.service?.name || 'Услуга'}
-                </div>
-                <div className="mybookings-status-chip-wrapper">
-                  <span className={'mybookings-status-chip ' + `mybookings-status-chip_${b.status}`}>
-                    <StatusBadge status={b.status} />
-                  </span>
-                </div>
-              </div>
+      {!loading && !error && currentList.length > 0 && (
+        <List style={{ background: 'var(--tgui--secondary_bg_color)', minHeight: '100%' }}>
+          {currentList.map((b) => {
+             const serviceName = b.service_name || b.slot.service?.name || 'Услуга';
+             const masterName = b.master_name || b.slot.service?.master_name || 'Мастер';
+             const timeStr = formatDateTime(b.slot.time);
 
-              <div className="mybookings-row">
-                <span className="mybookings-row-icon">
-                  <Icon20UserOutline />
-                </span>
-                <span className="mybookings-row-text">
-                  {b.master_name || b.slot.service?.master_name || 'Мастер не указан'}
-                </span>
-              </div>
+             return (
+               <Section key={b.id}>
+                 <Cell
+                   before={<Icon20RecentOutline />} /* Иконка часов/календаря */
+                   description={timeStr}
+                   multiline
+                 >
+                   {serviceName}
+                 </Cell>
+                 <Cell
+                   before={<Icon20UserOutline />} /* Иконка пользователя */
+                 >
+                   {masterName}
+                 </Cell>
 
-              <div className="mybookings-row">
-                <span className="mybookings-row-icon">
-                  <Icon20RecentOutline />
-                </span>
-                <span className="mybookings-row-text">{formatDateTime(b.slot.time)}</span>
-              </div>
+                 <Cell>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span>Статус:</span>
+                      <StatusBadge status={b.status} />
+                    </div>
+                 </Cell>
 
-              {segment === 'upcoming' && (
-                <Button size="m" mode="outline" onClick={() => handleCancel(b)} disabled={cancellingId === b.id} style={{ width: '100%', marginTop: 10 }}>
-                  {cancellingId === b.id ? 'Отмена...' : 'Отменить запись'}
-                </Button>
-              )}
-            </div>
-          ))}
-        </SectionCard>
+                 {segment === 'upcoming' && b.status !== 'canceled' && (
+                   <Cell>
+                     <Button
+                        mode="bezeled"
+                        size="m"
+                        stretched
+                        disabled={cancellingId === b.id}
+                        onClick={() => handleCancel(b)}
+                        style={{ color: 'var(--tgui--destructive_text_color)' }}
+                     >
+                       {cancellingId === b.id ? 'Отмена...' : 'Отменить запись'}
+                     </Button>
+                   </Cell>
+                 )}
+               </Section>
+             );
+          })}
+        </List>
       )}
     </ScreenLayout>
   );
