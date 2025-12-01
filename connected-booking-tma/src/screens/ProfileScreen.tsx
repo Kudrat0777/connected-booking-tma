@@ -7,6 +7,7 @@ import {
 } from '@telegram-apps/telegram-ui';
 import { ScreenLayout } from '../components/ScreenLayout';
 import { MyBookingsScreen } from './MyBookingsScreen';
+import SettingsScreen from './SettingsScreen';
 import {
   Icon28CalendarOutline,
   Icon28UserStarBadgeOutline,
@@ -58,13 +59,27 @@ const MOCK_MASTERS: Master[] = [
   },
 ];
 
-// Очень компактный вывод рейтинга
 const renderTinyRating = (rating?: number) => {
   if (!rating) return null;
   return (
     <span className="ps-tiny-rating">
       ★ {rating.toFixed(1)}
     </span>
+  );
+};
+
+const PreparedSection: React.FC<{
+  label: string;
+  onClick?: () => void;
+}> = ({ label, onClick }) => {
+  return (
+    <div
+      onClick={onClick}
+      className="ps-prepared-row"
+      role={onClick ? 'button' : undefined}
+    >
+      <div className="ps-prepared-row__label">{label}</div>
+    </div>
   );
 };
 
@@ -156,7 +171,7 @@ export const ProfileScreen: React.FC<Props> = ({
                 className="ps-input-field"
               />
             </div>
-            {/* ПРЕДЛОЖЕНИЯ УБРАНЫ */}
+            {/* Предложения выключены */}
           </div>
         </List>
 
@@ -202,6 +217,7 @@ export const ProfileScreen: React.FC<Props> = ({
     }
 
     if (currentTab === 'masters') {
+      // ВАЖНО: здесь вызываем renderMastersContent(), чтобы показать поиск и список мастеров
       return (
         <ScreenLayout title="Мастера" onBack={onBack}>
           {renderMastersContent()}
@@ -211,9 +227,14 @@ export const ProfileScreen: React.FC<Props> = ({
 
     if (currentTab === 'settings') {
       return (
-        <ScreenLayout title="Настройки" onBack={onBack}>
-          <div style={{ padding: 16 }}>Здесь позже появятся настройки (язык, уведомления и т.п.).</div>
-        </ScreenLayout>
+        <SettingsScreen
+          telegramId={telegramId}
+          onBack={onBack}
+          onLogout={() => {
+            // простой logout placeholder — добавь логику выхода
+            console.log('logout');
+          }}
+        />
       );
     }
 
@@ -234,3 +255,5 @@ export const ProfileScreen: React.FC<Props> = ({
     </div>
   );
 };
+
+export default ProfileScreen;
