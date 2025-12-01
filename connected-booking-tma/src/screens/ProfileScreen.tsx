@@ -4,7 +4,6 @@ import {
   Button,
   Avatar,
   List,
-  Input,
 } from '@telegram-apps/telegram-ui';
 import { ScreenLayout } from '../components/ScreenLayout';
 import { MyBookingsScreen } from './MyBookingsScreen';
@@ -14,6 +13,7 @@ import {
   Icon28SettingsOutline,
 } from '@vkontakte/icons';
 import lottie, { AnimationItem } from 'lottie-web';
+import '../css/ProfileScreen.css';
 
 type MainTab = 'bookings' | 'masters' | 'settings';
 
@@ -62,13 +62,7 @@ const MOCK_MASTERS: Master[] = [
 const renderTinyRating = (rating?: number) => {
   if (!rating) return null;
   return (
-    <span
-      style={{
-        fontSize: 11,
-        color: 'rgba(255,255,255,0.7)',
-        whiteSpace: 'nowrap',
-      }}
-    >
+    <span className="ps-tiny-rating">
       ★ {rating.toFixed(1)}
     </span>
   );
@@ -148,163 +142,49 @@ export const ProfileScreen: React.FC<Props> = ({
 
   const renderMastersContent = () => {
     return (
-      <div style={{ padding: 12 }}>
-        {/* Поисковая строка */}
-        <List
-          style={{
-            marginBottom: 12,
-            background: 'var(--tgui--secondary_bg_color)',
-            borderRadius: 12,
-          }}
-        >
-          <Input
-            header="Поиск по мастерам и услугам"
-            placeholder="Имя, услуга, описание..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            status={isEmptyResult ? 'error' : 'default'}
-            after={
-              search ? (
-                <button
-                  type="button"
-                  onClick={() => setSearch('')}
-                  style={{
-                    border: 'none',
-                    background: 'transparent',
-                    color: 'var(--tgui--hint_color)',
-                    cursor: 'pointer',
-                    fontSize: 18,
-                    padding: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  ×
-                </button>
-              ) : null
-            }
-          />
+      <div className="ps-outer" style={{ padding: 12 }}>
+        {/* Упрощённый аккуратный input — без предложений */}
+        <List style={{ marginBottom: 12, background: 'transparent' }}>
+          <div className="ps-search-wrap">
+            <div className="ps-search-label">Поиск по мастерам и услугам</div>
+
+            <div className="ps-search-input">
+              <input
+                placeholder="Имя, услуга, описание..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="ps-input-field"
+              />
+            </div>
+            {/* ПРЕДЛОЖЕНИЯ УБРАНЫ */}
+          </div>
         </List>
 
         {/* Пустое состояние, если никого не нашли */}
         {isEmptyResult && (
-          <div
-            style={{
-              padding: '32px 16px 24px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textAlign: 'center',
-              gap: 8,
-              color: 'rgba(255,255,255,0.9)',
-            }}
-          >
-            <div
-              ref={emptyLottieContainerRef}
-              style={{ width: 160, height: 160 }}
-              aria-hidden="true"
-            />
-
-            <div
-              style={{
-                fontSize: 15,
-                fontWeight: 500,
-                marginTop: 4,
-              }}
-            >
-              Ничего не нашли
-            </div>
-            <div
-              style={{
-                fontSize: 13,
-                color: 'rgba(255,255,255,0.7)',
-                maxWidth: 260,
-              }}
-            >
-              Попробуйте изменить запрос или очистить поле поиска.
-            </div>
+          <div className="ps-empty">
+            <div ref={emptyLottieContainerRef} className="ps-empty__anim" aria-hidden="true" />
+            <div className="ps-empty__title">Ничего не нашли</div>
+            <div className="ps-empty__desc">Попробуйте изменить запрос или очистить поле поиска.</div>
           </div>
         )}
 
-        {/* Список мастеров, если есть совпадения или поиск пустой */}
+        {/* Список мастеров */}
         {(!hasQuery || list.length > 0) &&
           list.map((m) => (
-            <div
-              key={m.id}
-              style={{
-                marginBottom: 10,
-                borderRadius: 12,
-                backgroundColor: 'rgba(255,255,255,0.02)',
-                border: '1px solid rgba(255,255,255,0.06)',
-                padding: 10,
-                display: 'flex',
-                gap: 10,
-              }}
-            >
-              <Avatar
-                size={48}
-                src={m.avatarUrl}
-                fallbackName={m.name}
-              />
-
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    gap: 8,
-                    marginBottom: 2,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontWeight: 600,
-                      fontSize: 15,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {m.name}
-                  </div>
+            <div key={m.id} className="ps-master-row">
+              <Avatar size={48} src={m.avatarUrl} fallbackName={m.name} />
+              <div className="ps-master-body">
+                <div className="ps-master-head">
+                  <div className="ps-master-name">{m.name}</div>
                   {renderTinyRating(m.rating)}
                 </div>
 
-                <div
-                  style={{
-                    fontSize: 13,
-                    color: 'rgba(255,255,255,0.85)',
-                    marginBottom: 2,
-                  }}
-                >
-                  {m.specialty}
-                </div>
+                <div className="ps-master-spec">{m.specialty}</div>
 
-                {m.description && (
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: 'rgba(255,255,255,0.7)',
-                      marginBottom: 6,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                    }}
-                  >
-                    {m.description}
-                  </div>
-                )}
+                {m.description && <div className="ps-master-desc">{m.description}</div>}
 
-                <Button
-                  mode="filled"
-                  size="s"
-                  onClick={() => handleMasterBook(m)}
-                  style={{ width: '100%' }}
-                >
+                <Button mode="filled" size="s" onClick={() => handleMasterBook(m)} style={{ width: '100%' }}>
                   Записаться
                 </Button>
               </div>
@@ -317,11 +197,7 @@ export const ProfileScreen: React.FC<Props> = ({
   const renderContent = () => {
     if (currentTab === 'bookings') {
       return (
-        <MyBookingsScreen
-          telegramId={telegramId}
-          onBack={onBack}
-          onGoToServices={onGoToServices}
-        />
+        <MyBookingsScreen telegramId={telegramId} onBack={onBack} onGoToServices={onGoToServices} />
       );
     }
 
@@ -336,9 +212,7 @@ export const ProfileScreen: React.FC<Props> = ({
     if (currentTab === 'settings') {
       return (
         <ScreenLayout title="Настройки" onBack={onBack}>
-          <div style={{ padding: 16 }}>
-            Здесь позже появятся настройки (язык, уведомления и т.п.).
-          </div>
+          <div style={{ padding: 16 }}>Здесь позже появятся настройки (язык, уведомления и т.п.).</div>
         </ScreenLayout>
       );
     }
@@ -347,23 +221,12 @@ export const ProfileScreen: React.FC<Props> = ({
   };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-      }}
-    >
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ flex: 1, minHeight: 0 }}>{renderContent()}</div>
 
       <Tabbar>
         {tabs.map(({ id, text, Icon }) => (
-          <Tabbar.Item
-            key={id}
-            text={text}
-            selected={id === currentTab}
-            onClick={() => setCurrentTab(id)}
-          >
+          <Tabbar.Item key={id} text={text} selected={id === currentTab} onClick={() => setCurrentTab(id)}>
             <Icon />
           </Tabbar.Item>
         ))}
