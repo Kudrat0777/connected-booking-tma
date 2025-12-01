@@ -108,13 +108,22 @@ export const ProfileScreen: React.FC<Props> = ({
   const hasQuery = Boolean(search.trim());
   const isEmptyResult = hasQuery && list.length === 0;
 
-  // --- Lottie для пустого состояния поиска ---
+  // Lottie для пустого состояния поиска
   const emptyLottieContainerRef = useRef<HTMLDivElement | null>(null);
   const emptyLottieInstanceRef = useRef<AnimationItem | null>(null);
 
   useEffect(() => {
-    // Инициализируем анимацию один раз, когда есть контейнер
-    if (!emptyLottieContainerRef.current) return;
+    if (!isEmptyResult) {
+      if (emptyLottieInstanceRef.current) {
+        emptyLottieInstanceRef.current.destroy();
+        emptyLottieInstanceRef.current = null;
+      }
+      return;
+    }
+
+    if (!emptyLottieContainerRef.current) {
+      return;
+    }
 
     if (emptyLottieInstanceRef.current) {
       emptyLottieInstanceRef.current.destroy();
@@ -133,8 +142,9 @@ export const ProfileScreen: React.FC<Props> = ({
 
     return () => {
       anim.destroy();
+      emptyLottieInstanceRef.current = null;
     };
-  }, []);
+  }, [isEmptyResult]);
 
   const renderMastersContent = () => {
     return (
@@ -153,7 +163,6 @@ export const ProfileScreen: React.FC<Props> = ({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             status={isEmptyResult ? 'error' : 'default'}
-            // безопасный крестик без внешних иконок
             after={
               search ? (
                 <button
@@ -205,7 +214,7 @@ export const ProfileScreen: React.FC<Props> = ({
                 marginTop: 4,
               }}
             >
-              Мастера не найдены
+              Ничего не нашли
             </div>
             <div
               style={{
