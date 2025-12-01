@@ -4,6 +4,11 @@ import {
   Button,
   Avatar,
   List,
+  Section,
+  Cell,
+  Input,
+  Placeholder,
+  Text
 } from '@telegram-apps/telegram-ui';
 import { ScreenLayout } from '../components/ScreenLayout';
 import { MyBookingsScreen } from './MyBookingsScreen';
@@ -12,9 +17,25 @@ import {
   Icon28CalendarOutline,
   Icon28UserStarBadgeOutline,
   Icon28SettingsOutline,
+  Icon24Search, // Добавили иконку поиска
 } from '@vkontakte/icons';
-import lottie, { AnimationItem } from 'lottie-web';
-import '../css/ProfileScreen.css';
+import lottie from 'lottie-web';
+
+const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
+  const container = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!container.current) return;
+    const anim = lottie.loadAnimation({
+      container: container.current,
+      renderer: 'svg',
+      loop: true,
+      autoplay: true,
+      path: src,
+    });
+    return () => anim.destroy();
+  }, [src]);
+  return <div ref={container} style={{ width: size, height: size, margin: '0 auto 16px' }} />;
+};
 
 type MainTab = 'bookings' | 'masters' | 'settings';
 
@@ -34,7 +55,7 @@ type Master = {
   rating?: number; // 0–5
 };
 
-const tabs: { id: MainTab; text: string; Icon: React.ComponentType }[] = [
+const tabs: { id: MainTab; text: string; Icon: React.ComponentType<any> }[] = [
   { id: 'bookings', text: 'Записи', Icon: Icon28CalendarOutline },
   { id: 'masters', text: 'Мастера', Icon: Icon28UserStarBadgeOutline },
   { id: 'settings', text: 'Настройки', Icon: Icon28SettingsOutline },
@@ -59,30 +80,6 @@ const MOCK_MASTERS: Master[] = [
   },
 ];
 
-const renderTinyRating = (rating?: number) => {
-  if (!rating) return null;
-  return (
-    <span className="ps-tiny-rating">
-      ★ {rating.toFixed(1)}
-    </span>
-  );
-};
-
-const PreparedSection: React.FC<{
-  label: string;
-  onClick?: () => void;
-}> = ({ label, onClick }) => {
-  return (
-    <div
-      onClick={onClick}
-      className="ps-prepared-row"
-      role={onClick ? 'button' : undefined}
-    >
-      <div className="ps-prepared-row__label">{label}</div>
-    </div>
-  );
-};
-
 export const ProfileScreen: React.FC<Props> = ({
   telegramId,
   initialTab = 'bookings',
@@ -99,113 +96,95 @@ export const ProfileScreen: React.FC<Props> = ({
     }
   };
 
-  // Поиск по имени, спецу и описанию (регистр не важен)
   const filteredMasters = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return masters;
     return masters.filter((m) => {
       const inName = m.name.toLowerCase().includes(q);
       const inSpec = m.specialty.toLowerCase().includes(q);
-      const inDesc = m.description
-        ? m.description.toLowerCase().includes(q)
-        : false;
+      const inDesc = m.description ? m.description.toLowerCase().includes(q) : false;
       return inName || inSpec || inDesc;
     });
   }, [masters, search]);
 
-  const list = filteredMasters;
   const hasQuery = Boolean(search.trim());
-  const isEmptyResult = hasQuery && list.length === 0;
-
-  // Lottie для пустого состояния поиска
-  const emptyLottieContainerRef = useRef<HTMLDivElement | null>(null);
-  const emptyLottieInstanceRef = useRef<AnimationItem | null>(null);
-
-  useEffect(() => {
-    if (!isEmptyResult) {
-      if (emptyLottieInstanceRef.current) {
-        emptyLottieInstanceRef.current.destroy();
-        emptyLottieInstanceRef.current = null;
-      }
-      return;
-    }
-
-    if (!emptyLottieContainerRef.current) {
-      return;
-    }
-
-    if (emptyLottieInstanceRef.current) {
-      emptyLottieInstanceRef.current.destroy();
-      emptyLottieInstanceRef.current = null;
-    }
-
-    const anim = lottie.loadAnimation({
-      container: emptyLottieContainerRef.current,
-      renderer: 'svg',
-      loop: true,
-      autoplay: true,
-      path: '/stickers/duck_out.json',
-    });
-
-    emptyLottieInstanceRef.current = anim;
-
-    return () => {
-      anim.destroy();
-      emptyLottieInstanceRef.current = null;
-    };
-  }, [isEmptyResult]);
+  const isEmptyResult = hasQuery && filteredMasters.length === 0;
 
   const renderMastersContent = () => {
     return (
-      <div className="ps-outer" style={{ padding: 12 }}>
-        {/* Упрощённый аккуратный input — без предложений */}
-        <List style={{ marginBottom: 12, background: 'transparent' }}>
-          <div className="ps-search-wrap">
-            <div className="ps-search-label">Поиск по мастерам и услугам</div>
+      <List style={{ background: 'var(--tgui--secondary_bg_color)', minHeight: '100%' }}>
 
-            <div className="ps-search-input">
-              <input
-                placeholder="Имя, услуга, описание..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="ps-input-field"
-              />
-            </div>
-            {/* Предложения выключены */}
-          </div>
-        </List>
+        {/* Поиск */}
+        <div style={{ padding: '10px 16px 6px' }}>
+          <Input
+            header="Поиск мастера"
+            placeholder="Имя, услуга..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            before={<Icon24Search style={{ color: 'var(--tgui--hint_color)' }} />}
+            clearable // Добавляет крестик очистки
+          />
+        </div>
 
-        {/* Пустое состояние, если никого не нашли */}
+        {/* Пустое состояние поиска */}
         {isEmptyResult && (
-          <div className="ps-empty">
-            <div ref={emptyLottieContainerRef} className="ps-empty__anim" aria-hidden="true" />
-            <div className="ps-empty__title">Ничего не нашли</div>
-            <div className="ps-empty__desc">Попробуйте изменить запрос или очистить поле поиска.</div>
-          </div>
+          <Placeholder
+            header="Ничего не найдено"
+            description="Попробуйте изменить запрос"
+          >
+             <LottieIcon src="/stickers/duck_out.json" size={140} />
+          </Placeholder>
         )}
 
         {/* Список мастеров */}
-        {(!hasQuery || list.length > 0) &&
-          list.map((m) => (
-            <div key={m.id} className="ps-master-row">
-              <Avatar size={48} src={m.avatarUrl} fallbackName={m.name} />
-              <div className="ps-master-body">
-                <div className="ps-master-head">
-                  <div className="ps-master-name">{m.name}</div>
-                  {renderTinyRating(m.rating)}
-                </div>
+        {(!hasQuery || filteredMasters.length > 0) && (
+           <>
+             {filteredMasters.map((m) => (
+               <Section key={m.id}>
+                 <Cell
+                   // Аватар мастера
+                   before={<Avatar size={48} src={m.avatarUrl} fallbackIcon={<Icon28UserStarBadgeOutline />} />}
+                   // Описание (специальность + рейтинг)
+                   description={
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <span>{m.specialty}</span>
+                        {m.description && <span style={{ opacity: 0.7, fontSize: 12 }}>{m.description}</span>}
+                      </div>
+                   }
+                   after={
+                      m.rating && (
+                        <div style={{
+                           background: 'var(--tgui--section_bg_color)',
+                           padding: '4px 8px',
+                           borderRadius: 6,
+                           fontSize: 12,
+                           fontWeight: 600,
+                           color: 'orange'
+                        }}>
+                          ★ {m.rating.toFixed(1)}
+                        </div>
+                      )
+                   }
+                   multiline
+                 >
+                   {m.name}
+                 </Cell>
 
-                <div className="ps-master-spec">{m.specialty}</div>
-
-                {m.description && <div className="ps-master-desc">{m.description}</div>}
-
-                <Button mode="filled" size="s" onClick={() => handleMasterBook(m)} style={{ width: '100%' }}>
-                  Записаться
-                </Button>
-              </div>
-            </div>
-          ))}
-      </div>
+                 <Cell>
+                    <Button
+                      mode="filled"
+                      size="m"
+                      stretched
+                      onClick={() => handleMasterBook(m)}
+                    >
+                      Записаться
+                    </Button>
+                 </Cell>
+               </Section>
+             ))}
+           </>
+        )}
+      </List>
     );
   };
 
@@ -217,7 +196,6 @@ export const ProfileScreen: React.FC<Props> = ({
     }
 
     if (currentTab === 'masters') {
-      // ВАЖНО: здесь вызываем renderMastersContent(), чтобы показать поиск и список мастеров
       return (
         <ScreenLayout title="Мастера" onBack={onBack}>
           {renderMastersContent()}
@@ -230,10 +208,7 @@ export const ProfileScreen: React.FC<Props> = ({
         <SettingsScreen
           telegramId={telegramId}
           onBack={onBack}
-          onLogout={() => {
-            // простой logout placeholder — добавь логику выхода
-            console.log('logout');
-          }}
+          onLogout={() => console.log('logout')}
         />
       );
     }
@@ -242,12 +217,27 @@ export const ProfileScreen: React.FC<Props> = ({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ flex: 1, minHeight: 0 }}>{renderContent()}</div>
+    <div style={{
+       display: 'flex',
+       flexDirection: 'column',
+       height: '100vh',
+       overflow: 'hidden'
+    }}>
 
+      {/* Основной контент (скроллится внутри своих экранов) */}
+      <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+        {renderContent()}
+      </div>
+
+      {/* Нижняя панель навигации */}
       <Tabbar>
         {tabs.map(({ id, text, Icon }) => (
-          <Tabbar.Item key={id} text={text} selected={id === currentTab} onClick={() => setCurrentTab(id)}>
+          <Tabbar.Item
+            key={id}
+            text={text}
+            selected={id === currentTab}
+            onClick={() => setCurrentTab(id)}
+          >
             <Icon />
           </Tabbar.Item>
         ))}
