@@ -104,15 +104,18 @@ export const ProfileScreen: React.FC<Props> = ({
     });
   }, [masters, search]);
 
+  const list = filteredMasters;
+  const hasQuery = Boolean(search.trim());
+  const isEmptyResult = hasQuery && list.length === 0;
+
   // --- Lottie для пустого состояния поиска ---
   const emptyLottieContainerRef = useRef<HTMLDivElement | null>(null);
   const emptyLottieInstanceRef = useRef<AnimationItem | null>(null);
 
   useEffect(() => {
-    // Инициализируем анимацию только если контейнер есть
+    // Инициализируем анимацию один раз, когда есть контейнер
     if (!emptyLottieContainerRef.current) return;
 
-    // Чистим предыдущую
     if (emptyLottieInstanceRef.current) {
       emptyLottieInstanceRef.current.destroy();
       emptyLottieInstanceRef.current = null;
@@ -131,12 +134,9 @@ export const ProfileScreen: React.FC<Props> = ({
     return () => {
       anim.destroy();
     };
-  }, []); // один раз при монтировании экрана
+  }, []);
 
   const renderMastersContent = () => {
-    const list = filteredMasters;
-    const hasQuery = Boolean(search.trim());
-
     return (
       <div style={{ padding: 12 }}>
         {/* Поисковая строка */}
@@ -152,11 +152,34 @@ export const ProfileScreen: React.FC<Props> = ({
             placeholder="Имя, услуга, описание..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            status={isEmptyResult ? 'error' : 'default'}
+            // безопасный крестик без внешних иконок
+            after={
+              search ? (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    color: 'var(--tgui--hint_color)',
+                    cursor: 'pointer',
+                    fontSize: 18,
+                    padding: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  ×
+                </button>
+              ) : null
+            }
           />
         </List>
 
         {/* Пустое состояние, если никого не нашли */}
-        {hasQuery && list.length === 0 && (
+        {isEmptyResult && (
           <div
             style={{
               padding: '32px 16px 24px',
@@ -182,7 +205,7 @@ export const ProfileScreen: React.FC<Props> = ({
                 marginTop: 4,
               }}
             >
-              Ничего не найдено
+              Мастера не найдены
             </div>
             <div
               style={{
@@ -196,7 +219,8 @@ export const ProfileScreen: React.FC<Props> = ({
           </div>
         )}
 
-        {list.length > 0 &&
+        {/* Список мастеров, если есть совпадения или поиск пустой */}
+        {(!hasQuery || list.length > 0) &&
           list.map((m) => (
             <div
               key={m.id}
