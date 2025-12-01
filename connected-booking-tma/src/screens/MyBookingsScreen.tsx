@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   List,
   Section,
@@ -6,15 +6,37 @@ import {
   Button,
   SegmentedControl,
   Placeholder,
-  Text,
   Spinner
 } from '@telegram-apps/telegram-ui';
 import { Icon20UserOutline, Icon20RecentOutline } from '@vkontakte/icons';
+import lottie from 'lottie-web'; // Импортируем lottie
 
 import type { Booking } from '../helpers/api';
 import { fetchMyBookings, cancelBooking } from '../helpers/api';
 import { ScreenLayout } from '../components/ScreenLayout';
 import { StatusBadge } from '../components/StatusBadge';
+
+// --- Мини-компонент для Lottie ---
+const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
+  const container = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!container.current) return;
+
+    const anim = lottie.loadAnimation({
+      container: container.current,
+      renderer: 'svg',
+      loop: true,
+      autoplay: true,
+      path: src,
+    });
+
+    return () => anim.destroy();
+  }, [src]);
+
+  return <div ref={container} style={{ width: size, height: size, margin: '0 auto 16px' }} />;
+};
+// ---------------------------------
 
 type Props = {
   telegramId: number;
@@ -72,7 +94,6 @@ export const MyBookingsScreen: React.FC<Props> = ({
       if (t.getTime() >= now.getTime()) up.push(b);
       else pa.push(b);
     });
-    // Сортируем
     up.sort((a, b) => new Date(a.slot.time).getTime() - new Date(b.slot.time).getTime());
     pa.sort((a, b) => new Date(b.slot.time).getTime() - new Date(a.slot.time).getTime());
 
@@ -97,9 +118,7 @@ export const MyBookingsScreen: React.FC<Props> = ({
   return (
     <ScreenLayout title="Мои записи" onBack={onBack}>
       <div style={{ padding: '10px 16px' }}>
-        <SegmentedControl
-          size="m"
-        >
+        <SegmentedControl size="m">
           <SegmentedControl.Item
             selected={segment === 'upcoming'}
             onClick={() => setSegment('upcoming')}
@@ -116,7 +135,7 @@ export const MyBookingsScreen: React.FC<Props> = ({
       </div>
 
       {loading && (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
            <Spinner size="m" />
         </div>
       )}
@@ -129,15 +148,28 @@ export const MyBookingsScreen: React.FC<Props> = ({
 
       {!loading && !error && currentList.length === 0 && (
         <Placeholder
+          // Вставляем Lottie как дочерний элемент Placeholder
+          // Это стандартный паттерн в UI Kit для кастомных иконок/иллюстраций
           header={segment === 'upcoming' ? 'Нет записей' : 'История пуста'}
           description={
             segment === 'upcoming'
-              ? 'У вас нет предстоящих визитов.'
-              : 'Здесь появятся ваши завершенные услуги.'
+              ? 'У вас пока нет запланированных визитов. Самое время записаться!'
+              : 'Здесь будут храниться ваши завершенные услуги.'
           }
         >
+          {/* Анимация сверху */}
+          <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+            <LottieIcon
+              src={segment === 'upcoming' ? '/stickers/skeleton.json' : '/stickers/favorites.json'}
+              size={140}
+            />
+          </div>
+
+          {/* Кнопка действия (только для предстоящих) */}
           {segment === 'upcoming' && onGoToServices && (
-             <Button size="m" onClick={onGoToServices}>Записаться</Button>
+             <Button size="l" stretched onClick={onGoToServices} style={{ marginTop: 16 }}>
+               Записаться онлайн
+             </Button>
           )}
         </Placeholder>
       )}
@@ -152,14 +184,14 @@ export const MyBookingsScreen: React.FC<Props> = ({
              return (
                <Section key={b.id}>
                  <Cell
-                   before={<Icon20RecentOutline />} /* Иконка часов/календаря */
+                   before={<Icon20RecentOutline />}
                    description={timeStr}
                    multiline
                  >
                    {serviceName}
                  </Cell>
                  <Cell
-                   before={<Icon20UserOutline />} /* Иконка пользователя */
+                   before={<Icon20UserOutline />}
                  >
                    {masterName}
                  </Cell>
