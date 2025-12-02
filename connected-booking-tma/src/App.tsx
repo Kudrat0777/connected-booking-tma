@@ -14,7 +14,8 @@ import { MasterWelcomeScreen } from './screens/MasterWelcomeScreen';
 import { MasterRegistrationScreen } from './screens/MasterRegistrationScreen';
 import { MasterDashboardScreen } from './screens/MasterDashboardScreen';
 import { MasterScheduleScreen } from './screens/MasterScheduleScreen';
-import { MasterEditProfileScreen } from './screens/MasterEditProfileScreen'; // <--- ИМПОРТ
+import { MasterEditProfileScreen } from './screens/MasterEditProfileScreen';
+import { MasterAnalyticsScreen } from './screens/MasterAnalyticsScreen';
 
 import type { Service, Slot, Booking } from './helpers/api';
 import { getUserFromQuery } from './helpers/telegramQueryUser';
@@ -35,7 +36,8 @@ type Screen =
   | 'master_registration'
   | 'master_dashboard'
   | 'master_schedule'
-  | 'master_edit_profile'; // <--- НОВЫЙ ТИП
+  | 'master_edit_profile'
+  | 'master_analytics';
 
 type MainTab = 'bookings' | 'masters' | 'settings';
 
@@ -261,6 +263,13 @@ const App: React.FC = () => {
         />
       )}
 
+      {screen === 'master_analytics' && user && (
+        <MasterAnalyticsScreen
+          telegramId={user.id}
+          onBack={() => setScreen('master_dashboard')}
+        />
+      )}
+
       {screen === 'master_dashboard' && user && (
         <MasterDashboardScreen
           telegramId={user.id}
@@ -270,6 +279,7 @@ const App: React.FC = () => {
              loadCurrentMaster();
              setScreen('master_edit_profile');
           }}
+          onOpenAnalytics={() => setScreen('master_analytics')}
         />
       )}
 

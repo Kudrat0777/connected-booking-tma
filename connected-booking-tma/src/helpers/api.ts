@@ -265,3 +265,19 @@ export async function uploadMasterAvatar(telegramId: number, file: File) {
   if (!res.ok) throw new Error('Failed to upload avatar');
   return res.json(); // { avatar_url: "..." }
 }
+
+
+export type AnalyticsData = {
+  revenue_today: number;
+  revenue_week: number;
+  revenue_month: number;
+  total_bookings: number;
+  unique_clients: number;
+  top_services: { slot__service__name: string; count: number; revenue: number }[];
+};
+
+export async function fetchMasterAnalytics(telegramId: number): Promise<AnalyticsData> {
+  const res = await fetch(`${API_BASE}/masters/analytics/?telegram_id=${telegramId}`);
+  if (!res.ok) throw new Error('Failed to fetch analytics');
+  return res.json();
+}

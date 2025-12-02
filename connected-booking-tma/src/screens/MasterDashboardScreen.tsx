@@ -17,7 +17,8 @@ import {
   Icon28UserCircleOutline,
   Icon28CheckCircleOutline,
   Icon28CancelCircleOutline,
-  Icon28EditOutline // <--- ДОБАВЛЕНА ИКОНКА
+  Icon28EditOutline,
+  Icon28StatisticsOutline
 } from '@vkontakte/icons';
 
 import { fetchMasterBookings, confirmBooking, rejectBooking, fetchMyServices } from '../helpers/api';
@@ -27,7 +28,8 @@ type Props = {
   telegramId: number;
   onSwitchToClient: () => void;
   onOpenSchedule: () => void;
-  onEditProfile: () => void; // <--- НОВЫЙ ПРОПС
+  onEditProfile: () => void;
+  onOpenAnalytics: () => void;
 };
 
 type Tab = 'bookings' | 'services' | 'profile';
@@ -37,7 +39,8 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   telegramId,
   onSwitchToClient,
   onOpenSchedule,
-  onEditProfile // <---
+  onEditProfile,
+  onOpenAnalytics,
 }) => {
   const [activeTab, setActiveTab] = useState<Tab>('bookings');
 
@@ -216,6 +219,13 @@ export const MasterDashboardScreen: React.FC<Props> = ({
                expandable
              >
                 Редактировать профиль
+             </Cell>
+             <Cell
+                before={<Icon28StatisticsOutline />}
+                onClick={onOpenAnalytics}
+                expandable
+             >
+                Статистика и доходы
              </Cell>
           </Section>
 
