@@ -8,7 +8,7 @@ import { SlotsScreen } from './screens/SlotsScreen';
 import { BookingConfirmScreen } from './screens/BookingConfirmScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
-import { LeaveReviewScreen } from './screens/LeaveReviewScreen'; // <--- НОВЫЙ ИМПОРТ
+import { LeaveReviewScreen } from './screens/LeaveReviewScreen';
 
 // Master Screens
 import { MasterWelcomeScreen } from './screens/MasterWelcomeScreen';
@@ -17,14 +17,14 @@ import { MasterDashboardScreen } from './screens/MasterDashboardScreen';
 import { MasterScheduleScreen } from './screens/MasterScheduleScreen';
 import { MasterEditProfileScreen } from './screens/MasterEditProfileScreen';
 import { MasterAnalyticsScreen } from './screens/MasterAnalyticsScreen';
+import { MasterReviewsScreen } from './screens/MasterReviewsScreen'; // <--- ВАЖНО: ЭТОТ ИМПОРТ БЫЛ НУЖЕН
 
 import type { Service, Slot, Booking } from './helpers/api';
 import { getUserFromQuery } from './helpers/telegramQueryUser';
 
-const API_BASE = import.meta.env.VITE_API_BASE || '/api'; // Нужно для fetch
+const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
 type Screen =
-  // Client
   | 'welcome'
   | 'services'
   | 'slots'
@@ -32,14 +32,14 @@ type Screen =
   | 'bookingDone'
   | 'profile'
   | 'settings'
-  | 'leave_review' // <--- НОВЫЙ ЭКРАН
-  // Master
+  | 'leave_review'
   | 'master_welcome'
   | 'master_registration'
   | 'master_dashboard'
   | 'master_schedule'
   | 'master_edit_profile'
-  | 'master_analytics';
+  | 'master_analytics'
+  | 'master_reviews'; // <--- ТИП
 
 type MainTab = 'bookings' | 'masters' | 'settings';
 
@@ -53,33 +53,21 @@ const App: React.FC = () => {
     const bindThemeParams = () => {
       const params = tg.themeParams;
       const root = document.documentElement;
-
       const isDark = tg.colorScheme === 'dark';
       setAppearance(isDark ? 'dark' : 'light');
-
       if (params.bg_color) {
         document.body.style.backgroundColor = params.bg_color;
         root.style.setProperty('background-color', params.bg_color);
-      }
-
-      if (params.bg_color) {
         root.style.setProperty('--tgui--bg_color', params.bg_color);
         root.style.setProperty('--tgui--secondary_bg_color', params.secondary_bg_color || params.bg_color);
       }
-      if (params.text_color) {
-        root.style.setProperty('--tgui--text_color', params.text_color);
-        root.style.setProperty('--tgui--subtitle_text_color', params.hint_color || '#888');
-      }
-      if (params.hint_color) {
-        root.style.setProperty('--tgui--hint_color', params.hint_color);
-      }
+      if (params.text_color) root.style.setProperty('--tgui--text_color', params.text_color);
+      if (params.hint_color) root.style.setProperty('--tgui--hint_color', params.hint_color);
       if (params.button_color) {
         root.style.setProperty('--tgui--button_color', params.button_color);
         root.style.setProperty('--tgui--button_text_color', params.button_text_color || '#fff');
       }
-      if (params.link_color) {
-        root.style.setProperty('--tgui--link_color', params.link_color);
-      }
+      if (params.link_color) root.style.setProperty('--tgui--link_color', params.link_color);
 
       tg.setHeaderColor(params.bg_color);
       tg.setBackgroundColor(params.bg_color);
@@ -88,7 +76,6 @@ const App: React.FC = () => {
     tg.ready();
     tg.expand();
     bindThemeParams();
-
     tg.onEvent('themeChanged', bindThemeParams);
     return () => tg.offEvent('themeChanged', bindThemeParams);
   }, [tg]);
@@ -100,16 +87,11 @@ const App: React.FC = () => {
 
   const [screen, setScreen] = useState<Screen>('welcome');
   const [mainTab, setMainTab] = useState<MainTab>('bookings');
-
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
   const [selectedMasterName, setSelectedMasterName] = useState<string | null>(null);
-
-  // Состояние для отзыва
   const [reviewMaster, setReviewMaster] = useState<{id: number, name: string} | null>(null);
-
-  // Данные мастера для редактирования
   const [currentMaster, setCurrentMaster] = useState<any>(null);
 
   const loadCurrentMaster = async () => {
@@ -157,25 +139,15 @@ const App: React.FC = () => {
   const isIos = ['macos', 'ios'].includes(platform);
 
   return (
-    <AppRoot
-      appearance={appearance}
-      platform={isIos ? 'ios' : 'base'}
-    >
-      {/* --- CLIENT SCREENS --- */}
+    <AppRoot appearance={appearance} platform={isIos ? 'ios' : 'base'}>
 
+      {/* CLIENT SCREENS */}
       {screen === 'welcome' && (
         <WelcomeScreen
-          onContinue={() => {
-            setSelectedMasterName(null);
-            setScreen('services');
-          }}
-          onOpenMyBookings={() => {
-            setMainTab('bookings');
-            setScreen('profile');
-          }}
+          onContinue={() => { setSelectedMasterName(null); setScreen('services'); }}
+          onOpenMyBookings={() => { setMainTab('bookings'); setScreen('profile'); }}
         />
       )}
-
       {screen === 'services' && (
         <ServicesScreen
           onBack={() => setScreen('welcome')}
@@ -183,7 +155,6 @@ const App: React.FC = () => {
           selectedMasterName={selectedMasterName}
         />
       )}
-
       {screen === 'slots' && selectedService && (
         <SlotsScreen
           service={selectedService}
@@ -191,7 +162,6 @@ const App: React.FC = () => {
           onSlotSelected={handleSlotSelected}
         />
       )}
-
       {screen === 'bookingConfirm' && selectedService && selectedSlot && (
         <BookingConfirmScreen
           service={selectedService}
@@ -201,36 +171,12 @@ const App: React.FC = () => {
           user={user}
         />
       )}
-
       {screen === 'bookingDone' && createdBooking && (
         <div style={{ padding: 20, minHeight: '100vh', background: 'var(--tgui--bg_color)' }}>
           <h2 style={{ color: 'var(--tgui--text_color)' }}>Бронь создана!</h2>
-          <p style={{ color: 'var(--tgui--text_color)' }}>
-            Мастер: {createdBooking.master_name || selectedService?.master_name}
-          </p>
-          <p style={{ color: 'var(--tgui--text_color)' }}>
-            Услуга: {createdBooking.service_name || selectedService?.name}
-          </p>
-          <p style={{ color: 'var(--tgui--text_color)' }}>
-            Время: {new Date(createdBooking.slot.time).toLocaleString('ru-RU')}
-          </p>
-          <button
-            onClick={resetToStart}
-            style={{
-              marginTop: 16,
-              padding: '10px 20px',
-              borderRadius: 8,
-              border: 'none',
-              background: 'var(--tgui--button_color)',
-              color: 'var(--tgui--button_text_color)',
-              cursor: 'pointer',
-            }}
-          >
-            На главный экран
-          </button>
+          <button onClick={resetToStart} style={{ marginTop: 16, padding: '10px 20px' }}>На главный экран</button>
         </div>
       )}
-
       {screen === 'profile' && user && (
         <ProfileScreen
           telegramId={user.id}
@@ -241,23 +187,13 @@ const App: React.FC = () => {
             setScreen('services');
           }}
           onReview={(booking) => {
-              // Прокидываем мастера для отзыва
-              // booking.slot.service.master это ID (так приходит с бэка в некоторых сериализаторах)
-              // Но лучше убедиться через консоль, если что.
-              // В BookingSerializer у нас slot.service -> master (FK).
-              // API отдает полный объект ServiceSerializer внутри SlotSerializer
-              // А ServiceSerializer отдает master (ID).
-
               const masterId = booking.slot.service.master;
               const masterName = booking.master_name || 'Мастер';
-
               setReviewMaster({ id: masterId, name: masterName });
               setScreen('leave_review');
           }}
         />
       )}
-
-      {/* ЭКРАН ОТЗЫВА */}
       {screen === 'leave_review' && user && reviewMaster && (
         <LeaveReviewScreen
           telegramId={user.id}
@@ -268,23 +204,17 @@ const App: React.FC = () => {
           onSuccess={() => setScreen('profile')}
         />
       )}
-
       {screen === 'settings' && user && (
-        <SettingsScreen
-          telegramId={user.id}
-          onBack={() => setScreen('profile')}
-        />
+        <SettingsScreen telegramId={user.id} onBack={() => setScreen('profile')} />
       )}
 
-      {/* --- MASTER SCREENS --- */}
-
+      {/* MASTER SCREENS */}
       {screen === 'master_welcome' && (
         <MasterWelcomeScreen
           onStart={() => setScreen('master_registration')}
           onLogin={() => setScreen('master_dashboard')}
         />
       )}
-
       {screen === 'master_registration' && user && (
         <MasterRegistrationScreen
           telegramId={user.id}
@@ -293,14 +223,6 @@ const App: React.FC = () => {
           onComplete={() => setScreen('master_dashboard')}
         />
       )}
-
-      {screen === 'master_analytics' && user && (
-        <MasterAnalyticsScreen
-          telegramId={user.id}
-          onBack={() => setScreen('master_dashboard')}
-        />
-      )}
-
       {screen === 'master_dashboard' && user && (
         <MasterDashboardScreen
           telegramId={user.id}
@@ -311,16 +233,12 @@ const App: React.FC = () => {
              setScreen('master_edit_profile');
           }}
           onOpenAnalytics={() => setScreen('master_analytics')}
+          onOpenReviews={() => setScreen('master_reviews')} // <--- ПЕРЕДАЧА ФУНКЦИИ
         />
       )}
-
       {screen === 'master_schedule' && user && (
-        <MasterScheduleScreen
-           telegramId={user.id}
-           onBack={() => setScreen('master_dashboard')}
-        />
+        <MasterScheduleScreen telegramId={user.id} onBack={() => setScreen('master_dashboard')} />
       )}
-
       {screen === 'master_edit_profile' && user && (
         <MasterEditProfileScreen
           telegramId={user.id}
@@ -331,11 +249,14 @@ const App: React.FC = () => {
              phone: currentMaster.phone
           } : undefined}
           onBack={() => setScreen('master_dashboard')}
-          onSaved={() => {
-             loadCurrentMaster();
-             setScreen('master_dashboard');
-          }}
+          onSaved={() => { loadCurrentMaster(); setScreen('master_dashboard'); }}
         />
+      )}
+      {screen === 'master_analytics' && user && (
+        <MasterAnalyticsScreen telegramId={user.id} onBack={() => setScreen('master_dashboard')} />
+      )}
+      {screen === 'master_reviews' && user && ( // <--- РЕНДЕР ЭКРАНА ОТЗЫВОВ
+        <MasterReviewsScreen telegramId={user.id} onBack={() => setScreen('master_dashboard')} />
       )}
 
     </AppRoot>

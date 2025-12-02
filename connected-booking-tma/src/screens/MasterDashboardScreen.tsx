@@ -18,7 +18,8 @@ import {
   Icon28CheckCircleOutline,
   Icon28CancelCircleOutline,
   Icon28EditOutline,
-  Icon28StatisticsOutline
+  Icon28StatisticsOutline,
+  Icon28FavoriteOutline // <--- ИМПОРТ
 } from '@vkontakte/icons';
 
 import { fetchMasterBookings, confirmBooking, rejectBooking, fetchMyServices } from '../helpers/api';
@@ -30,6 +31,7 @@ type Props = {
   onOpenSchedule: () => void;
   onEditProfile: () => void;
   onOpenAnalytics: () => void;
+  onOpenReviews: () => void; // <--- ПРОПС
 };
 
 type Tab = 'bookings' | 'services' | 'profile';
@@ -41,6 +43,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   onOpenSchedule,
   onEditProfile,
   onOpenAnalytics,
+  onOpenReviews // <--- ДЕСТРУКТУРИЗАЦИЯ
 }) => {
   const [activeTab, setActiveTab] = useState<Tab>('bookings');
 
@@ -211,7 +214,6 @@ export const MasterDashboardScreen: React.FC<Props> = ({
      <div style={{ paddingBottom: 100 }}>
         <List style={{ background: 'var(--tgui--secondary_bg_color)' }}>
 
-          {/* НОВАЯ СЕКЦИЯ */}
           <Section header="Мой профиль">
              <Cell
                before={<Icon28EditOutline />}
@@ -221,11 +223,18 @@ export const MasterDashboardScreen: React.FC<Props> = ({
                 Редактировать профиль
              </Cell>
              <Cell
-                before={<Icon28StatisticsOutline />}
-                onClick={onOpenAnalytics}
-                expandable
+               before={<Icon28StatisticsOutline />}
+               onClick={onOpenAnalytics}
+               expandable
              >
                 Статистика и доходы
+             </Cell>
+             <Cell
+               before={<Icon28FavoriteOutline />}
+               onClick={onOpenReviews}
+               expandable
+             >
+                Мои отзывы
              </Cell>
           </Section>
 

@@ -326,3 +326,9 @@ export async function fetchReviews(masterId: number): Promise<Review[]> {
   if (!res.ok) throw new Error('Failed to fetch reviews');
   return res.json();
 }
+
+export async function fetchMasterReviews(telegramId: number): Promise<Review[]> {
+  const res = await fetch(`${API_BASE}/reviews/?master_telegram_id=${telegramId}`);
+  if (!res.ok) throw new Error('Failed to fetch reviews');
+  return res.json();
+}
