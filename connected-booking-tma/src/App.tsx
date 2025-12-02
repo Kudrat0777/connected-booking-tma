@@ -13,6 +13,7 @@ import { SettingsScreen } from './screens/SettingsScreen';
 import { MasterWelcomeScreen } from './screens/MasterWelcomeScreen';
 import { MasterRegistrationScreen } from './screens/MasterRegistrationScreen';
 import { MasterDashboardScreen } from './screens/MasterDashboardScreen';
+import { MasterScheduleScreen } from './screens/MasterScheduleScreen'; // <--- ВАЖНО: ИМПОРТ
 
 import type { Service, Slot, Booking } from './helpers/api';
 import { getUserFromQuery } from './helpers/telegramQueryUser';
@@ -29,7 +30,8 @@ type Screen =
   // Master
   | 'master_welcome'
   | 'master_registration'
-  | 'master_dashboard';
+  | 'master_dashboard'
+  | 'master_schedule'; // <--- ВАЖНО: НОВЫЙ ТИП
 
 type MainTab = 'bookings' | 'masters' | 'settings';
 
@@ -96,7 +98,6 @@ const App: React.FC = () => {
   const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
   const [selectedMasterName, setSelectedMasterName] = useState<string | null>(null);
 
-  // Check for master role in URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('role') === 'master') {
@@ -246,6 +247,14 @@ const App: React.FC = () => {
         <MasterDashboardScreen
           telegramId={user.id}
           onSwitchToClient={() => setScreen('welcome')}
+          onOpenSchedule={() => setScreen('master_schedule')} // <--- ВАЖНО: ПЕРЕДАЕМ ФУНКЦИЮ
+        />
+      )}
+
+      {screen === 'master_schedule' && user && ( // <--- ВАЖНО: РЕНДЕР ЭКРАНА
+        <MasterScheduleScreen
+           telegramId={user.id}
+           onBack={() => setScreen('master_dashboard')}
         />
       )}
 

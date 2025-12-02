@@ -9,7 +9,6 @@ import {
   Spinner,
   SegmentedControl,
   Avatar,
-  Text,
   Title
 } from '@telegram-apps/telegram-ui';
 import {
@@ -26,16 +25,22 @@ import type { Booking, Service } from '../helpers/api';
 type Props = {
   telegramId: number;
   onSwitchToClient: () => void;
+  onOpenSchedule: () => void; // <--- ДОБАВЛЕНО
 };
 
 type Tab = 'bookings' | 'services' | 'profile';
 type BookingFilter = 'today' | 'tomorrow' | 'week';
 
-export const MasterDashboardScreen: React.FC<Props> = ({ telegramId, onSwitchToClient }) => {
+export const MasterDashboardScreen: React.FC<Props> = ({
+  telegramId,
+  onSwitchToClient,
+  onOpenSchedule // <--- ИСПОЛЬЗУЕМ
+}) => {
   const [activeTab, setActiveTab] = useState<Tab>('bookings');
 
   // --- Bookings State ---
   const [bookings, setBookings] = useState<Booking[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [summary, setSummary] = useState<any>(null);
   const [filter, setFilter] = useState<BookingFilter>('today');
   const [loadingBookings, setLoadingBookings] = useState(false);
@@ -73,13 +78,13 @@ export const MasterDashboardScreen: React.FC<Props> = ({ telegramId, onSwitchToC
   useEffect(() => {
     if (activeTab === 'bookings') loadBookings();
     if (activeTab === 'services') loadServices();
-  }, [activeTab, filter]);
+  }, [activeTab, filter, telegramId]);
 
   // --- ACTIONS ---
   const handleConfirm = async (id: number) => {
     try {
       await confirmBooking(id);
-      loadBookings(); // reload to update UI
+      loadBookings();
     } catch (e) {
       alert('Ошибка при подтверждении');
     }
@@ -128,7 +133,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({ telegramId, onSwitchToC
              (b.status === 'confirmed' ? "Запись подтверждена" : "Запись отклонена")
           }>
             <Cell
-              before={<Avatar size={40} src={b.photo_url} fallbackIcon={<Icon28UserCircleOutline />} />}
+              before={<Avatar size={40} src={b.photo_url || undefined} fallbackIcon={<Icon28UserCircleOutline />} />}
               description={`Время: ${new Date(b.slot.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`}
               after={
                 b.status === 'pending' && <span style={{color: 'orange', fontSize: 12}}>Ожидание</span>
@@ -197,15 +202,32 @@ export const MasterDashboardScreen: React.FC<Props> = ({ telegramId, onSwitchToC
   );
 
   const renderProfile = () => (
-     <div style={{ padding: 16 }}>
-        <Placeholder
-          header="Профиль мастера"
-          description="Здесь будет статистика и настройки рабочего графика."
-        >
-           <Button mode="filled" size="l" stretched onClick={onSwitchToClient}>
-              Вернуться в режим клиента
-           </Button>
-        </Placeholder>
+     <div style={{ paddingBottom: 100 }}>
+        <List style={{ background: 'var(--tgui--secondary_bg_color)' }}>
+          <Section header="Управление расписанием">
+             <Cell
+               before={<Icon28CalendarOutline />}
+               onClick={onOpenSchedule} // <--- ВОТ ЗДЕСЬ ВЫЗОВ ФУНКЦИИ ОТКРЫТИЯ РАСПИСАНИЯ
+               expandable
+             >
+                Настроить слоты
+             </Cell>
+          </Section>
+
+          <Section header="Аккаунт">
+             <Cell>
+               <Button
+                 mode="filled"
+                 size="l"
+                 stretched
+                 onClick={onSwitchToClient}
+                 style={{ background: 'var(--tgui--button_color)' }}
+               >
+                  Вернуться в режим клиента
+               </Button>
+             </Cell>
+          </Section>
+        </List>
      </div>
   );
 

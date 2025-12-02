@@ -196,3 +196,28 @@ export async function fetchMyServices(telegram_id: number) {
   if (!res.ok) throw new Error('Failed to fetch services');
   return res.json(); // returns Service[]
 }
+
+export async function bulkGenerateSlots(
+  serviceId: number,
+  startDate: string, // YYYY-MM-DD
+  endDate: string,   // YYYY-MM-DD
+  times: string[],   // ["09:00", "10:00", ...]
+  weekdays: number[] // [0, 1, 2, 3, 4] (Пн-Пт)
+) {
+  const res = await fetch(`${API_BASE}/slots/bulk_generate/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      service: serviceId,
+      start_date: startDate,
+      end_date: endDate,
+      times: times,
+      weekdays: weekdays
+    }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to generate slots: ${text}`);
+  }
+  return res.json();
+}
