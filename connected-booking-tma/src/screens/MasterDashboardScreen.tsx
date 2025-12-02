@@ -19,7 +19,7 @@ import {
   Icon28CancelCircleOutline,
   Icon28EditOutline,
   Icon28StatisticsOutline,
-  Icon28FavoriteOutline // <--- ИМПОРТ
+  Icon28FavoriteOutline
 } from '@vkontakte/icons';
 
 import { fetchMasterBookings, confirmBooking, rejectBooking, fetchMyServices } from '../helpers/api';
@@ -31,7 +31,7 @@ type Props = {
   onOpenSchedule: () => void;
   onEditProfile: () => void;
   onOpenAnalytics: () => void;
-  onOpenReviews: () => void; // <--- ПРОПС
+  onOpenReviews: () => void;
 };
 
 type Tab = 'bookings' | 'services' | 'profile';

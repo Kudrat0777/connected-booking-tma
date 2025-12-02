@@ -17,7 +17,9 @@ import { MasterDashboardScreen } from './screens/MasterDashboardScreen';
 import { MasterScheduleScreen } from './screens/MasterScheduleScreen';
 import { MasterEditProfileScreen } from './screens/MasterEditProfileScreen';
 import { MasterAnalyticsScreen } from './screens/MasterAnalyticsScreen';
-import { MasterReviewsScreen } from './screens/MasterReviewsScreen'; // <--- ВАЖНО: ЭТОТ ИМПОРТ БЫЛ НУЖЕН
+import { MasterReviewsScreen } from './screens/MasterReviewsScreen';
+import { ReviewsListScreen } from './screens/ReviewsListScreen';
+
 
 import type { Service, Slot, Booking } from './helpers/api';
 import { getUserFromQuery } from './helpers/telegramQueryUser';
@@ -39,7 +41,8 @@ type Screen =
   | 'master_schedule'
   | 'master_edit_profile'
   | 'master_analytics'
-  | 'master_reviews'; // <--- ТИП
+  | 'master_reviews'
+  | 'client_reviews_list';
 
 type MainTab = 'bookings' | 'masters' | 'settings';
 
@@ -93,6 +96,7 @@ const App: React.FC = () => {
   const [selectedMasterName, setSelectedMasterName] = useState<string | null>(null);
   const [reviewMaster, setReviewMaster] = useState<{id: number, name: string} | null>(null);
   const [currentMaster, setCurrentMaster] = useState<any>(null);
+  const [reviewsMasterId, setReviewsMasterId] = useState<number | null>(null);
 
   const loadCurrentMaster = async () => {
       if (!user?.id) return;
@@ -177,6 +181,12 @@ const App: React.FC = () => {
           <button onClick={resetToStart} style={{ marginTop: 16, padding: '10px 20px' }}>На главный экран</button>
         </div>
       )}
+    {screen === 'client_reviews_list' && reviewsMasterId && (
+        <ReviewsListScreen
+            masterId={reviewsMasterId}
+            onBack={() => setScreen('profile')} // Возвращаемся в профиль (где список мастеров)
+        />
+    )}
       {screen === 'profile' && user && (
         <ProfileScreen
           telegramId={user.id}
@@ -191,6 +201,10 @@ const App: React.FC = () => {
               const masterName = booking.master_name || 'Мастер';
               setReviewMaster({ id: masterId, name: masterName });
               setScreen('leave_review');
+          }}
+          onOpenMasterReviews={(id) => {
+            setReviewsMasterId(id);
+            setScreen('client_reviews_list');
           }}
         />
       )}

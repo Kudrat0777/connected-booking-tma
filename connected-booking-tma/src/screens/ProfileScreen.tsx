@@ -18,6 +18,7 @@ import {
   Icon28UserStarBadgeOutline,
   Icon28SettingsOutline,
   Icon24Search,
+  Icon28ChevronRightOutline // Добавим стрелочку
 } from '@vkontakte/icons';
 import lottie from 'lottie-web';
 
@@ -49,7 +50,8 @@ type Props = {
   initialTab?: MainTab;
   onBack: () => void;
   onGoToServices?: (masterName?: string) => void;
-  onReview?: (booking: Booking) => void; // <--- ВАЖНО: ДОБАВЛЕНО
+  onReview?: (booking: Booking) => void;
+  onOpenMasterReviews?: (masterId: number) => void;
 };
 
 const tabs: { id: MainTab; text: string; Icon: React.ComponentType<any> }[] = [
@@ -63,7 +65,8 @@ export const ProfileScreen: React.FC<Props> = ({
   initialTab = 'bookings',
   onBack,
   onGoToServices,
-  onReview, // <--- ВАЖНО: ПОЛУЧАЕМ
+  onReview,
+  onOpenMasterReviews,
 }) => {
   const [currentTab, setCurrentTab] = useState<MainTab>(initialTab);
   const [masters, setMasters] = useState<MasterPublicProfile[]>([]);
@@ -137,38 +140,59 @@ export const ProfileScreen: React.FC<Props> = ({
              {filteredMasters.map((m) => (
                <Section key={m.id}>
                  <Cell
+                   // ДЕЛАЕМ ВСЮ ЯЧЕЙКУ КЛИКАБЕЛЬНОЙ
+                   onClick={() => {
+                      if (onOpenMasterReviews) onOpenMasterReviews(m.id);
+                   }}
+                   // Добавляем стрелочку справа, чтобы было понятно, что можно нажать
+                   after={
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                         {m.rating > 0 && (
+                            <div style={{
+                               background: 'orange',
+                               padding: '2px 6px',
+                               borderRadius: 6,
+                               fontSize: 12,
+                               fontWeight: 600,
+                               color: '#fff',
+                               display: 'flex',
+                               gap: 4
+                            }}>
+                              ★ {m.rating.toFixed(1)}
+                            </div>
+                         )}
+                         <Icon28ChevronRightOutline style={{ color: 'var(--tgui--hint_color)' }} />
+                      </div>
+                   }
                    before={<Avatar size={48} src={m.avatar_url} fallbackIcon={<Icon28UserStarBadgeOutline />} />}
                    description={
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                         <span style={{ opacity: 0.7, fontSize: 12, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                            {m.bio || 'Мастер'}
                         </span>
+                        {/* Показываем кол-во отзывов в описании */}
+                        {m.reviews_count > 0 && (
+                            <span style={{ fontSize: 11, color: 'var(--tgui--link_color)' }}>
+                               Смотреть отзывы ({m.reviews_count})
+                            </span>
+                        )}
                       </div>
-                   }
-                   after={
-                      m.rating > 0 && (
-                        <div style={{
-                           background: 'var(--tgui--section_bg_color)',
-                           padding: '4px 8px',
-                           borderRadius: 6,
-                           fontSize: 12,
-                           fontWeight: 600,
-                           color: 'orange'
-                        }}>
-                          ★ {m.rating.toFixed(1)}
-                        </div>
-                      )
                    }
                    multiline
                  >
                    {m.name}
                  </Cell>
+
                  <Cell>
                     <Button
                       mode="filled"
                       size="m"
                       stretched
-                      onClick={() => handleMasterBook(m)}
+                      // Кнопка записи работает отдельно
+                      onClick={(e) => {
+                          e.stopPropagation();
+                          handleMasterBook(m);
+                      }}
                     >
                       Записаться
                     </Button>
@@ -188,7 +212,7 @@ export const ProfileScreen: React.FC<Props> = ({
            telegramId={telegramId}
            onBack={onBack}
            onGoToServices={onGoToServices}
-           onReview={onReview} // <--- ВАЖНО: ПЕРЕДАЕМ ДАЛЬШЕ
+           onReview={onReview}
         />
       );
     }
