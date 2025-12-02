@@ -332,3 +332,12 @@ export async function fetchMasterReviews(telegramId: number): Promise<Review[]> 
   if (!res.ok) throw new Error('Failed to fetch reviews');
   return res.json();
 }
+
+export async function deleteService(serviceId: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/services/${serviceId}/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok && res.status !== 204) {
+    throw new Error('Failed to delete service');
+  }
+}

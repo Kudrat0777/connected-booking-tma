@@ -19,10 +19,17 @@ import {
   Icon28CancelCircleOutline,
   Icon28EditOutline,
   Icon28StatisticsOutline,
-  Icon28FavoriteOutline
+  Icon28FavoriteOutline,
+  Icon28DeleteOutline
 } from '@vkontakte/icons';
 
-import { fetchMasterBookings, confirmBooking, rejectBooking, fetchMyServices } from '../helpers/api';
+import {
+  fetchMasterBookings,
+  confirmBooking,
+  rejectBooking,
+  fetchMyServices,
+  deleteService
+} from '../helpers/api';
 import type { Booking, Service } from '../helpers/api';
 
 type Props = {
@@ -32,6 +39,7 @@ type Props = {
   onEditProfile: () => void;
   onOpenAnalytics: () => void;
   onOpenReviews: () => void;
+  onAddService: () => void;
 };
 
 type Tab = 'bookings' | 'services' | 'profile';
@@ -43,7 +51,8 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   onOpenSchedule,
   onEditProfile,
   onOpenAnalytics,
-  onOpenReviews // <--- ДЕСТРУКТУРИЗАЦИЯ
+  onOpenReviews,
+  onAddService
 }) => {
   const [activeTab, setActiveTab] = useState<Tab>('bookings');
 
@@ -106,6 +115,17 @@ export const MasterDashboardScreen: React.FC<Props> = ({
       loadBookings();
     } catch (e) {
       alert('Ошибка при отклонении');
+    }
+  };
+
+  const handleDeleteService = async (id: number) => {
+    if (!window.confirm('Удалить эту услугу?')) return;
+    try {
+      await deleteService(id);
+      loadServices();
+    } catch (e) {
+      console.error(e);
+      alert('Ошибка при удалении услуги');
     }
   };
 
@@ -190,7 +210,8 @@ export const MasterDashboardScreen: React.FC<Props> = ({
     <div style={{ paddingBottom: 100 }}>
       <div style={{ padding: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Title level="2">Мои услуги</Title>
-        <Button size="s" onClick={() => alert('Функция добавления в разработке')}>+ Добавить</Button>
+        {/* Вызов функции создания */}
+        <Button size="s" onClick={onAddService}>+ Добавить</Button>
       </div>
 
       {loadingServices && <div style={{ display: 'flex', justifyContent: 'center', padding: 20 }}><Spinner size="m"/></div>}
@@ -201,11 +222,29 @@ export const MasterDashboardScreen: React.FC<Props> = ({
              <Cell
                description={`${s.duration} мин • ${s.price} ₽`}
                multiline
+               // Кнопка удаления
+               after={
+                  <Button
+                    mode="bezeled"
+                    size="s"
+                    style={{ color: 'var(--tgui--destructive_text_color)' }}
+                    onClick={(e) => {
+                       e.stopPropagation();
+                       handleDeleteService(s.id);
+                    }}
+                  >
+                    <Icon28DeleteOutline />
+                  </Button>
+               }
              >
                {s.name}
              </Cell>
            </Section>
         ))}
+
+        {services.length === 0 && !loadingServices && (
+           <Placeholder header="Нет услуг" description="Добавьте услуги, чтобы клиенты могли записываться." />
+        )}
       </List>
     </div>
   );

@@ -9,6 +9,7 @@ import { BookingConfirmScreen } from './screens/BookingConfirmScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { LeaveReviewScreen } from './screens/LeaveReviewScreen';
+import { ReviewsListScreen } from './screens/ReviewsListScreen';
 
 // Master Screens
 import { MasterWelcomeScreen } from './screens/MasterWelcomeScreen';
@@ -18,8 +19,7 @@ import { MasterScheduleScreen } from './screens/MasterScheduleScreen';
 import { MasterEditProfileScreen } from './screens/MasterEditProfileScreen';
 import { MasterAnalyticsScreen } from './screens/MasterAnalyticsScreen';
 import { MasterReviewsScreen } from './screens/MasterReviewsScreen';
-import { ReviewsListScreen } from './screens/ReviewsListScreen';
-
+import { MasterCreateServiceScreen } from './screens/MasterCreateServiceScreen'; // <--- ИМПОРТ
 
 import type { Service, Slot, Booking } from './helpers/api';
 import { getUserFromQuery } from './helpers/telegramQueryUser';
@@ -35,6 +35,7 @@ type Screen =
   | 'profile'
   | 'settings'
   | 'leave_review'
+  | 'client_reviews_list'
   | 'master_welcome'
   | 'master_registration'
   | 'master_dashboard'
@@ -42,7 +43,7 @@ type Screen =
   | 'master_edit_profile'
   | 'master_analytics'
   | 'master_reviews'
-  | 'client_reviews_list';
+  | 'master_create_service'; // <--- ТИП
 
 type MainTab = 'bookings' | 'masters' | 'settings';
 
@@ -181,12 +182,12 @@ const App: React.FC = () => {
           <button onClick={resetToStart} style={{ marginTop: 16, padding: '10px 20px' }}>На главный экран</button>
         </div>
       )}
-    {screen === 'client_reviews_list' && reviewsMasterId && (
+      {screen === 'client_reviews_list' && reviewsMasterId && (
         <ReviewsListScreen
             masterId={reviewsMasterId}
-            onBack={() => setScreen('profile')} // Возвращаемся в профиль (где список мастеров)
+            onBack={() => setScreen('profile')}
         />
-    )}
+      )}
       {screen === 'profile' && user && (
         <ProfileScreen
           telegramId={user.id}
@@ -247,7 +248,9 @@ const App: React.FC = () => {
              setScreen('master_edit_profile');
           }}
           onOpenAnalytics={() => setScreen('master_analytics')}
-          onOpenReviews={() => setScreen('master_reviews')} // <--- ПЕРЕДАЧА ФУНКЦИИ
+          onOpenReviews={() => setScreen('master_reviews')}
+          // ВОТ ЭТОГО НЕ ХВАТАЛО:
+          onAddService={() => setScreen('master_create_service')}
         />
       )}
       {screen === 'master_schedule' && user && (
@@ -269,8 +272,17 @@ const App: React.FC = () => {
       {screen === 'master_analytics' && user && (
         <MasterAnalyticsScreen telegramId={user.id} onBack={() => setScreen('master_dashboard')} />
       )}
-      {screen === 'master_reviews' && user && ( // <--- РЕНДЕР ЭКРАНА ОТЗЫВОВ
+      {screen === 'master_reviews' && user && (
         <MasterReviewsScreen telegramId={user.id} onBack={() => setScreen('master_dashboard')} />
+      )}
+
+      {/* ЭКРАН СОЗДАНИЯ УСЛУГИ */}
+      {screen === 'master_create_service' && user && (
+        <MasterCreateServiceScreen
+          telegramId={user.id}
+          onBack={() => setScreen('master_dashboard')}
+          onSuccess={() => setScreen('master_dashboard')}
+        />
       )}
 
     </AppRoot>
