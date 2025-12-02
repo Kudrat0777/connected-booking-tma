@@ -31,19 +31,26 @@ const SLIDES: Slide[] = [
     lottieSrc: '/stickers/duck_social_out.json',
     title: 'Управление записями',
     description:
-      'Забудьте о бумажных блокнотах. Все ваши записи теперь в удобном календаре.',
-  },
-  {
-    lottieSrc: '/stickers/notifications.json',
-    title: 'Связь с клиентами',
-    description:
-      'Мы напомним клиентам о визите и соберем отзывы после услуги.',
+      'Забудьте о бумажных блокнотах. Удобный календарь, который работает 24/7, даже когда вы спите.',
   },
   {
     lottieSrc: '/stickers/duck_wallet.json',
-    title: 'Гибкий график',
+    title: 'Прием платежей',
     description:
-      'Настраивайте рабочие часы, перерывы и выходные в пару касаний.',
+      'Принимайте оплату картами, Telegram Stars или криптовалютой TON. Безопасно и мгновенно.',
+  },
+  {
+    lottieSrc: '/stickers/duck_analitic.json',
+    title: 'Аналитика доходов',
+    description:
+      'Следите за ростом прибыли. Мы покажем самые популярные услуги и активность клиентов.',
+  },
+  {
+    // Слайд 4: Уведомления и забота
+    lottieSrc: '/stickers/duck_meteor_out.json',
+    title: 'Забота о клиентах',
+    description:
+      'Мы сами напомним клиенту о визите и попросим оставить отзыв. Меньше пропусков — выше доход.',
   },
 ];
 
@@ -71,9 +78,8 @@ export const MasterWelcomeScreen: React.FC<Props> = ({
     }
   };
 
-  // --- LOTTIE SETUP (ИСПРАВЛЕНО) ---
+  // --- LOTTIE SETUP (Исправленная версия) ---
   useEffect(() => {
-    // Функция очистки
     const cleanup = () => {
       if (lottieInstanceRef.current) {
         lottieInstanceRef.current.destroy();
@@ -86,6 +92,7 @@ export const MasterWelcomeScreen: React.FC<Props> = ({
     if (!slide.lottieSrc || !lottieContainerRef.current) return;
 
     try {
+        // Пытаемся загрузить анимацию
         const anim = lottie.loadAnimation({
           container: lottieContainerRef.current,
           renderer: 'svg',
@@ -94,9 +101,10 @@ export const MasterWelcomeScreen: React.FC<Props> = ({
           path: slide.lottieSrc,
         });
         lottieInstanceRef.current = anim;
-    } catch(e) { console.error(e) }
+    } catch(e) {
+      console.error("Lottie load error:", e);
+    }
 
-    // Возвращаем функцию очистки, которая использует ref, а не переменную
     return cleanup;
   }, [slide.lottieSrc]);
 
@@ -193,9 +201,11 @@ export const MasterWelcomeScreen: React.FC<Props> = ({
           <Button size="l" mode="filled" stretched onClick={onStart}>
             Стать мастером
           </Button>
-          <Button size="l" mode="bezeled" stretched onClick={onLogin}>
-            У меня есть аккаунт
-          </Button>
+          {onLogin && (
+            <Button size="l" mode="bezeled" stretched onClick={onLogin}>
+              У меня есть аккаунт
+            </Button>
+          )}
         </div>
       </Placeholder>
     </div>
