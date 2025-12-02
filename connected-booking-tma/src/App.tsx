@@ -13,10 +13,13 @@ import { SettingsScreen } from './screens/SettingsScreen';
 import { MasterWelcomeScreen } from './screens/MasterWelcomeScreen';
 import { MasterRegistrationScreen } from './screens/MasterRegistrationScreen';
 import { MasterDashboardScreen } from './screens/MasterDashboardScreen';
-import { MasterScheduleScreen } from './screens/MasterScheduleScreen'; // <--- ВАЖНО: ИМПОРТ
+import { MasterScheduleScreen } from './screens/MasterScheduleScreen';
+import { MasterEditProfileScreen } from './screens/MasterEditProfileScreen'; // <--- ИМПОРТ
 
 import type { Service, Slot, Booking } from './helpers/api';
 import { getUserFromQuery } from './helpers/telegramQueryUser';
+
+const API_BASE = import.meta.env.VITE_API_BASE || '/api'; // Нужно для fetch
 
 type Screen =
   // Client
@@ -31,7 +34,8 @@ type Screen =
   | 'master_welcome'
   | 'master_registration'
   | 'master_dashboard'
-  | 'master_schedule'; // <--- ВАЖНО: НОВЫЙ ТИП
+  | 'master_schedule'
+  | 'master_edit_profile'; // <--- НОВЫЙ ТИП
 
 type MainTab = 'bookings' | 'masters' | 'settings';
 
@@ -97,6 +101,20 @@ const App: React.FC = () => {
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
   const [selectedMasterName, setSelectedMasterName] = useState<string | null>(null);
+
+  // Данные мастера для редактирования
+  const [currentMaster, setCurrentMaster] = useState<any>(null);
+
+  const loadCurrentMaster = async () => {
+      if (!user?.id) return;
+      try {
+        const res = await fetch(`${API_BASE}/masters/me/?telegram_id=${user.id}`);
+        if (res.ok) {
+           const data = await res.json();
+           setCurrentMaster(data);
+        }
+      } catch (e) { console.error(e); }
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -247,14 +265,35 @@ const App: React.FC = () => {
         <MasterDashboardScreen
           telegramId={user.id}
           onSwitchToClient={() => setScreen('welcome')}
-          onOpenSchedule={() => setScreen('master_schedule')} // <--- ВАЖНО: ПЕРЕДАЕМ ФУНКЦИЮ
+          onOpenSchedule={() => setScreen('master_schedule')}
+          onEditProfile={() => { // <--- ПЕРЕДАЕМ ФУНКЦИЮ
+             loadCurrentMaster();
+             setScreen('master_edit_profile');
+          }}
         />
       )}
 
-      {screen === 'master_schedule' && user && ( // <--- ВАЖНО: РЕНДЕР ЭКРАНА
+      {screen === 'master_schedule' && user && (
         <MasterScheduleScreen
            telegramId={user.id}
            onBack={() => setScreen('master_dashboard')}
+        />
+      )}
+
+      {screen === 'master_edit_profile' && user && ( // <--- РЕНДЕР ЭКРАНА РЕДАКТИРОВАНИЯ
+        <MasterEditProfileScreen
+          telegramId={user.id}
+          initialData={currentMaster ? {
+             name: currentMaster.name,
+             bio: currentMaster.bio,
+             avatarUrl: currentMaster.avatar_url,
+             phone: currentMaster.phone
+          } : undefined}
+          onBack={() => setScreen('master_dashboard')}
+          onSaved={() => {
+             loadCurrentMaster();
+             setScreen('master_dashboard');
+          }}
         />
       )}
 

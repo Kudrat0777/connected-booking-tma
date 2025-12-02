@@ -16,7 +16,8 @@ import {
   Icon28ServicesOutline,
   Icon28UserCircleOutline,
   Icon28CheckCircleOutline,
-  Icon28CancelCircleOutline
+  Icon28CancelCircleOutline,
+  Icon28EditOutline // <--- ДОБАВЛЕНА ИКОНКА
 } from '@vkontakte/icons';
 
 import { fetchMasterBookings, confirmBooking, rejectBooking, fetchMyServices } from '../helpers/api';
@@ -25,7 +26,8 @@ import type { Booking, Service } from '../helpers/api';
 type Props = {
   telegramId: number;
   onSwitchToClient: () => void;
-  onOpenSchedule: () => void; // <--- ДОБАВЛЕНО
+  onOpenSchedule: () => void;
+  onEditProfile: () => void; // <--- НОВЫЙ ПРОПС
 };
 
 type Tab = 'bookings' | 'services' | 'profile';
@@ -34,7 +36,8 @@ type BookingFilter = 'today' | 'tomorrow' | 'week';
 export const MasterDashboardScreen: React.FC<Props> = ({
   telegramId,
   onSwitchToClient,
-  onOpenSchedule // <--- ИСПОЛЬЗУЕМ
+  onOpenSchedule,
+  onEditProfile // <---
 }) => {
   const [activeTab, setActiveTab] = useState<Tab>('bookings');
 
@@ -204,10 +207,22 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   const renderProfile = () => (
      <div style={{ paddingBottom: 100 }}>
         <List style={{ background: 'var(--tgui--secondary_bg_color)' }}>
+
+          {/* НОВАЯ СЕКЦИЯ */}
+          <Section header="Мой профиль">
+             <Cell
+               before={<Icon28EditOutline />}
+               onClick={onEditProfile}
+               expandable
+             >
+                Редактировать профиль
+             </Cell>
+          </Section>
+
           <Section header="Управление расписанием">
              <Cell
                before={<Icon28CalendarOutline />}
-               onClick={onOpenSchedule} // <--- ВОТ ЗДЕСЬ ВЫЗОВ ФУНКЦИИ ОТКРЫТИЯ РАСПИСАНИЯ
+               onClick={onOpenSchedule}
                expandable
              >
                 Настроить слоты
@@ -216,10 +231,10 @@ export const MasterDashboardScreen: React.FC<Props> = ({
 
           <Section header="Аккаунт">
              <Cell>
-               <Button
-                 mode="filled"
-                 size="l"
-                 stretched
+               <Button 
+                 mode="filled" 
+                 size="l" 
+                 stretched 
                  onClick={onSwitchToClient}
                  style={{ background: 'var(--tgui--button_color)' }}
                >
@@ -240,23 +255,23 @@ export const MasterDashboardScreen: React.FC<Props> = ({
       </div>
 
       <Tabbar>
-        <Tabbar.Item
-          text="Календарь"
-          selected={activeTab === 'bookings'}
+        <Tabbar.Item 
+          text="Календарь" 
+          selected={activeTab === 'bookings'} 
           onClick={() => setActiveTab('bookings')}
         >
           <Icon28CalendarOutline />
         </Tabbar.Item>
-        <Tabbar.Item
-          text="Услуги"
-          selected={activeTab === 'services'}
+        <Tabbar.Item 
+          text="Услуги" 
+          selected={activeTab === 'services'} 
           onClick={() => setActiveTab('services')}
         >
           <Icon28ServicesOutline />
         </Tabbar.Item>
-        <Tabbar.Item
-          text="Профиль"
-          selected={activeTab === 'profile'}
+        <Tabbar.Item 
+          text="Профиль" 
+          selected={activeTab === 'profile'} 
           onClick={() => setActiveTab('profile')}
         >
           <Icon28UserCircleOutline />

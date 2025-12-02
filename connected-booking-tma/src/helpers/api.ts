@@ -238,3 +238,30 @@ export async function fetchMasters(): Promise<MasterPublicProfile[]> {
   if (!res.ok) throw new Error('Failed to fetch masters');
   return res.json();
 }
+
+// ... в конец файла
+
+// Обновление данных мастера (Имя, Био, Телефон и т.д.)
+export async function updateMasterProfile(telegramId: number, data: { name?: string; bio?: string; phone?: string }) {
+  const res = await fetch(`${API_BASE}/masters/me_update/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ telegram_id: telegramId, ...data }),
+  });
+  if (!res.ok) throw new Error('Failed to update profile');
+  return res.json();
+}
+
+// Загрузка аватарки
+export async function uploadMasterAvatar(telegramId: number, file: File) {
+  const formData = new FormData();
+  formData.append('telegram_id', String(telegramId));
+  formData.append('avatar', file);
+
+  const res = await fetch(`${API_BASE}/masters/upload_avatar/`, {
+    method: 'POST',
+    body: formData, // Content-Type не нужен, браузер сам поставит multipart/form-data
+  });
+  if (!res.ok) throw new Error('Failed to upload avatar');
+  return res.json(); // { avatar_url: "..." }
+}
