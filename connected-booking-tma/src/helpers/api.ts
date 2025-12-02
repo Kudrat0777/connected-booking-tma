@@ -1,5 +1,3 @@
-// src/helpers/api.ts
-
 const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
 export type Service = {
@@ -10,8 +8,6 @@ export type Service = {
   duration: number | null;
   description: string;
   master_name: string;
-  masterId?: number;
-  master_name?: string;
 };
 
 export async function fetchServices(masterId?: number): Promise<Service[]> {
@@ -133,4 +129,70 @@ export async function cancelBooking(id: number): Promise<void> {
       `Failed to cancel booking: ${res.status} ${res.statusText} ${text}`,
     );
   }
+}
+
+// --------- MASTER API ---------
+
+// Регистрация мастера
+export async function registerMaster(name: string, telegram_id: number) {
+  const res = await fetch(`${API_BASE}/masters/register/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, telegram_id }),
+  });
+  if (!res.ok) throw new Error('Failed to register master');
+  return res.json();
+}
+
+// Создание услуги мастером
+export async function createServiceByMaster(
+  telegram_id: number,
+  name: string,
+  price: number,
+  duration: number,
+  description?: string
+) {
+  const res = await fetch(`${API_BASE}/services/create_by_master/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ telegram_id, name, price, duration, description }),
+  });
+  if (!res.ok) throw new Error('Failed to create service');
+  return res.json();
+}
+
+// Получить список записей для мастера
+export async function fetchMasterBookings(telegram_id: number, period?: 'today' | 'tomorrow' | 'week', status?: string) {
+  const params = new URLSearchParams({ telegram_id: String(telegram_id) });
+  if (period) params.append('period', period);
+  if (status) params.append('status', status);
+
+  const res = await fetch(`${API_BASE}/bookings/for_master/?${params}`);
+  if (!res.ok) throw new Error('Failed to fetch master bookings');
+  return res.json(); // returns { items: Booking[], summary: {...} }
+}
+
+// Подтвердить бронь
+export async function confirmBooking(bookingId: number) {
+  const res = await fetch(`${API_BASE}/bookings/${bookingId}/confirm/`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error('Failed to confirm booking');
+  return res.json();
+}
+
+// Отклонить бронь
+export async function rejectBooking(bookingId: number) {
+  const res = await fetch(`${API_BASE}/bookings/${bookingId}/reject/`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error('Failed to reject booking');
+  return res.json();
+}
+
+// Получить свои услуги
+export async function fetchMyServices(telegram_id: number) {
+  const res = await fetch(`${API_BASE}/services/my/?telegram_id=${telegram_id}`);
+  if (!res.ok) throw new Error('Failed to fetch services');
+  return res.json(); // returns Service[]
 }

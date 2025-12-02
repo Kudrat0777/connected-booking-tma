@@ -1,15 +1,36 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { AppRoot } from '@telegram-apps/telegram-ui';
+
+// Client Screens
 import { WelcomeScreen } from './screens/WelcomeScreen';
 import { ServicesScreen } from './screens/ServicesScreen';
 import { SlotsScreen } from './screens/SlotsScreen';
 import { BookingConfirmScreen } from './screens/BookingConfirmScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+
+// Master Screens
+import { MasterWelcomeScreen } from './screens/MasterWelcomeScreen';
+import { MasterRegistrationScreen } from './screens/MasterRegistrationScreen';
+import { MasterDashboardScreen } from './screens/MasterDashboardScreen';
+
 import type { Service, Slot, Booking } from './helpers/api';
 import { getUserFromQuery } from './helpers/telegramQueryUser';
 
-type Screen = 'welcome' | 'services' | 'slots' | 'bookingConfirm' | 'bookingDone' | 'profile' | 'settings';
+type Screen =
+  // Client
+  | 'welcome'
+  | 'services'
+  | 'slots'
+  | 'bookingConfirm'
+  | 'bookingDone'
+  | 'profile'
+  | 'settings'
+  // Master
+  | 'master_welcome'
+  | 'master_registration'
+  | 'master_dashboard';
+
 type MainTab = 'bookings' | 'masters' | 'settings';
 
 const App: React.FC = () => {
@@ -19,12 +40,10 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!tg) return;
 
-    // Эта функция берет цвета из Telegram (themeParams)
     const bindThemeParams = () => {
       const params = tg.themeParams;
       const root = document.documentElement;
 
-      // 1. Определяем, темная ли тема (для пропса appearance)
       const isDark = tg.colorScheme === 'dark';
       setAppearance(isDark ? 'dark' : 'light');
 
@@ -37,21 +56,17 @@ const App: React.FC = () => {
         root.style.setProperty('--tgui--bg_color', params.bg_color);
         root.style.setProperty('--tgui--secondary_bg_color', params.secondary_bg_color || params.bg_color);
       }
-
       if (params.text_color) {
         root.style.setProperty('--tgui--text_color', params.text_color);
         root.style.setProperty('--tgui--subtitle_text_color', params.hint_color || '#888');
       }
-
       if (params.hint_color) {
         root.style.setProperty('--tgui--hint_color', params.hint_color);
       }
-
       if (params.button_color) {
         root.style.setProperty('--tgui--button_color', params.button_color);
         root.style.setProperty('--tgui--button_text_color', params.button_text_color || '#fff');
       }
-
       if (params.link_color) {
         root.style.setProperty('--tgui--link_color', params.link_color);
       }
@@ -67,20 +82,27 @@ const App: React.FC = () => {
     tg.onEvent('themeChanged', bindThemeParams);
     return () => tg.offEvent('themeChanged', bindThemeParams);
   }, [tg]);
-  // ---------------------------
 
   const user = useMemo(() => {
     if (tg?.initDataUnsafe?.user) return tg.initDataUnsafe.user;
     return getUserFromQuery();
   }, [tg]);
 
-  // Навигация
   const [screen, setScreen] = useState<Screen>('welcome');
   const [mainTab, setMainTab] = useState<MainTab>('bookings');
+
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
   const [selectedMasterName, setSelectedMasterName] = useState<string | null>(null);
+
+  // Check for master role in URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('role') === 'master') {
+      setScreen('master_welcome');
+    }
+  }, []);
 
   const handleServiceSelected = (service: Service) => {
     setSelectedService(service);
@@ -105,7 +127,6 @@ const App: React.FC = () => {
     setScreen('welcome');
   };
 
-  // Платформа
   const platform = tg?.platform || 'base';
   const isIos = ['macos', 'ios'].includes(platform);
 
@@ -114,7 +135,8 @@ const App: React.FC = () => {
       appearance={appearance}
       platform={isIos ? 'ios' : 'base'}
     >
-      {/* ЭКРАНЫ */}
+      {/* --- CLIENT SCREENS --- */}
+
       {screen === 'welcome' && (
         <WelcomeScreen
           onContinue={() => {
@@ -161,10 +183,10 @@ const App: React.FC = () => {
             Мастер: {createdBooking.master_name || selectedService?.master_name}
           </p>
           <p style={{ color: 'var(--tgui--text_color)' }}>
-             Услуга: {createdBooking.service_name || selectedService?.name}
+            Услуга: {createdBooking.service_name || selectedService?.name}
           </p>
           <p style={{ color: 'var(--tgui--text_color)' }}>
-             Время: {new Date(createdBooking.slot.time).toLocaleString('ru-RU')}
+            Время: {new Date(createdBooking.slot.time).toLocaleString('ru-RU')}
           </p>
           <button
             onClick={resetToStart}
@@ -201,6 +223,32 @@ const App: React.FC = () => {
           onBack={() => setScreen('profile')}
         />
       )}
+
+      {/* --- MASTER SCREENS --- */}
+
+      {screen === 'master_welcome' && (
+        <MasterWelcomeScreen
+          onStart={() => setScreen('master_registration')}
+          onLogin={() => setScreen('master_dashboard')}
+        />
+      )}
+
+      {screen === 'master_registration' && user && (
+        <MasterRegistrationScreen
+          telegramId={user.id}
+          initialName={[user.first_name, user.last_name].filter(Boolean).join(' ')}
+          onBack={() => setScreen('master_welcome')}
+          onComplete={() => setScreen('master_dashboard')}
+        />
+      )}
+
+      {screen === 'master_dashboard' && user && (
+        <MasterDashboardScreen
+          telegramId={user.id}
+          onSwitchToClient={() => setScreen('welcome')}
+        />
+      )}
+
     </AppRoot>
   );
 };

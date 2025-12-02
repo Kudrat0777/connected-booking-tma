@@ -2,8 +2,6 @@ import React, {
   useEffect,
   useRef,
   useState,
-  PointerEvent,
-  TouchEvent,
   CSSProperties,
 } from 'react';
 import {
@@ -30,7 +28,7 @@ type Slide = {
 
 const SLIDES: Slide[] = [
   {
-    lottieSrc: '/stickers/hairdresser.json', // Нужно будет добавить этот файл или использовать booking.json
+    lottieSrc: '/stickers/duck_social_out.json',
     title: 'Управление записями',
     description:
       'Забудьте о бумажных блокнотах. Все ваши записи теперь в удобном календаре.',
@@ -73,15 +71,19 @@ export const MasterWelcomeScreen: React.FC<Props> = ({
     }
   };
 
-  // --- LOTTIE SETUP ---
+  // --- LOTTIE SETUP (ИСПРАВЛЕНО) ---
   useEffect(() => {
-    if (lottieInstanceRef.current) {
-      lottieInstanceRef.current.destroy();
-      lottieInstanceRef.current = null;
-    }
-    if (!slide.lottieSrc || !lottieContainerRef.current) return;
+    // Функция очистки
+    const cleanup = () => {
+      if (lottieInstanceRef.current) {
+        lottieInstanceRef.current.destroy();
+        lottieInstanceRef.current = null;
+      }
+    };
 
-    const path = slide.lottieSrc;
+    cleanup();
+
+    if (!slide.lottieSrc || !lottieContainerRef.current) return;
 
     try {
         const anim = lottie.loadAnimation({
@@ -89,14 +91,16 @@ export const MasterWelcomeScreen: React.FC<Props> = ({
           renderer: 'svg',
           loop: true,
           autoplay: true,
-          path: path,
+          path: slide.lottieSrc,
         });
         lottieInstanceRef.current = anim;
     } catch(e) { console.error(e) }
 
-    return () => anim?.destroy();
+    // Возвращаем функцию очистки, которая использует ref, а не переменную
+    return cleanup;
   }, [slide.lottieSrc]);
 
+  // --- SLIDER LOGIC ---
   const changeSlide = (newIndex: number) => {
     setIndex(newIndex);
     triggerHaptic();
@@ -156,7 +160,6 @@ export const MasterWelcomeScreen: React.FC<Props> = ({
   return (
     <div className="welcome-root">
       <Placeholder className="welcome-placeholder">
-        {/* SLIDE AREA */}
         <div
           className="welcome-slide-area"
           style={slideAreaStyle}
@@ -176,7 +179,6 @@ export const MasterWelcomeScreen: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* DOTS */}
         <div className="welcome-pagination">
           {SLIDES.map((_, i) => (
             <div
@@ -187,7 +189,6 @@ export const MasterWelcomeScreen: React.FC<Props> = ({
           ))}
         </div>
 
-        {/* ACTIONS */}
         <div className="welcome-actions">
           <Button size="l" mode="filled" stretched onClick={onStart}>
             Стать мастером
