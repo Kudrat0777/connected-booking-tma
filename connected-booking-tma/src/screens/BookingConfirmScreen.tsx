@@ -1,9 +1,23 @@
 import React, { useState } from 'react';
+import {
+  List,
+  Section,
+  Cell,
+  Button,
+  Input,
+  Text,
+  Avatar
+} from '@telegram-apps/telegram-ui';
+import {
+  Icon28CalendarOutline,
+  Icon28ServicesOutline,
+  Icon28UserOutline,
+  Icon28CoinsOutline
+} from '@vkontakte/icons';
+
 import type { Service, Slot, Booking } from '../helpers/api';
 import { createBooking } from '../helpers/api';
 import { ScreenLayout } from '../components/ScreenLayout';
-import { SectionCard } from '../components/SectionCard';
-import { Button } from '@telegram-apps/telegram-ui';
 
 type TelegramUser = {
   id: number;
@@ -23,15 +37,13 @@ type Props = {
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
-  const day = d.toLocaleDateString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-  });
-  const time = d.toLocaleTimeString('ru-RU', {
+  // Format: "25 October, 14:30"
+  return d.toLocaleString('ru-RU', {
+    day: 'numeric',
+    month: 'long',
     hour: '2-digit',
     minute: '2-digit',
   });
-  return `${day} • ${time}`;
 }
 
 export const BookingConfirmScreen: React.FC<Props> = ({
@@ -51,8 +63,7 @@ export const BookingConfirmScreen: React.FC<Props> = ({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!name.trim()) {
       setError('Пожалуйста, укажи своё имя.');
       return;
@@ -80,88 +91,83 @@ export const BookingConfirmScreen: React.FC<Props> = ({
   };
 
   return (
-    <ScreenLayout title="Подтверждение записи" onBack={onBack}>
-      <SectionCard header="Детали записи">
-        <div style={{ marginBottom: 4 }}>
-          <strong>Услуга:</strong> {service.name}
-        </div>
-        {service.master_name && (
-          <div style={{ marginBottom: 4 }}>
-            <strong>Мастер:</strong> {service.master_name}
-          </div>
-        )}
-        <div style={{ marginBottom: 4 }}>
-          <strong>Время:</strong> {formatTime(slot.time)}
-        </div>
-        {service.duration && (
-          <div style={{ marginBottom: 4 }}>
-            <strong>Длительность:</strong> {service.duration} мин.
-          </div>
-        )}
-        {service.price != null && (
-          <div>
-            <strong>Цена:</strong> {service.price} ₽
-          </div>
-        )}
-      </SectionCard>
+    <ScreenLayout title="Подтверждение" onBack={onBack}>
+      <List style={{ background: 'var(--tgui--secondary_bg_color)', minHeight: '100%' }}>
 
-      <SectionCard header="Данные клиента">
-        <form onSubmit={handleSubmit}>
-          <label
-            style={{
-              display: 'block',
-              marginBottom: 10,
-              fontSize: 14,
-            }}
+        {/* Booking Details Section */}
+        <Section header="Детали записи">
+          <Cell
+            before={<Icon28ServicesOutline />}
+            multiline
+            description={service.duration ? `Длительность: ${service.duration} мин` : undefined}
           >
-            Имя:
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Как к тебе обращаться?"
-              style={{
-                display: 'block',
-                width: '100%',
-                marginTop: 4,
-                padding: '8px 10px',
-                borderRadius: 8,
-                border: '1px solid rgba(255,255,255,0.12)',
-                background: 'transparent',
-                color: 'inherit',
-                fontSize: 14,
-                boxSizing: 'border-box',
-              }}
-            />
-          </label>
+            {service.name}
+          </Cell>
+
+          {service.master_name && (
+            <Cell before={<Icon28UserOutline />}>
+              {service.master_name}
+            </Cell>
+          )}
+
+          <Cell before={<Icon28CalendarOutline />}>
+            {formatTime(slot.time)}
+          </Cell>
+
+          {service.price != null && (
+             <Cell
+               before={<Icon28CoinsOutline />}
+               after={
+                 <Text weight="2" style={{ color: 'var(--tgui--link_color)' }}>
+                   {service.price} ₽
+                 </Text>
+               }
+             >
+               Стоимость
+             </Cell>
+          )}
+        </Section>
+
+        {/* User Info Form Section */}
+        <Section
+           header="Ваши данные"
+           footer={error ? <span style={{ color: 'var(--tgui--destructive_text_color)' }}>{error}</span> : "Мы используем это имя для записи."}
+        >
+          <Input
+            header="Имя"
+            placeholder="Как к вам обращаться?"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            status={error ? 'error' : 'default'}
+          />
 
           {user?.username && (
-            <div
-              style={{
-                fontSize: 12,
-                opacity: 0.7,
-                marginBottom: 8,
-              }}
+            <Cell
+               before={user.photo_url ? <Avatar src={user.photo_url} size={28} /> : undefined}
+               description="Telegram аккаунт привязан"
+               interactive={false}
             >
-              Telegram: @{user.username}
-            </div>
+              @{user.username}
+            </Cell>
           )}
+        </Section>
 
-          {error && (
-            <div style={{ color: 'red', marginBottom: 8 }}>{error}</div>
-          )}
+        {/* Action Button Section */}
+        <Section>
+          <Cell>
+            <Button
+              size="l"
+              mode="filled" // Primary action
+              stretched
+              loading={submitting}
+              onClick={handleSubmit}
+            >
+              Подтвердить запись
+            </Button>
+          </Cell>
+        </Section>
 
-          <Button
-            size="l"
-            mode="bezeled"
-            type="submit"
-            disabled={submitting}
-            style={{ width: '100%', marginTop: 4 }}
-          >
-            {submitting ? 'Создаём бронь...' : 'Записаться'}
-          </Button>
-        </form>
-      </SectionCard>
+      </List>
     </ScreenLayout>
   );
 };
