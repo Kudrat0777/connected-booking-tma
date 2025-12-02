@@ -8,8 +8,8 @@ import {
   Placeholder,
   Spinner
 } from '@telegram-apps/telegram-ui';
-import { Icon20UserOutline, Icon20RecentOutline } from '@vkontakte/icons';
-import lottie from 'lottie-web'; // Импортируем lottie
+import { Icon20UserOutline, Icon20RecentOutline, Icon28FavoriteOutline } from '@vkontakte/icons';
+import lottie from 'lottie-web';
 
 import type { Booking } from '../helpers/api';
 import { fetchMyBookings, cancelBooking } from '../helpers/api';
@@ -22,16 +22,16 @@ const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 
 
   useEffect(() => {
     if (!container.current) return;
-
-    const anim = lottie.loadAnimation({
-      container: container.current,
-      renderer: 'svg',
-      loop: true,
-      autoplay: true,
-      path: src,
-    });
-
-    return () => anim.destroy();
+    try {
+      const anim = lottie.loadAnimation({
+        container: container.current,
+        renderer: 'svg',
+        loop: true,
+        autoplay: true,
+        path: src,
+      });
+      return () => anim.destroy();
+    } catch (e) { console.error(e); }
   }, [src]);
 
   return <div ref={container} style={{ width: size, height: size, margin: '0 auto 16px' }} />;
@@ -42,6 +42,7 @@ type Props = {
   telegramId: number;
   onBack: () => void;
   onGoToServices?: () => void;
+  onReview?: (booking: Booking) => void; // <--- ДОБАВИЛ ПРОПС
 };
 
 function formatDateTime(iso: string): string {
@@ -60,6 +61,7 @@ export const MyBookingsScreen: React.FC<Props> = ({
   telegramId,
   onBack,
   onGoToServices,
+  onReview // <--- ИСПОЛЬЗУЕМ
 }) => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -148,8 +150,6 @@ export const MyBookingsScreen: React.FC<Props> = ({
 
       {!loading && !error && currentList.length === 0 && (
         <Placeholder
-          // Вставляем Lottie как дочерний элемент Placeholder
-          // Это стандартный паттерн в UI Kit для кастомных иконок/иллюстраций
           header={segment === 'upcoming' ? 'Нет записей' : 'История пуста'}
           description={
             segment === 'upcoming'
@@ -157,7 +157,6 @@ export const MyBookingsScreen: React.FC<Props> = ({
               : 'Здесь будут храниться ваши завершенные услуги.'
           }
         >
-          {/* Анимация сверху */}
           <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
             <LottieIcon
               src={segment === 'upcoming' ? '/stickers/skeleton.json' : '/stickers/favorites.json'}
@@ -165,7 +164,6 @@ export const MyBookingsScreen: React.FC<Props> = ({
             />
           </div>
 
-          {/* Кнопка действия (только для предстоящих) */}
           {segment === 'upcoming' && onGoToServices && (
              <Button size="l" stretched onClick={onGoToServices} style={{ marginTop: 16 }}>
                Записаться онлайн
@@ -203,7 +201,7 @@ export const MyBookingsScreen: React.FC<Props> = ({
                     </div>
                  </Cell>
 
-                 {segment === 'upcoming' && b.status !== 'canceled' && (
+                 {segment === 'upcoming' && b.status !== 'rejected' && ( // поправил статус canceled на rejected, если так в твоем API
                    <Cell>
                      <Button
                         mode="bezeled"
@@ -217,6 +215,22 @@ export const MyBookingsScreen: React.FC<Props> = ({
                      </Button>
                    </Cell>
                  )}
+
+                 {/* --- НОВАЯ КНОПКА ОЦЕНКИ (Только в прошедших и подтвержденных) --- */}
+                 {segment === 'past' && b.status === 'confirmed' && onReview && (
+                    <Cell>
+                      <Button
+                         mode="filled"
+                         size="m"
+                         stretched
+                         before={<Icon28FavoriteOutline />}
+                         onClick={() => onReview(b)}
+                      >
+                         Оценить мастера
+                      </Button>
+                    </Cell>
+                 )}
+
                </Section>
              );
           })}

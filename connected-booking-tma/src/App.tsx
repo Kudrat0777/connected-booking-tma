@@ -8,6 +8,7 @@ import { SlotsScreen } from './screens/SlotsScreen';
 import { BookingConfirmScreen } from './screens/BookingConfirmScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+import { LeaveReviewScreen } from './screens/LeaveReviewScreen'; // <--- НОВЫЙ ИМПОРТ
 
 // Master Screens
 import { MasterWelcomeScreen } from './screens/MasterWelcomeScreen';
@@ -31,6 +32,7 @@ type Screen =
   | 'bookingDone'
   | 'profile'
   | 'settings'
+  | 'leave_review' // <--- НОВЫЙ ЭКРАН
   // Master
   | 'master_welcome'
   | 'master_registration'
@@ -103,6 +105,9 @@ const App: React.FC = () => {
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
   const [selectedMasterName, setSelectedMasterName] = useState<string | null>(null);
+
+  // Состояние для отзыва
+  const [reviewMaster, setReviewMaster] = useState<{id: number, name: string} | null>(null);
 
   // Данные мастера для редактирования
   const [currentMaster, setCurrentMaster] = useState<any>(null);
@@ -235,6 +240,32 @@ const App: React.FC = () => {
             setSelectedMasterName(masterName || null);
             setScreen('services');
           }}
+          onReview={(booking) => {
+              // Прокидываем мастера для отзыва
+              // booking.slot.service.master это ID (так приходит с бэка в некоторых сериализаторах)
+              // Но лучше убедиться через консоль, если что.
+              // В BookingSerializer у нас slot.service -> master (FK).
+              // API отдает полный объект ServiceSerializer внутри SlotSerializer
+              // А ServiceSerializer отдает master (ID).
+
+              const masterId = booking.slot.service.master;
+              const masterName = booking.master_name || 'Мастер';
+
+              setReviewMaster({ id: masterId, name: masterName });
+              setScreen('leave_review');
+          }}
+        />
+      )}
+
+      {/* ЭКРАН ОТЗЫВА */}
+      {screen === 'leave_review' && user && reviewMaster && (
+        <LeaveReviewScreen
+          telegramId={user.id}
+          masterId={reviewMaster.id}
+          masterName={reviewMaster.name}
+          userFirstName={user.first_name}
+          onBack={() => setScreen('profile')}
+          onSuccess={() => setScreen('profile')}
         />
       )}
 
@@ -275,7 +306,7 @@ const App: React.FC = () => {
           telegramId={user.id}
           onSwitchToClient={() => setScreen('welcome')}
           onOpenSchedule={() => setScreen('master_schedule')}
-          onEditProfile={() => { // <--- ПЕРЕДАЕМ ФУНКЦИЮ
+          onEditProfile={() => {
              loadCurrentMaster();
              setScreen('master_edit_profile');
           }}
@@ -290,7 +321,7 @@ const App: React.FC = () => {
         />
       )}
 
-      {screen === 'master_edit_profile' && user && ( // <--- РЕНДЕР ЭКРАНА РЕДАКТИРОВАНИЯ
+      {screen === 'master_edit_profile' && user && (
         <MasterEditProfileScreen
           telegramId={user.id}
           initialData={currentMaster ? {

@@ -281,3 +281,48 @@ export async function fetchMasterAnalytics(telegramId: number): Promise<Analytic
   if (!res.ok) throw new Error('Failed to fetch analytics');
   return res.json();
 }
+
+// --- REVIEWS ---
+
+export type Review = {
+  id: number;
+  author_name: string;
+  rating: number;
+  text: string;
+  created_at: string;
+};
+
+export async function addReview(data: {
+  master_id: number;
+  telegram_id: number;
+  rating: number;
+  text?: string;
+  author_name?: string;
+}) {
+  const res = await fetch(`${API_BASE}/reviews/add/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      master: data.master_id,
+      telegram_id: data.telegram_id,
+      rating: data.rating,
+      text: data.text,
+      author_name: data.author_name
+    }),
+  });
+
+  if (!res.ok) {
+    const txt = await res.text();
+    // Если ошибка 429 (слишком часто) или 403 (нет записи)
+    if (res.status === 429) throw new Error('Вы уже оставили отзыв этому мастеру недавно.');
+    if (res.status === 403) throw new Error('Оставить отзыв можно только после визита.');
+    throw new Error(`Failed to add review: ${txt}`);
+  }
+  return res.json();
+}
+
+export async function fetchReviews(masterId: number): Promise<Review[]> {
+  const res = await fetch(`${API_BASE}/reviews/?master=${masterId}&limit=20`);
+  if (!res.ok) throw new Error('Failed to fetch reviews');
+  return res.json();
+}
