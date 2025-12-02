@@ -8,7 +8,7 @@ import {
   Cell,
   Input,
   Placeholder,
-  Text
+  Spinner
 } from '@telegram-apps/telegram-ui';
 import { ScreenLayout } from '../components/ScreenLayout';
 import { MyBookingsScreen } from './MyBookingsScreen';
@@ -17,22 +17,28 @@ import {
   Icon28CalendarOutline,
   Icon28UserStarBadgeOutline,
   Icon28SettingsOutline,
-  Icon24Search, // Добавили иконку поиска
+  Icon24Search,
 } from '@vkontakte/icons';
 import lottie from 'lottie-web';
 
+import { fetchMasters } from '../helpers/api'; // Импортируем API
+import type { MasterPublicProfile } from '../helpers/api';
+
+// Lottie component
 const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
   const container = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!container.current) return;
-    const anim = lottie.loadAnimation({
-      container: container.current,
-      renderer: 'svg',
-      loop: true,
-      autoplay: true,
-      path: src,
-    });
-    return () => anim.destroy();
+    try {
+      const anim = lottie.loadAnimation({
+        container: container.current,
+        renderer: 'svg',
+        loop: true,
+        autoplay: true,
+        path: src,
+      });
+      return () => anim.destroy();
+    } catch (e) { console.error(e); }
   }, [src]);
   return <div ref={container} style={{ width: size, height: size, margin: '0 auto 16px' }} />;
 };
@@ -46,38 +52,10 @@ type Props = {
   onGoToServices?: (masterName?: string) => void;
 };
 
-type Master = {
-  id: number;
-  name: string;
-  specialty: string;
-  description?: string;
-  avatarUrl?: string;
-  rating?: number; // 0–5
-};
-
 const tabs: { id: MainTab; text: string; Icon: React.ComponentType<any> }[] = [
   { id: 'bookings', text: 'Записи', Icon: Icon28CalendarOutline },
   { id: 'masters', text: 'Мастера', Icon: Icon28UserStarBadgeOutline },
   { id: 'settings', text: 'Настройки', Icon: Icon28SettingsOutline },
-];
-
-const MOCK_MASTERS: Master[] = [
-  {
-    id: 1,
-    name: 'Kudrat Sultanbaev',
-    specialty: 'Барбер / стрижки',
-    description: 'Фейд, классика, оформление бороды.',
-    avatarUrl: 'https://i.imgur.com/892vhef.jpeg',
-    rating: 4.9,
-  },
-  {
-    id: 2,
-    name: 'Dinara',
-    specialty: 'Маникюр / педикюр',
-    description: 'Аппаратный маникюр, выравнивание, дизайн.',
-    avatarUrl: 'https://avatars.githubusercontent.com/u/84640980?v=4',
-    rating: 4.8,
-  },
 ];
 
 export const ProfileScreen: React.FC<Props> = ({
@@ -87,11 +65,26 @@ export const ProfileScreen: React.FC<Props> = ({
   onGoToServices,
 }) => {
   const [currentTab, setCurrentTab] = useState<MainTab>(initialTab);
-  const [masters] = useState<Master[]>(MOCK_MASTERS);
+
+  // State для мастеров
+  const [masters, setMasters] = useState<MasterPublicProfile[]>([]);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState<string>('');
 
-  const handleMasterBook = (master: Master) => {
+  // Загрузка мастеров при монтировании
+  useEffect(() => {
+    if (currentTab === 'masters') {
+      setLoading(true);
+      fetchMasters()
+        .then(setMasters)
+        .catch(console.error)
+        .finally(() => setLoading(false));
+    }
+  }, [currentTab]);
+
+  const handleMasterBook = (master: MasterPublicProfile) => {
     if (onGoToServices) {
+      // Передаем имя мастера для фильтрации услуг на следующем экране
       onGoToServices(master.name);
     }
   };
@@ -101,9 +94,8 @@ export const ProfileScreen: React.FC<Props> = ({
     if (!q) return masters;
     return masters.filter((m) => {
       const inName = m.name.toLowerCase().includes(q);
-      const inSpec = m.specialty.toLowerCase().includes(q);
-      const inDesc = m.description ? m.description.toLowerCase().includes(q) : false;
-      return inName || inSpec || inDesc;
+      const inBio = m.bio ? m.bio.toLowerCase().includes(q) : false;
+      return inName || inBio;
     });
   }, [masters, search]);
 
@@ -118,16 +110,23 @@ export const ProfileScreen: React.FC<Props> = ({
         <div style={{ padding: '10px 16px 6px' }}>
           <Input
             header="Поиск мастера"
-            placeholder="Имя, услуга..."
+            placeholder="Имя, описание..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             before={<Icon24Search style={{ color: 'var(--tgui--hint_color)' }} />}
-            clearable // Добавляет крестик очистки
+            clearable
           />
         </div>
 
+        {/* Загрузка */}
+        {loading && (
+           <div style={{ display: 'flex', justifyContent: 'center', padding: 20 }}>
+             <Spinner size="m" />
+           </div>
+        )}
+
         {/* Пустое состояние поиска */}
-        {isEmptyResult && (
+        {!loading && isEmptyResult && (
           <Placeholder
             header="Ничего не найдено"
             description="Попробуйте изменить запрос"
@@ -136,23 +135,28 @@ export const ProfileScreen: React.FC<Props> = ({
           </Placeholder>
         )}
 
+        {/* Пустое состояние, если мастеров вообще нет */}
+        {!loading && !hasQuery && masters.length === 0 && (
+           <Placeholder header="Нет мастеров" description="Список пока пуст." />
+        )}
+
         {/* Список мастеров */}
-        {(!hasQuery || filteredMasters.length > 0) && (
+        {!loading && filteredMasters.length > 0 && (
            <>
              {filteredMasters.map((m) => (
                <Section key={m.id}>
                  <Cell
-                   // Аватар мастера
-                   before={<Avatar size={48} src={m.avatarUrl} fallbackIcon={<Icon28UserStarBadgeOutline />} />}
-                   // Описание (специальность + рейтинг)
+                   before={<Avatar size={48} src={m.avatar_url} fallbackIcon={<Icon28UserStarBadgeOutline />} />}
                    description={
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <span>{m.specialty}</span>
-                        {m.description && <span style={{ opacity: 0.7, fontSize: 12 }}>{m.description}</span>}
+                        {/* Используем Bio как описание специальности, если есть */}
+                        <span style={{ opacity: 0.7, fontSize: 12, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                           {m.bio || 'Мастер'}
+                        </span>
                       </div>
                    }
                    after={
-                      m.rating && (
+                      m.rating > 0 && (
                         <div style={{
                            background: 'var(--tgui--section_bg_color)',
                            padding: '4px 8px',
@@ -224,12 +228,10 @@ export const ProfileScreen: React.FC<Props> = ({
        overflow: 'hidden'
     }}>
 
-      {/* Основной контент (скроллится внутри своих экранов) */}
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
         {renderContent()}
       </div>
 
-      {/* Нижняя панель навигации */}
       <Tabbar>
         {tabs.map(({ id, text, Icon }) => (
           <Tabbar.Item

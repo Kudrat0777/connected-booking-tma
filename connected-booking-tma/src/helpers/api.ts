@@ -221,3 +221,20 @@ export async function bulkGenerateSlots(
   }
   return res.json();
 }
+
+
+export type MasterPublicProfile = {
+  id: number;
+  name: string;
+  bio: string;
+  avatar_url: string;
+  rating: number;
+  reviews_count: number;
+  // specializations пока нет в списке, можно использовать bio или добавить в сериализатор на бэке
+};
+
+export async function fetchMasters(): Promise<MasterPublicProfile[]> {
+  const res = await fetch(`${API_BASE}/masters/`);
+  if (!res.ok) throw new Error('Failed to fetch masters');
+  return res.json();
+}
