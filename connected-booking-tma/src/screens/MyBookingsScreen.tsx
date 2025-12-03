@@ -18,7 +18,6 @@ import { StatusBadge } from '../components/StatusBadge';
 
 const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
   const container = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     if (!container.current) return;
     try {
@@ -32,7 +31,6 @@ const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 
       return () => anim.destroy();
     } catch (e) { console.error(e); }
   }, [src]);
-
   return <div ref={container} style={{ width: size, height: size, margin: '0 auto 16px' }} />;
 };
 
@@ -54,6 +52,7 @@ function formatDateTime(iso: string): string {
 }
 
 type Segment = 'upcoming' | 'past';
+type StatusFilter = 'all' | 'confirmed' | 'pending' | 'rejected';
 
 export const MyBookingsScreen: React.FC<Props> = ({
   telegramId,
@@ -65,7 +64,10 @@ export const MyBookingsScreen: React.FC<Props> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
+
+  // Состояния фильтров
   const [segment, setSegment] = useState<Segment>('upcoming');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
   const load = async () => {
     try {
@@ -85,6 +87,7 @@ export const MyBookingsScreen: React.FC<Props> = ({
     load();
   }, [telegramId]);
 
+  // Разделение на будущее/прошлое
   const { upcoming, past } = useMemo(() => {
     const now = new Date();
     const up: Booking[] = [];
@@ -100,6 +103,13 @@ export const MyBookingsScreen: React.FC<Props> = ({
     return { upcoming: up, past: pa };
   }, [bookings]);
 
+  // Применение фильтра по статусу
+  const displayedList = useMemo(() => {
+      const baseList = segment === 'upcoming' ? upcoming : past;
+      if (statusFilter === 'all') return baseList;
+      return baseList.filter(b => b.status === statusFilter);
+  }, [segment, upcoming, past, statusFilter]);
+
   const handleCancel = async (b: Booking) => {
     if (!window.confirm('Отменить эту запись?')) return;
     try {
@@ -113,30 +123,75 @@ export const MyBookingsScreen: React.FC<Props> = ({
     }
   };
 
-  const currentList = segment === 'upcoming' ? upcoming : past;
-
   return (
     <ScreenLayout title="Мои записи" onBack={onBack}>
       <div>
-        <div style={{ padding: '10px 16px' }}>
+        {/* 1. Основной переключатель (Предстоящие / Прошедшие) */}
+        <div style={{ padding: '10px 16px 0' }}>
           <SegmentedControl size="m">
             <SegmentedControl.Item
               selected={segment === 'upcoming'}
-              onClick={() => setSegment('upcoming')}
+              onClick={() => { setSegment('upcoming'); setStatusFilter('all'); }}
             >
               Предстоящие
             </SegmentedControl.Item>
             <SegmentedControl.Item
               selected={segment === 'past'}
-              onClick={() => setSegment('past')}
+              onClick={() => { setSegment('past'); setStatusFilter('all'); }}
             >
               Прошедшие
             </SegmentedControl.Item>
           </SegmentedControl>
         </div>
+
+        {/* 2. Фильтр статусов (Чипсы) */}
+        <div style={{
+            padding: '12px 16px',
+            display: 'flex',
+            gap: 8,
+            overflowX: 'auto',
+            whiteSpace: 'nowrap',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            WebkitOverflowScrolling: 'touch'
+        }}>
+            <Button
+                size="s"
+                mode={statusFilter === 'all' ? 'filled' : 'bezeled'}
+                onClick={() => setStatusFilter('all')}
+                style={{ flexShrink: 0 }}
+            >
+                Все
+            </Button>
+            <Button
+                size="s"
+                mode={statusFilter === 'confirmed' ? 'filled' : 'bezeled'}
+                onClick={() => setStatusFilter('confirmed')}
+                style={{ flexShrink: 0 }}
+            >
+                Подтверждено
+            </Button>
+            <Button
+                size="s"
+                mode={statusFilter === 'pending' ? 'filled' : 'bezeled'}
+                onClick={() => setStatusFilter('pending')}
+                style={{ flexShrink: 0 }}
+            >
+                Ожидание
+            </Button>
+            <Button
+                size="s"
+                mode={statusFilter === 'rejected' ? 'filled' : 'bezeled'}
+                onClick={() => setStatusFilter('rejected')}
+                style={{ flexShrink: 0 }}
+            >
+                Отменено
+            </Button>
+        </div>
+
         <div
           style={{
-            height: 'calc(100vh - 180px)',
+            height: 'calc(100vh - 240px)',
             overflowY: 'auto',
             WebkitOverflowScrolling: 'touch',
             paddingBottom: 20
@@ -154,23 +209,23 @@ export const MyBookingsScreen: React.FC<Props> = ({
             </Placeholder>
           )}
 
-          {!loading && !error && currentList.length === 0 && (
+          {!loading && !error && displayedList.length === 0 && (
             <Placeholder
-              header={segment === 'upcoming' ? 'Нет записей' : 'История пуста'}
+              header={statusFilter === 'all' ? 'Список пуст' : 'Ничего не найдено'}
               description={
-                segment === 'upcoming'
-                  ? 'У вас пока нет запланированных визитов.'
-                  : 'Здесь будут храниться ваши завершенные услуги.'
+                statusFilter === 'all'
+                  ? (segment === 'upcoming' ? 'Нет предстоящих записей' : 'История записей пуста')
+                  : 'Записей с таким статусом нет'
               }
             >
               <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
                 <LottieIcon
-                  src={segment === 'upcoming' ? '/stickers/skeleton.json' : '/stickers/favorites.json'}
+                  src={segment === 'upcoming' ? '/stickers/skeleton.json' : '/stickers/duck_out.json'}
                   size={140}
                 />
               </div>
 
-              {segment === 'upcoming' && onGoToServices && (
+              {segment === 'upcoming' && statusFilter === 'all' && onGoToServices && (
                 <Button size="l" stretched onClick={onGoToServices} style={{ marginTop: 16 }}>
                   Записаться онлайн
                 </Button>
@@ -178,9 +233,9 @@ export const MyBookingsScreen: React.FC<Props> = ({
             </Placeholder>
           )}
 
-          {!loading && !error && currentList.length > 0 && (
+          {!loading && !error && displayedList.length > 0 && (
             <List style={{ background: 'var(--tgui--secondary_bg_color)', minHeight: '100%' }}>
-              {currentList.map((b) => {
+              {displayedList.map((b) => {
                 const serviceName = b.service_name || b.slot.service?.name || 'Услуга';
                 const masterName = b.master_name || b.slot.service?.master_name || 'Мастер';
                 const timeStr = formatDateTime(b.slot.time);
