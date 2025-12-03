@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // <--- Добавил useRef
 import {
   Tabbar,
   List,
@@ -22,6 +22,7 @@ import {
   Icon28FavoriteOutline,
   Icon28DeleteOutline
 } from '@vkontakte/icons';
+import lottie from 'lottie-web'; // <--- Добавил импорт
 
 import {
   fetchMasterBookings,
@@ -32,6 +33,26 @@ import {
   deleteAccount
 } from '../helpers/api';
 import type { Booking, Service } from '../helpers/api';
+
+// --- КОМПОНЕНТ АНИМАЦИИ ---
+const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
+  const container = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!container.current) return;
+    try {
+      const anim = lottie.loadAnimation({
+        container: container.current,
+        renderer: 'svg',
+        loop: true,
+        autoplay: true,
+        path: src,
+      });
+      return () => anim.destroy();
+    } catch (e) { console.error(e); }
+  }, [src]);
+  return <div ref={container} style={{ width: size, height: size, margin: '0 auto 16px' }} />;
+};
+// ---------------------------
 
 type Props = {
   telegramId: number;
@@ -63,6 +84,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   const [filter, setFilter] = useState<BookingFilter>('today');
   const [loadingBookings, setLoadingBookings] = useState(false);
 
+  // --- Services State ---
   const [services, setServices] = useState<Service[]>([]);
   const [loadingServices, setLoadingServices] = useState(false);
 
@@ -128,7 +150,6 @@ export const MasterDashboardScreen: React.FC<Props> = ({
     }
   };
 
-  // --- ЛОГИКА АККАУНТА (ВЫХОД И УДАЛЕНИЕ) ---
   const handleLogout = () => {
     window.location.href = '/';
   };
@@ -167,8 +188,12 @@ export const MasterDashboardScreen: React.FC<Props> = ({
       {loadingBookings && <div style={{ display: 'flex', justifyContent: 'center', padding: 20 }}><Spinner size="m"/></div>}
 
       {!loadingBookings && bookings.length === 0 && (
-        <Placeholder header="Нет записей" description="На этот период записей пока нет.">
-           <div style={{ fontSize: 40 }}>📅</div>
+        <Placeholder
+            header="Нет записей"
+            description="На этот период записей пока нет. Отдыхайте!"
+        >
+           {/* АНИМАЦИЯ ДЛЯ ЗАПИСЕЙ */}
+           <LottieIcon src="/stickers/duck_out.json" size={140} />
         </Placeholder>
       )}
 
@@ -228,7 +253,6 @@ export const MasterDashboardScreen: React.FC<Props> = ({
     <div style={{ paddingBottom: 100 }}>
       <div style={{ padding: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Title level="2">Мои услуги</Title>
-        {/* Вызов функции создания */}
         <Button size="s" onClick={onAddService}>+ Добавить</Button>
       </div>
 
@@ -260,7 +284,13 @@ export const MasterDashboardScreen: React.FC<Props> = ({
         ))}
 
         {services.length === 0 && !loadingServices && (
-           <Placeholder header="Нет услуг" description="Добавьте услуги, чтобы клиенты могли записываться." />
+           <Placeholder
+             header="Нет услуг"
+             description="Добавьте услуги, чтобы клиенты могли записываться."
+           >
+              {/* АНИМАЦИЯ ДЛЯ УСЛУГ */}
+              <LottieIcon src="/stickers/duck_out.json" size={140} />
+           </Placeholder>
         )}
       </List>
     </div>
@@ -269,37 +299,20 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   const renderProfile = () => (
      <div style={{ paddingBottom: 100 }}>
         <List style={{ background: 'var(--tgui--secondary_bg_color)' }}>
-
           <Section header="Мой профиль">
-             <Cell
-               before={<Icon28EditOutline />}
-               onClick={onEditProfile}
-               expandable
-             >
+             <Cell before={<Icon28EditOutline />} onClick={onEditProfile} expandable>
                 Редактировать профиль
              </Cell>
-             <Cell
-               before={<Icon28StatisticsOutline />}
-               onClick={onOpenAnalytics}
-               expandable
-             >
+             <Cell before={<Icon28StatisticsOutline />} onClick={onOpenAnalytics} expandable>
                 Статистика и доходы
              </Cell>
-             <Cell
-               before={<Icon28FavoriteOutline />}
-               onClick={onOpenReviews}
-               expandable
-             >
+             <Cell before={<Icon28FavoriteOutline />} onClick={onOpenReviews} expandable>
                 Мои отзывы
              </Cell>
           </Section>
 
           <Section header="Управление расписанием">
-             <Cell
-               before={<Icon28CalendarOutline />}
-               onClick={onOpenSchedule}
-               expandable
-             >
+             <Cell before={<Icon28CalendarOutline />} onClick={onOpenSchedule} expandable>
                 Настроить слоты
              </Cell>
           </Section>
@@ -307,39 +320,21 @@ export const MasterDashboardScreen: React.FC<Props> = ({
           <Section header="Аккаунт">
              <Cell>
                <Button
-                 mode="filled"
-                 size="l"
-                 stretched
-                 onClick={onSwitchToClient}
+                 mode="filled" size="l" stretched onClick={onSwitchToClient}
                  style={{ background: 'var(--tgui--button_color)' }}
                >
                   Вернуться в режим клиента
                </Button>
              </Cell>
-
-             {/* Кнопка ВЫЙТИ */}
              <Cell>
-                <Button
-                    mode="bezeled"
-                    size="m"
-                    stretched
-                    onClick={handleLogout}
-                >
+                <Button mode="bezeled" size="m" stretched onClick={handleLogout}>
                     Выйти из аккаунта
                 </Button>
              </Cell>
-
-             {/* Кнопка УДАЛИТЬ */}
              <Cell>
                 <Button
-                    mode="bezeled"
-                    size="m"
-                    stretched
-                    onClick={handleDeleteAccount}
-                    style={{
-                        color: 'var(--tgui--destructive_text_color)',
-                        borderColor: 'var(--tgui--destructive_text_color)'
-                    }}
+                    mode="bezeled" size="m" stretched onClick={handleDeleteAccount}
+                    style={{ color: 'var(--tgui--destructive_text_color)', borderColor: 'var(--tgui--destructive_text_color)' }}
                 >
                     Удалить аккаунт
                 </Button>
@@ -356,27 +351,14 @@ export const MasterDashboardScreen: React.FC<Props> = ({
         {activeTab === 'services' && renderServices()}
         {activeTab === 'profile' && renderProfile()}
       </div>
-
       <Tabbar>
-        <Tabbar.Item
-          text="Календарь"
-          selected={activeTab === 'bookings'}
-          onClick={() => setActiveTab('bookings')}
-        >
+        <Tabbar.Item text="Календарь" selected={activeTab === 'bookings'} onClick={() => setActiveTab('bookings')}>
           <Icon28CalendarOutline />
         </Tabbar.Item>
-        <Tabbar.Item
-          text="Услуги"
-          selected={activeTab === 'services'}
-          onClick={() => setActiveTab('services')}
-        >
+        <Tabbar.Item text="Услуги" selected={activeTab === 'services'} onClick={() => setActiveTab('services')}>
           <Icon28ServicesOutline />
         </Tabbar.Item>
-        <Tabbar.Item
-          text="Профиль"
-          selected={activeTab === 'profile'}
-          onClick={() => setActiveTab('profile')}
-        >
+        <Tabbar.Item text="Профиль" selected={activeTab === 'profile'} onClick={() => setActiveTab('profile')}>
           <Icon28UserCircleOutline />
         </Tabbar.Item>
       </Tabbar>

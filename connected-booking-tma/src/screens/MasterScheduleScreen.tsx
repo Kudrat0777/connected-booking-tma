@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Button,
   Select,
@@ -9,10 +9,10 @@ import {
   SegmentedControl,
   Spinner,
   Placeholder,
-  Modal
 } from '@telegram-apps/telegram-ui';
 import { ScreenLayout } from '../components/ScreenLayout';
-import { Icon28CalendarOutline, Icon28AddCircleOutline, Icon28DeleteOutline, Icon28UserAddOutline } from '@vkontakte/icons';
+import { Icon28DeleteOutline } from '@vkontakte/icons';
+import lottie from 'lottie-web';
 import {
   fetchMyServices,
   bulkGenerateSlots,
@@ -22,6 +22,26 @@ import {
   Service,
   Slot
 } from '../helpers/api';
+
+// --- Lottie Component ---
+const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
+  const container = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!container.current) return;
+    try {
+      const anim = lottie.loadAnimation({
+        container: container.current,
+        renderer: 'svg',
+        loop: true,
+        autoplay: true,
+        path: src,
+      });
+      return () => anim.destroy();
+    } catch (e) { console.error(e); }
+  }, [src]);
+  return <div ref={container} style={{ width: size, height: size, margin: '0 auto 16px' }} />;
+};
+// ------------------------
 
 type Props = {
   telegramId: number;
@@ -65,7 +85,7 @@ export const MasterScheduleScreen: React.FC<Props> = ({ telegramId, onBack }) =>
       setLoadingSlots(true);
       try {
           // Получаем ВСЕ слоты услуги, а потом фильтруем по дате на клиенте
-          // (Не идеально для продакшена, но просто для реализации сейчас)
+          // (Для продакшена лучше фильтровать на сервере, но пока так)
           const allSlots = await fetchSlotsForService(Number(selectedServiceId));
           const filtered = allSlots.filter(s => s.time.startsWith(manageDate));
           // Сортируем по времени
@@ -174,7 +194,13 @@ export const MasterScheduleScreen: React.FC<Props> = ({ telegramId, onBack }) =>
        {loadingSlots ? <Spinner size="m" style={{ margin: 20 }} /> : (
          <List>
             {slots.length === 0 ? (
-                <Placeholder header="Нет слотов" description="На этот день слотов нет. Перейдите в 'Создать', чтобы добавить их." />
+                <Placeholder
+                  header="Нет слотов"
+                  description="На этот день слотов нет. Перейдите в 'Создать', чтобы добавить их."
+                >
+                    {/* АНИМАЦИЯ КАЛЕНДАРЯ */}
+                    <LottieIcon src="/stickers/duck_out.json" size={140} />
+                </Placeholder>
             ) : (
                 slots.map(slot => {
                     const timeStr = new Date(slot.time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});

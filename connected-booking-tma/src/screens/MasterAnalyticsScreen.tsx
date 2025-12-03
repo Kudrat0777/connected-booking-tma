@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   List,
   Section,
@@ -6,11 +6,33 @@ import {
   Spinner,
   Title,
   Text,
-  LargeTitle
+  LargeTitle,
+  Placeholder
 } from '@telegram-apps/telegram-ui';
 import { Icon28StatisticsOutline, Icon24UserOutline } from '@vkontakte/icons';
+import lottie from 'lottie-web';
+
 import { ScreenLayout } from '../components/ScreenLayout';
 import { fetchMasterAnalytics, AnalyticsData } from '../helpers/api';
+
+// --- Компонент для Lottie анимации ---
+const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
+  const container = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!container.current) return;
+    try {
+      const anim = lottie.loadAnimation({
+        container: container.current,
+        renderer: 'svg',
+        loop: true,
+        autoplay: true,
+        path: src,
+      });
+      return () => anim.destroy();
+    } catch (e) { console.error(e); }
+  }, [src]);
+  return <div ref={container} style={{ width: size, height: size, margin: '0 auto 16px' }} />;
+};
 
 type Props = {
   telegramId: number;
@@ -27,6 +49,9 @@ export const MasterAnalyticsScreen: React.FC<Props> = ({ telegramId, onBack }) =
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [telegramId]);
+
+  // Определяем, пустая ли статистика (нет записей вообще)
+  const isEmpty = !loading && data && data.total_bookings === 0;
 
   // Компонент для карточки с деньгами
   const StatCard = ({ title, value, subtitle }: { title: string, value: string, subtitle?: string }) => (
@@ -49,27 +74,42 @@ export const MasterAnalyticsScreen: React.FC<Props> = ({ telegramId, onBack }) =
 
   return (
     <ScreenLayout title="Статистика" onBack={onBack}>
-      {loading ? (
+      {loading && (
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: 40 }}>
            <Spinner size="l"/>
         </div>
-      ) : data ? (
-        <div style={{ padding: 16 }}>
+      )}
 
-          {/* Общий баланс (месяц) */}
-          <div style={{ textAlign: 'center', marginBottom: 24 }}>
-             <Text style={{ color: 'var(--tgui--hint_color)' }}>Доход за месяц</Text>
-             <LargeTitle weight="1">{data.revenue_month.toLocaleString()} ₽</LargeTitle>
-          </div>
+      {/* Если данных нет (пустой аккаунт) */}
+      {isEmpty && (
+        <Placeholder
+           header="Статистика пуста"
+           description="Здесь будут отображаться ваши доходы и активность, как только появятся первые записи."
+        >
+           <LottieIcon src="/stickers/duck_out.json" size={140} />
+        </Placeholder>
+      )}
 
-          {/* Карточки День/Неделя */}
-          <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
-             <StatCard title="Сегодня" value={`+${data.revenue_today} ₽`} />
-             <StatCard title="Эта неделя" value={`+${data.revenue_week} ₽`} />
+      {/* Если данные есть */}
+      {!loading && !isEmpty && data && (
+        <div style={{ paddingBottom: 40 }}>
+          <div style={{ padding: 16 }}>
+
+            {/* Общий баланс (месяц) */}
+            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+               <Text style={{ color: 'var(--tgui--hint_color)' }}>Доход за месяц</Text>
+               <LargeTitle weight="1">{data.revenue_month.toLocaleString()} ₽</LargeTitle>
+            </div>
+
+            {/* Карточки День/Неделя */}
+            <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+               <StatCard title="Сегодня" value={`+${data.revenue_today} ₽`} />
+               <StatCard title="Эта неделя" value={`+${data.revenue_week} ₽`} />
+            </div>
           </div>
 
           {/* Список метрик */}
-          <List style={{ background: 'var(--tgui--bg_color)' }}> {/* Убираем фон списка, чтобы сливался */}
+          <List style={{ background: 'var(--tgui--bg_color)' }}>
              <Section header="Активность">
                 <Cell before={<Icon28StatisticsOutline />} after={String(data.total_bookings)}>
                    Выполнено записей
@@ -94,10 +134,7 @@ export const MasterAnalyticsScreen: React.FC<Props> = ({ telegramId, onBack }) =
                </Section>
              )}
           </List>
-
         </div>
-      ) : (
-         <div style={{ padding: 20, textAlign: 'center' }}>Нет данных</div>
       )}
     </ScreenLayout>
   );
