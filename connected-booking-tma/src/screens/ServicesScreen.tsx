@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import {
   List,
   Section,
@@ -10,12 +10,31 @@ import {
 import { ScreenLayout } from '../components/ScreenLayout';
 import { fetchServices, Service } from '../helpers/api';
 import { Icon24Search } from '@vkontakte/icons';
+import lottie from 'lottie-web';
+
+const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
+  const container = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!container.current) return;
+    try {
+      const anim = lottie.loadAnimation({
+        container: container.current,
+        renderer: 'svg',
+        loop: true,
+        autoplay: true,
+        path: src,
+      });
+      return () => anim.destroy();
+    } catch (e) { console.error(e); }
+  }, [src]);
+  return <div ref={container} style={{ width: size, height: size, margin: '0 auto 16px' }} />;
+};
 
 type Props = {
   onBack: () => void;
   onServiceSelected: (service: Service) => void;
-  selectedMasterName?: string | null; // Оставим для отображения в заголовке
-  masterId?: number | null; // <--- НОВЫЙ ПРОПС
+  selectedMasterName?: string | null;
+  masterId?: number | null;
 };
 
 export const ServicesScreen: React.FC<Props> = ({
@@ -29,8 +48,6 @@ export const ServicesScreen: React.FC<Props> = ({
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    // Если передан ID мастера, грузим только его услуги
-    // Если нет - грузим все (как раньше)
     const idToFetch = masterId ? masterId : undefined;
 
     fetchServices(idToFetch)
@@ -42,7 +59,6 @@ export const ServicesScreen: React.FC<Props> = ({
   const filteredServices = useMemo(() => {
     let res = services;
 
-    // Если мы НЕ передали ID, но передали Имя (старая логика из списка мастеров), фильтруем тут
     if (!masterId && selectedMasterName) {
        res = res.filter(s => s.master_name === selectedMasterName);
     }
@@ -86,8 +102,15 @@ export const ServicesScreen: React.FC<Props> = ({
             </Cell>
           </Section>
         ))}
+
+        {/* ЗАМЕНЕННЫЙ БЛОК С АНИМАЦИЕЙ */}
         {!loading && filteredServices.length === 0 && (
-           <Placeholder header="Ничего нет" description="Услуги не найдены" />
+           <Placeholder
+             header="Ничего нет"
+             description="Услуги по вашему запросу не найдены"
+           >
+              <LottieIcon src="/stickers/duck_out.json" size={140} />
+           </Placeholder>
         )}
       </List>
     </ScreenLayout>
