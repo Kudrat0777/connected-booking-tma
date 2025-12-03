@@ -341,3 +341,39 @@ export async function deleteService(serviceId: number): Promise<void> {
     throw new Error('Failed to delete service');
   }
 }
+
+export type PortfolioItem = {
+  id: number;
+  image_url: string;
+};
+
+export async function fetchPortfolio(masterId?: number, telegramId?: number): Promise<PortfolioItem[]> {
+  let url = `${API_BASE}/portfolio/?`;
+  if (masterId) url += `master_id=${masterId}`;
+  else if (telegramId) url += `telegram_id=${telegramId}`;
+
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Failed to load portfolio');
+  return res.json();
+}
+
+export async function uploadPortfolioPhoto(telegramId: number, file: File) {
+  const formData = new FormData();
+  formData.append('telegram_id', String(telegramId));
+  formData.append('image', file);
+
+  const res = await fetch(`${API_BASE}/portfolio/`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!res.ok) throw new Error('Failed to upload photo');
+  return res.json();
+}
+
+export async function deletePortfolioPhoto(photoId: number) {
+  const res = await fetch(`${API_BASE}/portfolio/${photoId}/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete photo');
+}

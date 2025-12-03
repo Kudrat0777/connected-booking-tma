@@ -37,7 +37,7 @@ export default defineConfig({
     port: 5173,
 
     // Разрешаем любые ngrok-домены вида *.ngrok-free.app
-    allowedHosts: ['.ngrok-free.app'],
+    allowedHosts: ['.share.zrok.io'],
 
     // Прокси: все запросы к /api → на Django (localhost:8000)
     proxy: {
