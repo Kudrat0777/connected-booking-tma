@@ -168,7 +168,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
                 b.status === 'pending' && <span style={{color: 'orange', fontSize: 12}}>Ожидание</span>
               }
             >
-              {b.name || 'Клиент'}
+              {b.client_name || b.name || 'Клиент'}
               <div style={{ fontSize: 13, color: 'var(--tgui--hint_color)' }}>
                  {b.service_name}
               </div>

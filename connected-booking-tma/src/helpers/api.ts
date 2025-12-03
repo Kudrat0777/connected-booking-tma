@@ -58,6 +58,7 @@ export async function fetchSlotsForService(serviceId: number): Promise<Slot[]> {
 export type Booking = {
   id: number;
   name: string;
+  client_name?: string | null;
   slot: Slot;
   created_at: string;
   telegram_id: number | null;
@@ -377,4 +378,28 @@ export async function deletePortfolioPhoto(photoId: number) {
     method: 'DELETE',
   });
   if (!res.ok) throw new Error('Failed to delete photo');
+}
+
+
+export async function fetchMasterSlots(telegramId: number, date: string): Promise<Slot[]> {
+  return [];
+}
+
+export async function createManualBooking(slotId: number, clientName: string) {
+  const res = await fetch(`${API_BASE}/bookings/manual_create/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ slot_id: slotId, client_name: clientName }),
+  });
+
+  if (!res.ok) throw new Error('Failed to create manual booking');
+  return res.json();
+}
+
+// Удаление слота (если мастер хочет убрать окно)
+export async function deleteSlot(slotId: number) {
+  const res = await fetch(`${API_BASE}/slots/${slotId}/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete slot');
 }
