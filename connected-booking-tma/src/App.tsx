@@ -23,7 +23,7 @@ import { MasterCreateServiceScreen } from './screens/MasterCreateServiceScreen';
 import { PortfolioViewerScreen } from './screens/PortfolioViewerScreen';
 
 import type { Service, Slot, Booking } from './helpers/api';
-import { getUserFromQuery } from './helpers/telegramQueryUser';
+import { getUserFromQuery, getStartParam } from './helpers/telegramQueryUser';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
@@ -93,10 +93,15 @@ const App: React.FC = () => {
 
   const [screen, setScreen] = useState<Screen>('welcome');
   const [mainTab, setMainTab] = useState<MainTab>('bookings');
+
+  // State
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
+
   const [selectedMasterName, setSelectedMasterName] = useState<string | null>(null);
+  const [selectedMasterId, setSelectedMasterId] = useState<number | null>(null); // <--- НОВОЕ ПОЛЕ
+
   const [reviewMaster, setReviewMaster] = useState<{id: number, name: string} | null>(null);
   const [currentMaster, setCurrentMaster] = useState<any>(null);
   const [reviewsMasterId, setReviewsMasterId] = useState<number | null>(null);
@@ -113,11 +118,40 @@ const App: React.FC = () => {
       } catch (e) { console.error(e); }
   };
 
+  // Логика инициализации (Роли + Deep Linking)
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('role') === 'master') {
-      setScreen('master_welcome');
-    }
+    const initApp = async () => {
+       // 1. Проверяем роль Мастера (из URL)
+       const params = new URLSearchParams(window.location.search);
+       if (params.get('role') === 'master') {
+         setScreen('master_welcome');
+         return;
+       }
+
+       // 2. Проверяем Deep Link (startapp=master_ID)
+       const startParam = getStartParam();
+       if (startParam && startParam.startsWith('master_')) {
+          const idStr = startParam.replace('master_', '');
+          const mId = parseInt(idStr);
+
+          if (!isNaN(mId)) {
+             try {
+                 // Загружаем данные мастера, чтобы узнать имя
+                 const res = await fetch(`${API_BASE}/masters/${mId}/`);
+                 if (res.ok) {
+                     const mData = await res.json();
+                     setSelectedMasterId(mId);
+                     setSelectedMasterName(mData.name);
+                     setScreen('services');
+                 }
+             } catch (e) {
+                 console.error('Deep link error', e);
+             }
+          }
+       }
+    };
+
+    initApp();
   }, []);
 
   const handleServiceSelected = (service: Service) => {
@@ -140,6 +174,7 @@ const App: React.FC = () => {
     setSelectedSlot(null);
     setCreatedBooking(null);
     setSelectedMasterName(null);
+    setSelectedMasterId(null); // Сбрасываем ID мастера
     setScreen('welcome');
   };
 
@@ -152,7 +187,11 @@ const App: React.FC = () => {
       {/* CLIENT SCREENS */}
       {screen === 'welcome' && (
         <WelcomeScreen
-          onContinue={() => { setSelectedMasterName(null); setScreen('services'); }}
+          onContinue={() => {
+            setSelectedMasterName(null);
+            setSelectedMasterId(null);
+            setScreen('services');
+          }}
           onOpenMyBookings={() => { setMainTab('bookings'); setScreen('profile'); }}
         />
       )}
@@ -161,6 +200,7 @@ const App: React.FC = () => {
           onBack={() => setScreen('welcome')}
           onServiceSelected={handleServiceSelected}
           selectedMasterName={selectedMasterName}
+          masterId={selectedMasterId} // <--- Передаем ID
         />
       )}
       {screen === 'slots' && selectedService && (
@@ -263,7 +303,6 @@ const App: React.FC = () => {
           }}
           onOpenAnalytics={() => setScreen('master_analytics')}
           onOpenReviews={() => setScreen('master_reviews')}
-          // ВОТ ЭТОГО НЕ ХВАТАЛО:
           onAddService={() => setScreen('master_create_service')}
         />
       )}

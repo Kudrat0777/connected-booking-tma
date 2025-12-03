@@ -19,3 +19,14 @@ export function getUserFromQuery(): QueryUser | null {
     return null;
   }
 }
+
+export function getStartParam(): string | null {
+  const tg = (window as any).Telegram?.WebApp;
+
+  if (tg?.initDataUnsafe?.start_param) {
+    return tg.initDataUnsafe.start_param;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  return params.get('tgWebAppStartParam') || params.get('start_param');
+}

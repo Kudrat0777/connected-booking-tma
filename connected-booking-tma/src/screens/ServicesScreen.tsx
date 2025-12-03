@@ -1,130 +1,95 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   List,
   Section,
   Cell,
-  Spinner,
   Placeholder,
-  Button,
-  Text
+  Spinner,
+  Input
 } from '@telegram-apps/telegram-ui';
-import { Icon28ServicesOutline } from '@vkontakte/icons';
-import type { Service } from '../helpers/api';
-import { fetchServices } from '../helpers/api';
 import { ScreenLayout } from '../components/ScreenLayout';
+import { fetchServices, Service } from '../helpers/api';
+import { Icon24Search } from '@vkontakte/icons';
 
 type Props = {
   onBack: () => void;
   onServiceSelected: (service: Service) => void;
-  selectedMasterName?: string | null;
+  selectedMasterName?: string | null; // Оставим для отображения в заголовке
+  masterId?: number | null; // <--- НОВЫЙ ПРОПС
 };
 
 export const ServicesScreen: React.FC<Props> = ({
   onBack,
   onServiceSelected,
   selectedMasterName,
+  masterId
 }) => {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await fetchServices();
-      setServices(data);
-    } catch (e) {
-      console.error(e);
-      setError('Не удалось загрузить услуги. Попробуйте позже.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
-    load();
-  }, []);
+    // Если передан ID мастера, грузим только его услуги
+    // Если нет - грузим все (как раньше)
+    const idToFetch = masterId ? masterId : undefined;
 
-  const visibleServices = useMemo(() => {
-    if (!selectedMasterName) return services;
-    return services.filter((s) => s.master_name === selectedMasterName);
-  }, [services, selectedMasterName]);
+    fetchServices(idToFetch)
+      .then(setServices)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [masterId]);
 
-  const headerText = selectedMasterName
-    ? `Услуги мастера ${selectedMasterName}`
-    : 'Выберите услугу';
+  const filteredServices = useMemo(() => {
+    let res = services;
+
+    // Если мы НЕ передали ID, но передали Имя (старая логика из списка мастеров), фильтруем тут
+    if (!masterId && selectedMasterName) {
+       res = res.filter(s => s.master_name === selectedMasterName);
+    }
+
+    if (search) {
+      const q = search.toLowerCase();
+      res = res.filter(s => s.name.toLowerCase().includes(q));
+    }
+    return res;
+  }, [services, search, selectedMasterName, masterId]);
+
+  const title = selectedMasterName ? `Услуги: ${selectedMasterName}` : 'Выберите услугу';
 
   return (
-    <ScreenLayout title="Услуги" onBack={onBack}>
-      {loading && (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
-          <Spinner size="m" />
-        </div>
-      )}
-
-      {!loading && error && (
-        <Placeholder header="Ошибка" description={error}>
-          <Button size="s" onClick={load}>Повторить</Button>
-        </Placeholder>
-      )}
-
-      {!loading && !error && visibleServices.length === 0 && (
-        <Placeholder
-          header="Нет доступных услуг"
-          description="Попробуйте выбрать другого мастера или загляните позже."
+    <ScreenLayout title={title} onBack={onBack}>
+      <div style={{ padding: 16 }}>
+        <Input
+           placeholder="Поиск услуги..."
+           before={<Icon24Search style={{ color: 'var(--tgui--hint_color)' }}/>}
+           value={search}
+           onChange={e => setSearch(e.target.value)}
         />
-      )}
+      </div>
 
-      {!loading && !error && visibleServices.length > 0 && (
-        <List style={{ background: 'var(--tgui--secondary_bg_color)', minHeight: '100%' }}>
-          <Section header={headerText}>
-            {visibleServices.map((s) => (
-              <Cell
-                key={s.id}
-                onClick={() => onServiceSelected(s)}
-                before={<Icon28ServicesOutline />}
-                multiline
-                description={
-                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: 2 }}>
-                    {/* Duration Badge */}
-                    {s.duration && (
-                       <span style={{
-                         fontSize: 12,
-                         color: 'var(--tgui--hint_color)',
-                         display: 'inline-flex',
-                         alignItems: 'center'
-                       }}>
-                         ⏱ {s.duration} мин
-                       </span>
-                    )}
+      {loading && <div style={{ display: 'flex', justifyContent: 'center' }}><Spinner size="m"/></div>}
 
-                    {/* Separator if both exist */}
-                    {s.duration && s.price != null && <span>·</span>}
-
-                    {/* Master Name (if not filtered by master already) */}
-                    {!selectedMasterName && s.master_name && (
-                      <span style={{ fontSize: 12, color: 'var(--tgui--hint_color)' }}>
-                        {s.master_name}
-                      </span>
-                    )}
-                  </div>
-                }
-                // Price on the right side
-                after={
-                  s.price != null && (
-                    <Text weight="2" style={{ color: 'var(--tgui--link_color)' }}>
-                      {s.price} ₽
-                    </Text>
-                  )
-                }
-              >
-                {s.name}
-              </Cell>
-            ))}
+      <List>
+        {filteredServices.map((s) => (
+          <Section key={s.id}>
+            <Cell
+              description={`${s.duration} мин • ${s.price} ₽`}
+              onClick={() => onServiceSelected(s)}
+              multiline
+            >
+              {s.name}
+              {!selectedMasterName && !masterId && (
+                 <div style={{ fontSize: 12, color: 'var(--tgui--link_color)' }}>
+                    Мастер: {s.master_name}
+                 </div>
+              )}
+            </Cell>
           </Section>
-        </List>
-      )}
+        ))}
+        {!loading && filteredServices.length === 0 && (
+           <Placeholder header="Ничего нет" description="Услуги не найдены" />
+        )}
+      </List>
     </ScreenLayout>
   );
 };
