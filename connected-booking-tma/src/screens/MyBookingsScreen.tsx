@@ -16,7 +16,6 @@ import { fetchMyBookings, cancelBooking } from '../helpers/api';
 import { ScreenLayout } from '../components/ScreenLayout';
 import { StatusBadge } from '../components/StatusBadge';
 
-// --- Мини-компонент для Lottie ---
 const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
   const container = useRef<HTMLDivElement>(null);
 
@@ -36,13 +35,12 @@ const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 
 
   return <div ref={container} style={{ width: size, height: size, margin: '0 auto 16px' }} />;
 };
-// ---------------------------------
 
 type Props = {
   telegramId: number;
   onBack: () => void;
   onGoToServices?: () => void;
-  onReview?: (booking: Booking) => void; // <--- ДОБАВИЛ ПРОПС
+  onReview?: (booking: Booking) => void;
 };
 
 function formatDateTime(iso: string): string {
@@ -61,7 +59,7 @@ export const MyBookingsScreen: React.FC<Props> = ({
   telegramId,
   onBack,
   onGoToServices,
-  onReview // <--- ИСПОЛЬЗУЕМ
+  onReview
 }) => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,123 +117,133 @@ export const MyBookingsScreen: React.FC<Props> = ({
 
   return (
     <ScreenLayout title="Мои записи" onBack={onBack}>
-      <div style={{ padding: '10px 16px' }}>
-        <SegmentedControl size="m">
-          <SegmentedControl.Item
-            selected={segment === 'upcoming'}
-            onClick={() => setSegment('upcoming')}
-          >
-            Предстоящие
-          </SegmentedControl.Item>
-          <SegmentedControl.Item
-            selected={segment === 'past'}
-            onClick={() => setSegment('past')}
-          >
-            Прошедшие
-          </SegmentedControl.Item>
-        </SegmentedControl>
-      </div>
-
-      {loading && (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
-           <Spinner size="m" />
+      <div>
+        <div style={{ padding: '10px 16px' }}>
+          <SegmentedControl size="m">
+            <SegmentedControl.Item
+              selected={segment === 'upcoming'}
+              onClick={() => setSegment('upcoming')}
+            >
+              Предстоящие
+            </SegmentedControl.Item>
+            <SegmentedControl.Item
+              selected={segment === 'past'}
+              onClick={() => setSegment('past')}
+            >
+              Прошедшие
+            </SegmentedControl.Item>
+          </SegmentedControl>
         </div>
-      )}
-
-      {!loading && error && (
-         <Placeholder header="Ошибка" description={error}>
-            <Button size="s" onClick={load}>Повторить</Button>
-         </Placeholder>
-      )}
-
-      {!loading && !error && currentList.length === 0 && (
-        <Placeholder
-          header={segment === 'upcoming' ? 'Нет записей' : 'История пуста'}
-          description={
-            segment === 'upcoming'
-              ? 'У вас пока нет запланированных визитов. Самое время записаться!'
-              : 'Здесь будут храниться ваши завершенные услуги.'
-          }
+        <div
+          style={{
+            height: 'calc(100vh - 180px)',
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            paddingBottom: 20
+          }}
         >
-          <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-            <LottieIcon
-              src={segment === 'upcoming' ? '/stickers/skeleton.json' : '/stickers/favorites.json'}
-              size={140}
-            />
-          </div>
-
-          {segment === 'upcoming' && onGoToServices && (
-             <Button size="l" stretched onClick={onGoToServices} style={{ marginTop: 16 }}>
-               Записаться онлайн
-             </Button>
+          {loading && (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
+              <Spinner size="m" />
+            </div>
           )}
-        </Placeholder>
-      )}
 
-      {!loading && !error && currentList.length > 0 && (
-        <List style={{ background: 'var(--tgui--secondary_bg_color)', minHeight: '100%' }}>
-          {currentList.map((b) => {
-             const serviceName = b.service_name || b.slot.service?.name || 'Услуга';
-             const masterName = b.master_name || b.slot.service?.master_name || 'Мастер';
-             const timeStr = formatDateTime(b.slot.time);
+          {!loading && error && (
+            <Placeholder header="Ошибка" description={error}>
+                <Button size="s" onClick={load}>Повторить</Button>
+            </Placeholder>
+          )}
 
-             return (
-               <Section key={b.id}>
-                 <Cell
-                   before={<Icon20RecentOutline />}
-                   description={timeStr}
-                   multiline
-                 >
-                   {serviceName}
-                 </Cell>
-                 <Cell
-                   before={<Icon20UserOutline />}
-                 >
-                   {masterName}
-                 </Cell>
+          {!loading && !error && currentList.length === 0 && (
+            <Placeholder
+              header={segment === 'upcoming' ? 'Нет записей' : 'История пуста'}
+              description={
+                segment === 'upcoming'
+                  ? 'У вас пока нет запланированных визитов.'
+                  : 'Здесь будут храниться ваши завершенные услуги.'
+              }
+            >
+              <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+                <LottieIcon
+                  src={segment === 'upcoming' ? '/stickers/skeleton.json' : '/stickers/favorites.json'}
+                  size={140}
+                />
+              </div>
 
-                 <Cell>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span>Статус:</span>
-                      <StatusBadge status={b.status} />
-                    </div>
-                 </Cell>
+              {segment === 'upcoming' && onGoToServices && (
+                <Button size="l" stretched onClick={onGoToServices} style={{ marginTop: 16 }}>
+                  Записаться онлайн
+                </Button>
+              )}
+            </Placeholder>
+          )}
 
-                 {segment === 'upcoming' && b.status !== 'rejected' && ( // поправил статус canceled на rejected, если так в твоем API
-                   <Cell>
-                     <Button
-                        mode="bezeled"
-                        size="m"
-                        stretched
-                        disabled={cancellingId === b.id}
-                        onClick={() => handleCancel(b)}
-                        style={{ color: 'var(--tgui--destructive_text_color)' }}
-                     >
-                       {cancellingId === b.id ? 'Отмена...' : 'Отменить запись'}
-                     </Button>
-                   </Cell>
-                 )}
+          {!loading && !error && currentList.length > 0 && (
+            <List style={{ background: 'var(--tgui--secondary_bg_color)', minHeight: '100%' }}>
+              {currentList.map((b) => {
+                const serviceName = b.service_name || b.slot.service?.name || 'Услуга';
+                const masterName = b.master_name || b.slot.service?.master_name || 'Мастер';
+                const timeStr = formatDateTime(b.slot.time);
 
-                 {/* --- НОВАЯ КНОПКА ОЦЕНКИ (Только в прошедших и подтвержденных) --- */}
-                 {segment === 'past' && b.status === 'confirmed' && onReview && (
-                    <Cell>
-                      <Button
-                         mode="filled"
-                         size="m"
-                         stretched
-                         before={<Icon28FavoriteOutline />}
-                         onClick={() => onReview(b)}
-                      >
-                         Оценить мастера
-                      </Button>
+                return (
+                  <Section key={b.id}>
+                    <Cell
+                      before={<Icon20RecentOutline />}
+                      description={timeStr}
+                      multiline
+                    >
+                      {serviceName}
                     </Cell>
-                 )}
+                    <Cell
+                      before={<Icon20UserOutline />}
+                    >
+                      {masterName}
+                    </Cell>
 
-               </Section>
-             );
-          })}
-        </List>
-      )}
+                    <Cell>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span>Статус:</span>
+                          <StatusBadge status={b.status} />
+                        </div>
+                    </Cell>
+
+                    {segment === 'upcoming' && b.status !== 'rejected' && (
+                      <Cell>
+                        <Button
+                            mode="bezeled"
+                            size="m"
+                            stretched
+                            disabled={cancellingId === b.id}
+                            onClick={() => handleCancel(b)}
+                            style={{ color: 'var(--tgui--destructive_text_color)' }}
+                        >
+                          {cancellingId === b.id ? 'Отмена...' : 'Отменить запись'}
+                        </Button>
+                      </Cell>
+                    )}
+
+                    {segment === 'past' && b.status === 'confirmed' && onReview && (
+                        <Cell>
+                          <Button
+                            mode="filled"
+                            size="m"
+                            stretched
+                            before={<Icon28FavoriteOutline />}
+                            onClick={() => onReview(b)}
+                          >
+                            Оценить мастера
+                          </Button>
+                        </Cell>
+                    )}
+
+                  </Section>
+                );
+              })}
+              <div style={{ height: 40 }} />
+            </List>
+          )}
+        </div>
+      </div>
     </ScreenLayout>
   );
 };
