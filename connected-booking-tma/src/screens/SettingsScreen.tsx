@@ -1,109 +1,100 @@
 import React, { useState } from 'react';
+import {
+  List,
+  Section,
+  Input,
+  Button,
+  Cell,
+  Avatar
+} from '@telegram-apps/telegram-ui';
 import { ScreenLayout } from '../components/ScreenLayout';
-import { List, Section, Cell, Button, Switch } from '@telegram-apps/telegram-ui';
-import '../css/SettingsScreen.css';
+import { Icon28PhoneOutline, Icon28UserCircleOutline } from '@vkontakte/icons';
 
 type Props = {
   telegramId: number;
   onBack: () => void;
-  onLogout?: () => void;
-  onChangeLanguage?: (lang: string) => void;
+  onLogout: () => void;
 };
 
-export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout, onChangeLanguage }) => {
-  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(true);
-  const [language, setLanguage] = useState<string>('ru');
-
-  const handleToggleNotifications = () => {
-    setNotificationsEnabled((s) => !s);
-    // TODO: persist setting to backend/localStorage if needed
-  };
-
-  const handleSelectLanguage = (lang: string) => {
-    setLanguage(lang);
-    onChangeLanguage?.(lang);
-  };
+export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }) => {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
 
   return (
     <ScreenLayout title="Настройки" onBack={onBack}>
-      <List
-        style={{
-          background: 'var(--tgui--secondary_bg_color)',
-          minHeight: '100%'
-        }}
-      >
-        <Section header="Аккаунт">
-          <Cell
-            after={String(telegramId)}
-            disabled
-          >
-            Telegram ID
-          </Cell>
-          <Cell
-            onClick={() => { /* Navigate to profile if needed */ }}
-            // Add "before" icon here if you have one, e.g. <Icon28User />
-          >
-            Открыть профиль
-          </Cell>
-        </Section>
+       {/*
+           Ограничиваем высоту контента.
+           100vh (весь экран) - 60px (хедер) - 60px (таббар) ≈ 120px.
+           Оставляем запас.
+       */}
+       <div style={{
+           height: 'calc(100vh - 120px)',
+           overflowY: 'auto',
+           WebkitOverflowScrolling: 'touch', // Плавный скролл на iOS
+           paddingBottom: 40 // Отступ снизу
+       }}>
+          <div style={{ padding: 20, display: 'flex', justifyContent: 'center' }}>
+             <Avatar size={96} fallbackIcon={<Icon28UserCircleOutline />} />
+          </div>
 
-        <Section
-          header="Уведомления"
-          footer="Включите уведомления, чтобы не пропускать записи и напоминания."
-        >
-          <Cell
-            after={
-              <Switch
-                checked={notificationsEnabled}
-                onChange={handleToggleNotifications}
+          <List>
+            <Section header="Личные данные">
+              <Input
+                header="Имя"
+                placeholder="Ваше имя"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
               />
-            }
-            onClick={handleToggleNotifications}
-          >
-            Push-уведомления
-          </Cell>
-        </Section>
+              <Input
+                header="Фамилия"
+                placeholder="Ваше фамилия"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+              />
+            </Section>
 
-        <Section header="Язык">
-          <Cell
-            onClick={() => handleSelectLanguage('ru')}
-            after={language === 'ru' && <div style={{ color: 'var(--tgui--link_color)' }}>✓</div>}
-          >
-            Русский
-          </Cell>
-          <Cell
-            onClick={() => handleSelectLanguage('en')}
-            after={language === 'en' && <div style={{ color: 'var(--tgui--link_color)' }}>✓</div>}
-          >
-            English
-          </Cell>
-        </Section>
+            <Section header="Контакты">
+               <Input
+                 header="Телефон"
+                 placeholder="+7 999 000-00-00"
+                 value={phone}
+                 onChange={(e) => setPhone(e.target.value)}
+               />
+               <Cell>
+                 <Button
+                    mode="bezeled"
+                    before={<Icon28PhoneOutline />}
+                    stretched
+                    onClick={() => alert('Функция запроса номера в разработке')}
+                 >
+                    Обновить из Telegram
+                 </Button>
+               </Cell>
+            </Section>
 
-        <Section header="Конфиденциальность">
-          <Cell onClick={() => { /* Open Terms */ }}>
-            Общие условия
-          </Cell>
-          <Cell onClick={() => { /* Open Privacy */ }}>
-            Политика конфиденциальности
-          </Cell>
-        </Section>
+            <Section>
+               <Cell>
+                 <Button
+                    mode="filled"
+                    size="l"
+                    stretched
+                    onClick={() => alert('Сохранение...')}
+                 >
+                    Сохранить изменения
+                 </Button>
+               </Cell>
+            </Section>
 
-        <Section>
-          <Cell>
-            <Button
-              mode="bezeled"
-              size="m"
-              stretched
-              onClick={() => onLogout?.()}
-              style={{ color: 'var(--tgui--destructive_text_color)' }}
-            >
-              Выйти
-            </Button>
-          </Cell>
-        </Section>
-      </List>
+            <Section>
+                <Cell>
+                    <Button mode="bezeled" size="m" stretched onClick={onLogout} style={{color: 'var(--tgui--destructive_text_color)'}}>
+                        Выйти
+                    </Button>
+                </Cell>
+            </Section>
+          </List>
+      </div>
     </ScreenLayout>
   );
 };
-
-export default SettingsScreen;
