@@ -418,3 +418,11 @@ export const updateUserProfile = async (telegramId: number, data: { first_name?:
     if (!response.ok) throw new Error('Failed to update profile');
     return response.json();
 };
+
+export const deleteAccount = async (telegramId: number) => {
+  const response = await fetch(`${API_BASE}/users/${telegramId}/`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Failed to delete account');
+  return true;
+};

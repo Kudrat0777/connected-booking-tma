@@ -28,7 +28,8 @@ import {
   confirmBooking,
   rejectBooking,
   fetchMyServices,
-  deleteService
+  deleteService,
+  deleteAccount
 } from '../helpers/api';
 import type { Booking, Service } from '../helpers/api';
 
@@ -58,12 +59,10 @@ export const MasterDashboardScreen: React.FC<Props> = ({
 
   // --- Bookings State ---
   const [bookings, setBookings] = useState<Booking[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [summary, setSummary] = useState<any>(null);
   const [filter, setFilter] = useState<BookingFilter>('today');
   const [loadingBookings, setLoadingBookings] = useState(false);
 
-  // --- Services State ---
   const [services, setServices] = useState<Service[]>([]);
   const [loadingServices, setLoadingServices] = useState(false);
 
@@ -126,6 +125,25 @@ export const MasterDashboardScreen: React.FC<Props> = ({
     } catch (e) {
       console.error(e);
       alert('Ошибка при удалении услуги');
+    }
+  };
+
+  // --- ЛОГИКА АККАУНТА (ВЫХОД И УДАЛЕНИЕ) ---
+  const handleLogout = () => {
+    window.location.href = '/';
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmText = prompt("Чтобы удалить аккаунт и все данные навсегда, введите слово DELETE");
+    if (confirmText === 'DELETE') {
+        try {
+            await deleteAccount(telegramId);
+            alert('Аккаунт успешно удален.');
+            handleLogout();
+        } catch (e) {
+            alert('Ошибка при удалении аккаунта.');
+            console.error(e);
+        }
     }
   };
 
@@ -222,7 +240,6 @@ export const MasterDashboardScreen: React.FC<Props> = ({
              <Cell
                description={`${s.duration} мин • ${s.price} ₽`}
                multiline
-               // Кнопка удаления
                after={
                   <Button
                     mode="bezeled"
@@ -289,15 +306,43 @@ export const MasterDashboardScreen: React.FC<Props> = ({
 
           <Section header="Аккаунт">
              <Cell>
-               <Button 
-                 mode="filled" 
-                 size="l" 
-                 stretched 
+               <Button
+                 mode="filled"
+                 size="l"
+                 stretched
                  onClick={onSwitchToClient}
                  style={{ background: 'var(--tgui--button_color)' }}
                >
                   Вернуться в режим клиента
                </Button>
+             </Cell>
+
+             {/* Кнопка ВЫЙТИ */}
+             <Cell>
+                <Button
+                    mode="bezeled"
+                    size="m"
+                    stretched
+                    onClick={handleLogout}
+                >
+                    Выйти из аккаунта
+                </Button>
+             </Cell>
+
+             {/* Кнопка УДАЛИТЬ */}
+             <Cell>
+                <Button
+                    mode="bezeled"
+                    size="m"
+                    stretched
+                    onClick={handleDeleteAccount}
+                    style={{
+                        color: 'var(--tgui--destructive_text_color)',
+                        borderColor: 'var(--tgui--destructive_text_color)'
+                    }}
+                >
+                    Удалить аккаунт
+                </Button>
              </Cell>
           </Section>
         </List>
@@ -313,23 +358,23 @@ export const MasterDashboardScreen: React.FC<Props> = ({
       </div>
 
       <Tabbar>
-        <Tabbar.Item 
-          text="Календарь" 
-          selected={activeTab === 'bookings'} 
+        <Tabbar.Item
+          text="Календарь"
+          selected={activeTab === 'bookings'}
           onClick={() => setActiveTab('bookings')}
         >
           <Icon28CalendarOutline />
         </Tabbar.Item>
-        <Tabbar.Item 
-          text="Услуги" 
-          selected={activeTab === 'services'} 
+        <Tabbar.Item
+          text="Услуги"
+          selected={activeTab === 'services'}
           onClick={() => setActiveTab('services')}
         >
           <Icon28ServicesOutline />
         </Tabbar.Item>
-        <Tabbar.Item 
-          text="Профиль" 
-          selected={activeTab === 'profile'} 
+        <Tabbar.Item
+          text="Профиль"
+          selected={activeTab === 'profile'}
           onClick={() => setActiveTab('profile')}
         >
           <Icon28UserCircleOutline />
