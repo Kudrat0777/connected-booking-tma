@@ -357,6 +357,7 @@ export async function fetchPortfolio(masterId?: number, telegramId?: number): Pr
   return res.json();
 }
 
+
 export async function uploadPortfolioPhoto(telegramId: number, file: File) {
   const formData = new FormData();
   formData.append('telegram_id', String(telegramId));

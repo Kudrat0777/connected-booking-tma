@@ -18,7 +18,7 @@ import {
   Icon28UserStarBadgeOutline,
   Icon28SettingsOutline,
   Icon24Search,
-  Icon28ChevronRightOutline // Добавим стрелочку
+  Icon28ChevronRightOutline
 } from '@vkontakte/icons';
 import lottie from 'lottie-web';
 
@@ -52,6 +52,7 @@ type Props = {
   onGoToServices?: (masterName?: string) => void;
   onReview?: (booking: Booking) => void;
   onOpenMasterReviews?: (masterId: number) => void;
+  onOpenPortfolio?: (masterId: number, masterName: string) => void;
 };
 
 const tabs: { id: MainTab; text: string; Icon: React.ComponentType<any> }[] = [
@@ -67,6 +68,7 @@ export const ProfileScreen: React.FC<Props> = ({
   onGoToServices,
   onReview,
   onOpenMasterReviews,
+  onOpenPortfolio,
 }) => {
   const [currentTab, setCurrentTab] = useState<MainTab>(initialTab);
   const [masters, setMasters] = useState<MasterPublicProfile[]>([]);
@@ -139,12 +141,11 @@ export const ProfileScreen: React.FC<Props> = ({
            <>
              {filteredMasters.map((m) => (
                <Section key={m.id}>
+                 {/* Кликабельная карточка мастера (открывает отзывы) */}
                  <Cell
-                   // ДЕЛАЕМ ВСЮ ЯЧЕЙКУ КЛИКАБЕЛЬНОЙ
                    onClick={() => {
                       if (onOpenMasterReviews) onOpenMasterReviews(m.id);
                    }}
-                   // Добавляем стрелочку справа, чтобы было понятно, что можно нажать
                    after={
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                          {m.rating > 0 && (
@@ -170,7 +171,6 @@ export const ProfileScreen: React.FC<Props> = ({
                         <span style={{ opacity: 0.7, fontSize: 12, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                            {m.bio || 'Мастер'}
                         </span>
-                        {/* Показываем кол-во отзывов в описании */}
                         {m.reviews_count > 0 && (
                             <span style={{ fontSize: 11, color: 'var(--tgui--link_color)' }}>
                                Смотреть отзывы ({m.reviews_count})
@@ -183,19 +183,36 @@ export const ProfileScreen: React.FC<Props> = ({
                    {m.name}
                  </Cell>
 
+                 {/* Блок кнопок */}
                  <Cell>
-                    <Button
-                      mode="filled"
-                      size="m"
-                      stretched
-                      // Кнопка записи работает отдельно
-                      onClick={(e) => {
-                          e.stopPropagation();
-                          handleMasterBook(m);
-                      }}
-                    >
-                      Записаться
-                    </Button>
+                    <div style={{ display: 'flex', gap: 8, position: 'relative', zIndex: 2 }}>
+                        {/* Кнопка ПОРТФОЛИО */}
+                        <Button
+                          mode="bezeled"
+                          size="m"
+                          style={{ flex: 1 }}
+                          onClick={(e) => {
+                              e.stopPropagation(); // Важно: остановить всплытие, чтобы не открылись отзывы
+                              console.log('Click Portfolio:', m.id);
+                              if (onOpenPortfolio) onOpenPortfolio(m.id, m.name);
+                          }}
+                        >
+                          Портфолио
+                        </Button>
+
+                        {/* Кнопка ЗАПИСАТЬСЯ */}
+                        <Button
+                          mode="filled"
+                          size="m"
+                          style={{ flex: 1 }}
+                          onClick={(e) => {
+                              e.stopPropagation();
+                              handleMasterBook(m);
+                          }}
+                        >
+                          Записаться
+                        </Button>
+                    </div>
                  </Cell>
                </Section>
              ))}

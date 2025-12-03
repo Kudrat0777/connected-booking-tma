@@ -19,7 +19,8 @@ import { MasterScheduleScreen } from './screens/MasterScheduleScreen';
 import { MasterEditProfileScreen } from './screens/MasterEditProfileScreen';
 import { MasterAnalyticsScreen } from './screens/MasterAnalyticsScreen';
 import { MasterReviewsScreen } from './screens/MasterReviewsScreen';
-import { MasterCreateServiceScreen } from './screens/MasterCreateServiceScreen'; // <--- ИМПОРТ
+import { MasterCreateServiceScreen } from './screens/MasterCreateServiceScreen';
+import { PortfolioViewerScreen } from './screens/PortfolioViewerScreen';
 
 import type { Service, Slot, Booking } from './helpers/api';
 import { getUserFromQuery } from './helpers/telegramQueryUser';
@@ -43,7 +44,8 @@ type Screen =
   | 'master_edit_profile'
   | 'master_analytics'
   | 'master_reviews'
-  | 'master_create_service'; // <--- ТИП
+  | 'master_create_service'
+  | 'client_portfolio';
 
 type MainTab = 'bookings' | 'masters' | 'settings';
 
@@ -98,6 +100,7 @@ const App: React.FC = () => {
   const [reviewMaster, setReviewMaster] = useState<{id: number, name: string} | null>(null);
   const [currentMaster, setCurrentMaster] = useState<any>(null);
   const [reviewsMasterId, setReviewsMasterId] = useState<number | null>(null);
+  const [portfolioMaster, setPortfolioMaster] = useState<{id: number, name: string} | null>(null);
 
   const loadCurrentMaster = async () => {
       if (!user?.id) return;
@@ -188,6 +191,13 @@ const App: React.FC = () => {
             onBack={() => setScreen('profile')}
         />
       )}
+      {screen === 'client_portfolio' && portfolioMaster && (
+        <PortfolioViewerScreen
+            masterId={portfolioMaster.id}
+            masterName={portfolioMaster.name}
+            onBack={() => setScreen('profile')}
+        />
+      )}
       {screen === 'profile' && user && (
         <ProfileScreen
           telegramId={user.id}
@@ -206,6 +216,10 @@ const App: React.FC = () => {
           onOpenMasterReviews={(id) => {
             setReviewsMasterId(id);
             setScreen('client_reviews_list');
+          }}
+          onOpenPortfolio={(id, name) => {
+            setPortfolioMaster({ id, name });
+            setScreen('client_portfolio');
           }}
         />
       )}
