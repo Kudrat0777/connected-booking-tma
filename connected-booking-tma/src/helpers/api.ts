@@ -396,10 +396,25 @@ export async function createManualBooking(slotId: number, clientName: string) {
   return res.json();
 }
 
-// Удаление слота (если мастер хочет убрать окно)
 export async function deleteSlot(slotId: number) {
   const res = await fetch(`${API_BASE}/slots/${slotId}/`, {
     method: 'DELETE',
   });
   if (!res.ok) throw new Error('Failed to delete slot');
 }
+
+export const fetchUserProfile = async (telegramId: number) => {
+    const response = await fetch(`${API_BASE}/users/${telegramId}/`);
+    if (!response.ok) throw new Error('Failed to fetch profile');
+    return response.json();
+};
+
+export const updateUserProfile = async (telegramId: number, data: { first_name?: string; last_name?: string; phone?: string }) => {
+    const response = await fetch(`${API_BASE}/users/${telegramId}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error('Failed to update profile');
+    return response.json();
+};
