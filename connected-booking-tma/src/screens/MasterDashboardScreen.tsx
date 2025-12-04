@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'; // <--- Добавил useRef
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Tabbar,
   List,
@@ -20,9 +20,10 @@ import {
   Icon28EditOutline,
   Icon28StatisticsOutline,
   Icon28FavoriteOutline,
-  Icon28DeleteOutline
+  Icon28DeleteOutline,
+  Icon28PhoneOutline
 } from '@vkontakte/icons';
-import lottie from 'lottie-web'; // <--- Добавил импорт
+import lottie from 'lottie-web';
 
 import {
   fetchMasterBookings,
@@ -52,7 +53,6 @@ const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 
   }, [src]);
   return <div ref={container} style={{ width: size, height: size, margin: '0 auto 16px' }} />;
 };
-// ---------------------------
 
 type Props = {
   telegramId: number;
@@ -80,6 +80,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
 
   // --- Bookings State ---
   const [bookings, setBookings] = useState<Booking[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [summary, setSummary] = useState<any>(null);
   const [filter, setFilter] = useState<BookingFilter>('today');
   const [loadingBookings, setLoadingBookings] = useState(false);
@@ -216,6 +217,23 @@ export const MasterDashboardScreen: React.FC<Props> = ({
                  {b.service_name}
               </div>
             </Cell>
+
+            {/* --- КНОПКА ЗВОНКА (Если есть телефон) --- */}
+            {b.client_phone && (
+                <Cell>
+                    <Button
+                        mode="bezeled"
+                        size="s"
+                        before={<Icon28PhoneOutline />}
+                        component="a"
+                        // @ts-ignore
+                        href={`tel:${b.client_phone}`}
+                        stretched
+                    >
+                        Позвонить {b.client_phone}
+                    </Button>
+                </Cell>
+            )}
 
             {/* Actions for Pending */}
             {b.status === 'pending' && (

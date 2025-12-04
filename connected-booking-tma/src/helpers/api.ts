@@ -67,6 +67,7 @@ export type Booking = {
   status: 'pending' | 'confirmed' | 'rejected';
   master_name: string | null;
   service_name: string | null;
+  client_phone?: string;
 };
 
 export type CreateBookingPayload = {
@@ -173,7 +174,6 @@ export async function fetchMasterBookings(telegram_id: number, period?: 'today' 
   return res.json(); // returns { items: Booking[], summary: {...} }
 }
 
-// Подтвердить бронь
 export async function confirmBooking(bookingId: number) {
   const res = await fetch(`${API_BASE}/bookings/${bookingId}/confirm/`, {
     method: 'POST',
@@ -191,7 +191,6 @@ export async function rejectBooking(bookingId: number) {
   return res.json();
 }
 
-// Получить свои услуги
 export async function fetchMyServices(telegram_id: number) {
   const res = await fetch(`${API_BASE}/services/my/?telegram_id=${telegram_id}`);
   if (!res.ok) throw new Error('Failed to fetch services');
@@ -231,7 +230,6 @@ export type MasterPublicProfile = {
   avatar_url: string;
   rating: number;
   reviews_count: number;
-  // specializations пока нет в списке, можно использовать bio или добавить в сериализатор на бэке
 };
 
 export async function fetchMasters(): Promise<MasterPublicProfile[]> {
@@ -240,9 +238,7 @@ export async function fetchMasters(): Promise<MasterPublicProfile[]> {
   return res.json();
 }
 
-// ... в конец файла
 
-// Обновление данных мастера (Имя, Био, Телефон и т.д.)
 export async function updateMasterProfile(telegramId: number, data: { name?: string; bio?: string; phone?: string }) {
   const res = await fetch(`${API_BASE}/masters/me_update/`, {
     method: 'PATCH',
