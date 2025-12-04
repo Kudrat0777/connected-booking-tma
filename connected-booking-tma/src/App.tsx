@@ -51,39 +51,62 @@ type MainTab = 'bookings' | 'masters' | 'settings';
 
 const App: React.FC = () => {
   const tg = (window as any).Telegram?.WebApp;
-  const [appearance, setAppearance] = useState<'light' | 'dark'>('light');
+
+  // 1. Инициализируем тему СРАЗУ, чтобы избежать мерцания белого
+  const [appearance, setAppearance] = useState<'light' | 'dark'>(() => {
+    if (tg?.colorScheme === 'dark') return 'dark';
+    // Если tg не готов, проверим системные настройки браузера
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+    return 'light';
+  });
 
   useEffect(() => {
     if (!tg) return;
 
-    const bindThemeParams = () => {
-      const params = tg.themeParams;
-      const root = document.documentElement;
+    const applyTheme = () => {
       const isDark = tg.colorScheme === 'dark';
       setAppearance(isDark ? 'dark' : 'light');
+
+      const params = tg.themeParams;
+      const root = document.documentElement;
+
+      // Принудительно устанавливаем CSS переменные для Telegram UI
       if (params.bg_color) {
-        document.body.style.backgroundColor = params.bg_color;
-        root.style.setProperty('background-color', params.bg_color);
-        root.style.setProperty('--tgui--bg_color', params.bg_color);
-        root.style.setProperty('--tgui--secondary_bg_color', params.secondary_bg_color || params.bg_color);
+          root.style.setProperty('--tgui--bg_color', params.bg_color);
+          root.style.setProperty('--tgui--secondary_bg_color', params.secondary_bg_color || params.bg_color);
+          document.body.style.backgroundColor = params.bg_color;
+      } else {
+          // Фоллбэк, если параметров нет (например, в браузере)
+          const fallbackBg = isDark ? '#000000' : '#ffffff';
+          const fallbackSec = isDark ? '#1c1c1d' : '#f1f1f1';
+          root.style.setProperty('--tgui--bg_color', fallbackBg);
+          root.style.setProperty('--tgui--secondary_bg_color', fallbackSec);
+          document.body.style.backgroundColor = fallbackBg;
       }
+
       if (params.text_color) root.style.setProperty('--tgui--text_color', params.text_color);
       if (params.hint_color) root.style.setProperty('--tgui--hint_color', params.hint_color);
       if (params.button_color) {
-        root.style.setProperty('--tgui--button_color', params.button_color);
-        root.style.setProperty('--tgui--button_text_color', params.button_text_color || '#fff');
+          root.style.setProperty('--tgui--button_color', params.button_color);
+          root.style.setProperty('--tgui--button_text_color', params.button_text_color || '#ffffff');
       }
-      if (params.link_color) root.style.setProperty('--tgui--link_color', params.link_color);
+      if (params.destructive_text_color) {
+          root.style.setProperty('--tgui--destructive_text_color', params.destructive_text_color);
+      }
 
-      tg.setHeaderColor(params.bg_color);
-      tg.setBackgroundColor(params.bg_color);
+      tg.setHeaderColor(params.bg_color || (isDark ? '#000000' : '#ffffff'));
+      tg.setBackgroundColor(params.bg_color || (isDark ? '#000000' : '#ffffff'));
     };
 
     tg.ready();
     tg.expand();
-    bindThemeParams();
-    tg.onEvent('themeChanged', bindThemeParams);
-    return () => tg.offEvent('themeChanged', bindThemeParams);
+
+    // Применяем тему сразу
+    applyTheme();
+
+    // Слушаем изменения темы (когда пользователь меняет её в настройках ТГ)
+    tg.onEvent('themeChanged', applyTheme);
+    return () => tg.offEvent('themeChanged', applyTheme);
   }, [tg]);
 
   const user = useMemo(() => {
@@ -100,7 +123,7 @@ const App: React.FC = () => {
   const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
 
   const [selectedMasterName, setSelectedMasterName] = useState<string | null>(null);
-  const [selectedMasterId, setSelectedMasterId] = useState<number | null>(null); // <--- НОВОЕ ПОЛЕ
+  const [selectedMasterId, setSelectedMasterId] = useState<number | null>(null);
 
   const [reviewMaster, setReviewMaster] = useState<{id: number, name: string} | null>(null);
   const [currentMaster, setCurrentMaster] = useState<any>(null);
@@ -121,14 +144,12 @@ const App: React.FC = () => {
   // Логика инициализации (Роли + Deep Linking)
   useEffect(() => {
     const initApp = async () => {
-       // 1. Проверяем роль Мастера (из URL)
        const params = new URLSearchParams(window.location.search);
        if (params.get('role') === 'master') {
          setScreen('master_welcome');
          return;
        }
 
-       // 2. Проверяем Deep Link (startapp=master_ID)
        const startParam = getStartParam();
        if (startParam && startParam.startsWith('master_')) {
           const idStr = startParam.replace('master_', '');
@@ -136,7 +157,6 @@ const App: React.FC = () => {
 
           if (!isNaN(mId)) {
              try {
-                 // Загружаем данные мастера, чтобы узнать имя
                  const res = await fetch(`${API_BASE}/masters/${mId}/`);
                  if (res.ok) {
                      const mData = await res.json();
@@ -174,7 +194,7 @@ const App: React.FC = () => {
     setSelectedSlot(null);
     setCreatedBooking(null);
     setSelectedMasterName(null);
-    setSelectedMasterId(null); // Сбрасываем ID мастера
+    setSelectedMasterId(null);
     setScreen('welcome');
   };
 
@@ -200,7 +220,7 @@ const App: React.FC = () => {
           onBack={() => setScreen('welcome')}
           onServiceSelected={handleServiceSelected}
           selectedMasterName={selectedMasterName}
-          masterId={selectedMasterId} // <--- Передаем ID
+          masterId={selectedMasterId}
         />
       )}
       {screen === 'slots' && selectedService && (
