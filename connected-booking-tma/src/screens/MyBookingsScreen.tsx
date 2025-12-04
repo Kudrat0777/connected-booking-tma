@@ -15,6 +15,7 @@ import type { Booking } from '../helpers/api';
 import { fetchMyBookings, cancelBooking } from '../helpers/api';
 import { ScreenLayout } from '../components/ScreenLayout';
 import { StatusBadge } from '../components/StatusBadge';
+import { RateBookingModal } from '../components/RateBookingModal'; // <--- ИМПОРТ
 
 const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
   const container = useRef<HTMLDivElement>(null);
@@ -38,7 +39,7 @@ type Props = {
   telegramId: number;
   onBack: () => void;
   onGoToServices?: () => void;
-  onReview?: (booking: Booking) => void;
+  // onReview убрали, теперь логика внутри
 };
 
 function formatDateTime(iso: string): string {
@@ -57,13 +58,15 @@ type StatusFilter = 'all' | 'confirmed' | 'pending' | 'rejected';
 export const MyBookingsScreen: React.FC<Props> = ({
   telegramId,
   onBack,
-  onGoToServices,
-  onReview
+  onGoToServices
 }) => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
+
+  // Состояние для модального окна отзыва
+  const [reviewBooking, setReviewBooking] = useState<Booking | null>(null);
 
   // Состояния фильтров
   const [segment, setSegment] = useState<Segment>('upcoming');
@@ -87,7 +90,6 @@ export const MyBookingsScreen: React.FC<Props> = ({
     load();
   }, [telegramId]);
 
-  // Разделение на будущее/прошлое
   const { upcoming, past } = useMemo(() => {
     const now = new Date();
     const up: Booking[] = [];
@@ -103,7 +105,6 @@ export const MyBookingsScreen: React.FC<Props> = ({
     return { upcoming: up, past: pa };
   }, [bookings]);
 
-  // Применение фильтра по статусу
   const displayedList = useMemo(() => {
       const baseList = segment === 'upcoming' ? upcoming : past;
       if (statusFilter === 'all') return baseList;
@@ -126,7 +127,6 @@ export const MyBookingsScreen: React.FC<Props> = ({
   return (
     <ScreenLayout title="Мои записи" onBack={onBack}>
       <div>
-        {/* 1. Основной переключатель (Предстоящие / Прошедшие) */}
         <div style={{ padding: '10px 16px 0' }}>
           <SegmentedControl size="m">
             <SegmentedControl.Item
@@ -144,7 +144,6 @@ export const MyBookingsScreen: React.FC<Props> = ({
           </SegmentedControl>
         </div>
 
-        {/* 2. Фильтр статусов (Чипсы) */}
         <div style={{
             padding: '12px 16px',
             display: 'flex',
@@ -277,14 +276,14 @@ export const MyBookingsScreen: React.FC<Props> = ({
                       </Cell>
                     )}
 
-                    {segment === 'past' && b.status === 'confirmed' && onReview && (
+                    {segment === 'past' && b.status === 'confirmed' && (
                         <Cell>
                           <Button
                             mode="filled"
                             size="m"
                             stretched
                             before={<Icon28FavoriteOutline />}
-                            onClick={() => onReview(b)}
+                            onClick={() => setReviewBooking(b)} // <--- ОТКРЫВАЕМ МОДАЛКУ
                           >
                             Оценить мастера
                           </Button>
@@ -299,6 +298,17 @@ export const MyBookingsScreen: React.FC<Props> = ({
           )}
         </div>
       </div>
+
+      {/* МОДАЛКА ОТЗЫВА */}
+      <RateBookingModal
+         booking={reviewBooking}
+         telegramId={telegramId}
+         onClose={() => setReviewBooking(null)}
+         onSuccess={() => {
+            // Можно перезагрузить список, но это необязательно
+            setReviewBooking(null);
+         }}
+      />
     </ScreenLayout>
   );
 };
