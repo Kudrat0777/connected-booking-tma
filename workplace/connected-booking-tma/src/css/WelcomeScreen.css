@@ -1,0 +1,99 @@
+.welcome-root {
+  min-height: 100vh;
+  /* Принудительно используем фон темы */
+  background-color: var(--tgui--bg_color);
+  color: var(--tgui--text_color);
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.welcome-placeholder {
+  /* Растягиваем на всю высоту, чтобы кнопки всегда были внизу */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+}
+
+/* Обертка для свайпа занимает все свободное пространство */
+.welcome-slide-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center; /* Центрируем контент по вертикали */
+  touch-action: pan-y;
+  width: 100%;
+}
+
+.welcome-sticker-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* ФИКС: Жесткая высота для контейнера стикера, чтобы он не прыгал */
+  height: 220px;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.welcome-lottie {
+  width: 200px;
+  height: 200px;
+}
+
+.welcome-text-content {
+  text-align: center;
+  padding: 0 16px;
+  /* ФИКС: Минимальная высота для текста.
+     Если текста будет меньше, блок все равно займет это место.
+     Подобрано под 3-4 строки текста. */
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.welcome-title {
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.welcome-description {
+  color: var(--tgui--hint_color);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.welcome-pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: auto; /* Точки прижимаем ближе к низу контентной части */
+  padding-bottom: 20px;
+  gap: 8px;
+}
+
+.welcome-pagination-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tgui--secondary_hint_color);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  cursor: pointer;
+}
+
+.welcome-pagination-dot_active {
+  transform: scale(1.25);
+  background: var(--tgui--button_color);
+}
+
+.welcome-actions {
+  margin-top: auto; /* Прижимаем кнопки к самому низу экрана */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding-bottom: 10px;
+}
