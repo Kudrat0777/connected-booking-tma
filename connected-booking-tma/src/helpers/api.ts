@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE || '/api';
+const API_BASE = 'https://mnlyd16bdcfn.share.zrok.io/api';
 
 export type Service = {
   id: number;

@@ -25,7 +25,31 @@ import { PortfolioViewerScreen } from './screens/PortfolioViewerScreen';
 import type { Service, Slot, Booking } from './helpers/api';
 import { getUserFromQuery, getStartParam } from './helpers/telegramQueryUser';
 
-const API_BASE = import.meta.env.VITE_API_BASE || '/api';
+// ==========================================
+// ГЛОБАЛЬНЫЙ ПАТЧ ДЛЯ ОБХОДА ZROK/NGROK
+// ==========================================
+const originalFetch = window.fetch;
+window.fetch = async function () {
+    let [resource, config] = arguments;
+    if (!config) {
+        config = {};
+    }
+    if (!config.headers) {
+        config.headers = {};
+    }
+    // Добавляем секретные заголовки в КАЖДЫЙ запрос
+    config.headers['ngrok-skip-browser-warning'] = 'true';
+    config.headers['bypass-tunnel-reminder'] = 'true';
+    config.headers['Accept'] = 'application/json';
+
+    return await originalFetch(resource, config);
+};
+// ==========================================
+
+
+const API_BASE = 'https://mnlyd16bdcfn.share.zrok.io/api';
+
+// ... ДАЛЬШЕ ВЕСЬ ВАШ КОД КАК БЫЛ ...
 
 type Screen =
   | 'welcome'

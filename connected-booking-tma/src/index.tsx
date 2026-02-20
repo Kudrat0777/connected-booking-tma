@@ -1,10 +1,13 @@
-// src/index.tsx
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import eruda from 'eruda'; // <-- ДОБАВЛЯЕМ ИМПОРТ
 
 import '@telegram-apps/telegram-ui/dist/styles.css';
 import './index.css';
+
+// <-- ВБРАСЫВАЕМ ИНИЦИАЛИЗАЦИЮ ПРЯМО СЮДА
+eruda.init();
 
 console.log('### index.tsx loaded');
 
