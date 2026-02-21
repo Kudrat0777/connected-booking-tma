@@ -4,7 +4,6 @@
   "version": "0.0.1",
   "type": "module",
   "homepage": "https://telegram-mini-apps.github.io/reactjs-template",
-
   "scripts": {
     "deploy": "gh-pages -d dist",
     "dev": "vite",
@@ -13,8 +12,7 @@
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0 --fix",
     "preview": "vite preview",
-    "predeploy": "npm run build",
-    "tunnel": "mate tunnel --port 5173"
+    "predeploy": "npm run build"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.9",
