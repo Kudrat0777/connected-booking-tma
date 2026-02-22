@@ -198,9 +198,21 @@ export const MasterWelcomeScreen: React.FC<Props> = ({
         </div>
 
         <div className="welcome-actions">
-          <Button size="l" mode="filled" stretched onClick={onStart}>
+          <Button
+            size="l"
+            mode="filled"
+            stretched
+            onClick={() => {
+              if (webApp) {
+                webApp.openTelegramLink('https://t.me/kudratsultanbaev');
+              } else {
+                window.open('https://t.me/kudratsultanbaev', '_blank');
+              }
+            }}
+          >
             Стать мастером
           </Button>
+
           {onLogin && (
             <Button size="l" mode="bezeled" stretched onClick={onLogin}>
               У меня есть аккаунт

@@ -1,4 +1,4 @@
-const API_BASE = 'https://mnlyd16bdcfn.share.zrok.io/api';
+const API_BASE = 'https://rnuwopmwjmns.share.zrok.io/api';
 
 export type Service = {
   id: number;
@@ -135,14 +135,30 @@ export async function cancelBooking(id: number): Promise<void> {
 
 // --------- MASTER API ---------
 
-// Регистрация мастера
-export async function registerMaster(name: string, telegram_id: number) {
-  const res = await fetch(`${API_BASE}/masters/register/`, {
+// // Регистрация мастера
+// export async function registerMaster(name: string, telegram_id: number) {
+//   const res = await fetch(`${API_BASE}/masters/register/`, {
+//     method: 'POST',
+//     headers: { 'Content-Type': 'application/json' },
+//     body: JSON.stringify({ name, telegram_id }),
+//   });
+//   if (!res.ok) throw new Error('Failed to register master');
+//   return res.json();
+// }
+
+// Авторизация мастера по телефону и паролю
+export async function loginMasterWithPhone(phone: string, password: string, telegram_id: number) {
+  const res = await fetch(`${API_BASE}/masters/login/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, telegram_id }),
+    body: JSON.stringify({ phone, password, telegram_id }),
   });
-  if (!res.ok) throw new Error('Failed to register master');
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Ошибка авторизации. Проверьте данные.');
+  }
+
   return res.json();
 }
 

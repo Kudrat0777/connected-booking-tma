@@ -13,7 +13,7 @@ import { ReviewsListScreen } from './screens/ReviewsListScreen';
 
 // Master Screens
 import { MasterWelcomeScreen } from './screens/MasterWelcomeScreen';
-import { MasterRegistrationScreen } from './screens/MasterRegistrationScreen';
+import { MasterLoginScreen } from './screens/MasterLoginScreen';
 import { MasterDashboardScreen } from './screens/MasterDashboardScreen';
 import { MasterScheduleScreen } from './screens/MasterScheduleScreen';
 import { MasterEditProfileScreen } from './screens/MasterEditProfileScreen';
@@ -62,7 +62,7 @@ type Screen =
   | 'leave_review'
   | 'client_reviews_list'
   | 'master_welcome'
-  | 'master_registration'
+  | 'master_login'
   | 'master_dashboard'
   | 'master_schedule'
   | 'master_edit_profile'
@@ -324,14 +324,14 @@ const App: React.FC = () => {
       {/* MASTER SCREENS */}
       {screen === 'master_welcome' && (
         <MasterWelcomeScreen
-          onStart={() => setScreen('master_registration')}
-          onLogin={() => setScreen('master_dashboard')}
+          onStart={() => {
+          }}
+          onLogin={() => setScreen('master_login')} // Переход на экран логина
         />
       )}
-      {screen === 'master_registration' && user && (
-        <MasterRegistrationScreen
+      {screen === 'master_login' && user && (
+        <MasterLoginScreen
           telegramId={user.id}
-          initialName={[user.first_name, user.last_name].filter(Boolean).join(' ')}
           onBack={() => setScreen('master_welcome')}
           onComplete={() => setScreen('master_dashboard')}
         />
