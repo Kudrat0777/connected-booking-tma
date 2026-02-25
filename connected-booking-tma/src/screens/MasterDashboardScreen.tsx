@@ -62,6 +62,7 @@ type Props = {
   onOpenAnalytics: () => void;
   onOpenReviews: () => void;
   onAddService: () => void;
+  onLogout?: () => void;
 };
 
 type Tab = 'bookings' | 'services' | 'profile';
@@ -74,7 +75,8 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   onEditProfile,
   onOpenAnalytics,
   onOpenReviews,
-  onAddService
+  onAddService,
+  onLogout
 }) => {
   const [activeTab, setActiveTab] = useState<Tab>('bookings');
 
@@ -166,6 +168,25 @@ export const MasterDashboardScreen: React.FC<Props> = ({
             alert('Ошибка при удалении аккаунта.');
             console.error(e);
         }
+    }
+  };
+
+  const handleLogoutClick = () => {
+    const tg = (window as any).Telegram?.WebApp;
+
+    // Если мы внутри Telegram, используем красивое нативное окно
+    if (tg?.showConfirm) {
+      tg.showConfirm('Вы точно хотите выйти из аккаунта мастера?', (isConfirmed: boolean) => {
+        if (isConfirmed && onLogout) {
+          onLogout();
+        }
+      });
+    } else {
+      // Фолбэк для браузера вне Telegram
+      const isConfirmed = window.confirm('Вы точно хотите выйти из аккаунта мастера?');
+      if (isConfirmed && onLogout) {
+        onLogout();
+      }
     }
   };
 
@@ -345,7 +366,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
                </Button>
              </Cell>
              <Cell>
-                <Button mode="bezeled" size="m" stretched onClick={handleLogout}>
+                <Button mode="bezeled" size="l" stretched onClick={handleLogoutClick}>
                     Выйти из аккаунта
                 </Button>
              </Cell>

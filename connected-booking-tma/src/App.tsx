@@ -25,9 +25,7 @@ import { PortfolioViewerScreen } from './screens/PortfolioViewerScreen';
 import type { Service, Slot, Booking } from './helpers/api';
 import { getUserFromQuery, getStartParam } from './helpers/telegramQueryUser';
 
-// ==========================================
-// ГЛОБАЛЬНЫЙ ПАТЧ ДЛЯ ОБХОДА ZROK/NGROK
-// ==========================================
+
 const originalFetch = window.fetch;
 window.fetch = async function () {
     let [resource, config] = arguments;
@@ -235,6 +233,19 @@ const App: React.FC = () => {
     setScreen('bookingDone');
   };
 
+  const handleMasterLogout = () => {
+    // Удаляем сессию
+    localStorage.removeItem('is_master_logged_in');
+
+    // Очищаем текущие данные мастера из стейта
+    setCurrentMaster(null);
+    setSelectedMasterId(null);
+    setSelectedMasterName(null);
+
+    // Перекидываем на экран приветствия мастеров
+    setScreen('master_welcome');
+  };
+
   const resetToStart = () => {
     setSelectedService(null);
     setSelectedSlot(null);
@@ -380,6 +391,7 @@ const App: React.FC = () => {
           onOpenAnalytics={() => setScreen('master_analytics')}
           onOpenReviews={() => setScreen('master_reviews')}
           onAddService={() => setScreen('master_create_service')}
+          onLogout={handleMasterLogout}
         />
       )}
       {screen === 'master_schedule' && user && (
