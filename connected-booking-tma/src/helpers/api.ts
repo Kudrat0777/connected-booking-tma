@@ -397,14 +397,19 @@ export async function fetchMasterSlots(telegramId: number, date: string): Promis
   return [];
 }
 
-export async function createManualBooking(slotId: number, clientName: string) {
+export async function createManualBooking(slotId: number, clientName: string, phone: string) {
   const res = await fetch(`${API_BASE}/bookings/manual_create/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ slot_id: slotId, client_name: clientName }),
+    body: JSON.stringify({ slot_id: slotId, client_name: clientName, phone: phone }),
   });
 
-  if (!res.ok) throw new Error('Failed to create manual booking');
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to create manual booking');
+  }
+
+  // Возвращает объект Booking + поле is_new_client
   return res.json();
 }
 

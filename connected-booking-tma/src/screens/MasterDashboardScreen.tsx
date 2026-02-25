@@ -36,9 +36,11 @@ import {
   fetchMyServices,
   deleteService,
   deleteAccount,
-  fetchSlotsForService // <-- НОВЫЙ ИМПОРТ
+  fetchSlotsForService,
+  createManualBooking,
 } from '../helpers/api';
-import type { Booking, Service, Slot } from '../helpers/api'; // <-- НОВЫЙ ИМПОРТ Slot
+
+import type { Booking, Service, Slot } from '../helpers/api';
 
 // --- КОМПОНЕНТ АНИМАЦИИ ---
 const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
@@ -104,6 +106,10 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   const [availableSlots, setAvailableSlots] = useState<Slot[]>([]);
   const [selectedNewSlotId, setSelectedNewSlotId] = useState<string>('');
   const [isCreatingManual, setIsCreatingManual] = useState(false);
+
+  // --- Share Link Modal State ---
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [newClientDetails, setNewClientDetails] = useState({ name: '', phone: '' });
 
   // --- LOADERS ---
   const loadBookings = async () => {
@@ -228,14 +234,57 @@ export const MasterDashboardScreen: React.FC<Props> = ({
     setAvailableSlots([]);
   };
 
-  const handleManualCreateSubmit = () => {
+  const handleManualCreateSubmit = async () => {
     if (!newClientName.trim() || !newClientPhone.trim() || !selectedNewServiceId || !selectedNewSlotId) {
       alert('Пожалуйста, заполните все поля и выберите время!');
       return;
     }
 
-    // Пока просто заглушка для проверки работы UI
-    alert(`Отправляем на бэкенд:\nИмя: ${newClientName}\nТелефон: ${newClientPhone}\nУслуга ID: ${selectedNewServiceId}\nСлот ID: ${selectedNewSlotId}`);
+    setIsCreatingManual(true);
+    try {
+      // Отправляем запрос на сервер
+      const response = await createManualBooking(
+        Number(selectedNewSlotId),
+        newClientName,
+        newClientPhone
+      );
+
+      // Закрываем модалку создания
+      handleCloseCreateModal();
+      // Обновляем список записей
+      loadBookings();
+
+      // Если клиент НОВЫЙ (не найден в базе), открываем окно шеринга
+      if (response.is_new_client) {
+        setNewClientDetails({ name: newClientName, phone: newClientPhone });
+        setIsShareModalOpen(true);
+      } else {
+        alert('Запись успешно создана! Клиенту отправлено уведомление.');
+      }
+
+    } catch (e: any) {
+      alert(e.message || 'Ошибка при создании записи');
+    } finally {
+      setIsCreatingManual(false);
+    }
+  };
+
+  const handleShareLink = () => {
+    const tg = (window as any).Telegram?.WebApp;
+    // Формируем ссылку на бота с параметром deep link (master_ID)
+    const botUrl = `https://t.me/cbtestconnected_bot?start=master_${telegramId}`;
+
+    const text = `Здравствуйте, ${newClientDetails.name}! Я записал(а) вас на процедуру.\n\nПожалуйста, перейдите по ссылке ниже в мой профиль, чтобы посмотреть детали записи и в будущем записываться самостоятельно:\n\n${botUrl}`;
+
+    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(botUrl)}&text=${encodeURIComponent(text)}`;
+
+    if (tg?.openTelegramLink) {
+      tg.openTelegramLink(shareUrl);
+    } else {
+      window.open(shareUrl, '_blank');
+    }
+
+    setIsShareModalOpen(false); // Закрываем окно после отправки
   };
 
   // --- RENDER CONTENT ---
@@ -553,6 +602,49 @@ export const MasterDashboardScreen: React.FC<Props> = ({
               Отмена
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      {/* МОДАЛЬНОЕ ОКНО "ПОДЕЛИТЬСЯ ССЫЛКОЙ" (Для новых клиентов) */}
+      <Modal
+        header={<Modal.Header>Новый клиент</Modal.Header>}
+        open={isShareModalOpen}
+        onOpenChange={setIsShareModalOpen}
+      >
+        <div style={{ padding: '0 16px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+
+          <div style={{ width: 80, height: 80, background: 'var(--tgui--secondary_bg_color)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+            <Icon28UserCircleOutline width={48} height={48} style={{ color: 'var(--tgui--button_color)' }} />
+          </div>
+
+          <h3 style={{ margin: '0 0 8px', fontSize: 20, color: 'var(--tgui--text_color)' }}>
+            Отправить ссылку?
+          </h3>
+
+          <p style={{ margin: '0 0 24px', fontSize: 15, color: 'var(--tgui--hint_color)', lineHeight: '1.4' }}>
+            Клиент <b>{newClientDetails.name}</b> ({newClientDetails.phone}) еще не пользуется нашим ботом.<br/><br/>
+            Отправьте ему ссылку на ваш профиль в Telegram, чтобы он мог видеть свои записи и записываться сам!
+          </p>
+
+          <Button
+            size="l"
+            mode="filled"
+            stretched
+            onClick={handleShareLink}
+          >
+            Поделиться ссылкой
+          </Button>
+
+          <Button
+            size="l"
+            mode="plain"
+            stretched
+            onClick={() => setIsShareModalOpen(false)}
+            style={{ marginTop: 8, color: 'var(--tgui--hint_color)' }}
+          >
+            Не сейчас
+          </Button>
+
         </div>
       </Modal>
 
