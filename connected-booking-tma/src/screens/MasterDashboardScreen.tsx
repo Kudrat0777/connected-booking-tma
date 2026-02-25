@@ -285,6 +285,35 @@ export const MasterDashboardScreen: React.FC<Props> = ({
           </Section>
         ))}
       </List>
+      <div
+        onClick={() => {
+          // Пока просто выводим алерт. Позже здесь будет открытие модалки
+          alert('Здесь откроется окно добавления клиента!');
+        }}
+        style={{
+          position: 'fixed',
+          bottom: 120,
+          right: 20,
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          backgroundColor: 'var(--tgui--button_color)',
+          color: 'var(--tgui--button_text_color)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+          cursor: 'pointer',
+          zIndex: 100,
+          // Легкая анимация при нажатии
+          transition: 'transform 0.1s',
+        }}
+        onPointerDown={(e) => e.currentTarget.style.transform = 'scale(0.92)'}
+        onPointerUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+        onPointerLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+      >
+        <span style={{ fontSize: 32, lineHeight: '32px', marginTop: -2 }}>+</span>
+      </div>
     </div>
   );
 
