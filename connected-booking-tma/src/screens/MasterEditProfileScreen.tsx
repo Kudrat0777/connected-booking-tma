@@ -1,15 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
+  List,
   Input,
   Textarea,
   Button,
   Section,
   Avatar,
-  File,
-  Spinner,
-  Cell
+  Spinner
 } from '@telegram-apps/telegram-ui';
-import { Icon28AddCircleOutline, Icon28DeleteOutline } from '@vkontakte/icons';
+import {
+  Icon28AddCircleOutline,
+  Icon28DeleteOutline,
+  Icon28UserCircleOutline
+} from '@vkontakte/icons';
 import { ScreenLayout } from '../components/ScreenLayout';
 import {
   updateMasterProfile,
@@ -118,96 +121,124 @@ export const MasterEditProfileScreen: React.FC<Props> = ({
 
   return (
     <ScreenLayout title="Редактировать профиль" onBack={onBack}>
-      <div style={{ padding: 16, paddingBottom: 50 }}>
+      {/* Оборачиваем ВСЁ в List для применения нативных стилей Telegram */}
+      <List style={{ background: 'var(--tgui--secondary_bg_color)', minHeight: '100vh', paddingBottom: 60 }}>
 
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+        {/* --- АВАТАР --- */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 16px 24px' }}>
           <label style={{ position: 'relative', cursor: 'pointer' }}>
-             <Avatar size={96} src={avatarUrl} />
+             <Avatar size={96} src={avatarUrl || undefined} fallbackIcon={<Icon28UserCircleOutline />} />
              <div style={{
-               position: 'absolute', bottom: 0, right: 0,
-               background: 'var(--tgui--link_color)', borderRadius: '50%',
-               width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center'
+               position: 'absolute',
+               bottom: 0,
+               right: 0,
+               background: 'var(--tgui--button_color)',
+               border: '4px solid var(--tgui--secondary_bg_color)',
+               borderRadius: '50%',
+               width: 32,
+               height: 32,
+               display: 'flex',
+               alignItems: 'center',
+               justifyContent: 'center',
+               boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
              }}>
-               <span style={{ color: '#fff', fontSize: 16 }}>+</span>
+               <span style={{ color: 'var(--tgui--button_text_color)', fontSize: 24, lineHeight: '24px', marginTop: -2 }}>+</span>
              </div>
              <input type="file" hidden accept="image/*" onChange={handleAvatarChange} />
           </label>
+          <div style={{ marginTop: 12, color: 'var(--tgui--hint_color)', fontSize: 14 }}>
+            Нажмите на фото, чтобы изменить
+          </div>
         </div>
 
+        {/* --- ЛИЧНЫЕ ДАННЫЕ --- */}
         <Section header="Личные данные">
           <Input
             header="Имя"
-            placeholder="Ваше имя"
+            placeholder="Как вас зовут?"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-          <Textarea
-            header="О себе"
-            placeholder="Расскажите о своем опыте..."
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-          />
           <Input
             header="Телефон"
-            placeholder="+7..."
+            placeholder="+7 999 000 00 00"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
           />
+          <Textarea
+            header="О себе"
+            placeholder="Расскажите о своем опыте и специализации..."
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+          />
         </Section>
 
-        {/* СЕКЦИЯ ПОРТФОЛИО */}
-        <Section header="Мое портфолио">
-            <div style={{ padding: 12 }}>
-                {/* Сетка фото */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
+        {/* --- ПОРТФОЛИО --- */}
+        <Section header="Мое портфолио" footer="Загрузите фото ваших лучших работ. Клиенты увидят их в вашем профиле.">
+            <div style={{ padding: '16px', background: 'var(--tgui--bg_color)' }}>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+
+                    {/* Фотографии */}
                     {portfolio.map(item => (
-                        <div key={item.id} style={{ position: 'relative', aspectRatio: '1/1' }}>
+                        <div key={item.id} style={{ position: 'relative', aspectRatio: '1/1', borderRadius: 12, overflow: 'hidden' }}>
                             <img
                                 src={item.image_url}
                                 alt="work"
-                                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             />
                             <div
                                 onClick={() => handleDeletePhoto(item.id)}
                                 style={{
-                                    position: 'absolute', top: 4, right: 4,
-                                    background: 'rgba(0,0,0,0.5)', borderRadius: '50%',
-                                    width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    cursor: 'pointer'
+                                    position: 'absolute', top: 6, right: 6,
+                                    background: 'rgba(0,0,0,0.5)',
+                                    borderRadius: '50%',
+                                    width: 28, height: 28,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    cursor: 'pointer',
+                                    backdropFilter: 'blur(4px)'
                                 }}
                             >
-                                <Icon28DeleteOutline style={{ width: 16, height: 16, color: '#fff' }} />
+                                <Icon28DeleteOutline width={20} height={20} style={{ color: '#fff' }} />
                             </div>
                         </div>
                     ))}
 
-                    {/* Кнопка добавления */}
+                    {/* Кнопка добавления фото */}
                     <label style={{
-                        border: '2px dashed var(--tgui--hint_color)',
-                        borderRadius: 8,
+                        backgroundColor: 'var(--tgui--secondary_bg_color)',
+                        borderRadius: 12,
                         display: 'flex',
+                        flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
                         cursor: 'pointer',
-                        aspectRatio: '1/1'
+                        aspectRatio: '1/1',
+                        transition: 'opacity 0.2s',
                     }}>
-                        {loadingPortfolio ? <Spinner size="s" /> : <Icon28AddCircleOutline style={{ color: 'var(--tgui--link_color)' }} />}
+                        {loadingPortfolio ? (
+                            <Spinner size="m" />
+                        ) : (
+                            <>
+                                <Icon28AddCircleOutline width={32} height={32} style={{ color: 'var(--tgui--hint_color)', marginBottom: 4 }} />
+                                <span style={{ fontSize: 13, color: 'var(--tgui--hint_color)', fontWeight: 500 }}>Добавить</span>
+                            </>
+                        )}
                         <input type="file" hidden accept="image/*" onChange={handlePortfolioUpload} />
                     </label>
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--tgui--hint_color)', textAlign: 'center' }}>
-                    Загрузите фото ваших лучших работ
+
                 </div>
             </div>
         </Section>
 
-        <div style={{ marginTop: 24 }}>
+        {/* --- КНОПКА СОХРАНИТЬ --- */}
+        <div style={{ padding: '24px 16px' }}>
            <Button size="l" mode="filled" stretched loading={loading} onClick={handleSave}>
              Сохранить изменения
            </Button>
         </div>
 
-      </div>
+      </List>
     </ScreenLayout>
   );
 };
