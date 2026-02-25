@@ -14,7 +14,7 @@ export const MasterLoginScreen: React.FC<Props> = ({ telegramId, onBack, onCompl
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = async () => {
+    const handleLogin = async () => {
     if (!phone.trim() || !password.trim()) {
       setError('Введите телефон и пароль');
       return;
@@ -23,7 +23,11 @@ export const MasterLoginScreen: React.FC<Props> = ({ telegramId, onBack, onCompl
     setError(null);
     try {
       await loginMasterWithPhone(phone, password, telegramId);
-      onComplete(); // Успешно вошли -> перекидываем в дашборд
+
+      // СОХРАНЯЕМ "СЕССИЮ" В ПАМЯТЬ ТЕЛЕФОНА
+      localStorage.setItem('is_master_logged_in', 'true');
+
+      onComplete(); // Успешно вошли
     } catch (e: any) {
       setError(e.message || 'Ошибка входа');
     } finally {

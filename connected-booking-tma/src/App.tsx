@@ -47,9 +47,7 @@ window.fetch = async function () {
 // ==========================================
 
 
-const API_BASE = 'https://mnlyd16bdcfn.share.zrok.io/api';
-
-// ... ДАЛЬШЕ ВЕСЬ ВАШ КОД КАК БЫЛ ...
+const API_BASE = 'https://amao3becylj5.share.zrok.io/api';
 
 type Screen =
   | 'welcome'
@@ -140,6 +138,7 @@ const App: React.FC = () => {
 
   const [screen, setScreen] = useState<Screen>('welcome');
   const [mainTab, setMainTab] = useState<MainTab>('bookings');
+  const [isAppLoading, setIsAppLoading] = useState(true);
 
   // State
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -154,10 +153,12 @@ const App: React.FC = () => {
   const [reviewsMasterId, setReviewsMasterId] = useState<number | null>(null);
   const [portfolioMaster, setPortfolioMaster] = useState<{id: number, name: string} | null>(null);
 
-  const loadCurrentMaster = async () => {
-      if (!user?.id) return;
+    const loadCurrentMaster = async () => {
+      // Достаем ID даже если React его еще не обработал
+      const uid = user?.id || (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id;
+      if (!uid) return;
       try {
-        const res = await fetch(`${API_BASE}/masters/me/?telegram_id=${user.id}`);
+        const res = await fetch(`${API_BASE}/masters/me/?telegram_id=${uid}`);
         if (res.ok) {
            const data = await res.json();
            setCurrentMaster(data);
@@ -165,15 +166,24 @@ const App: React.FC = () => {
       } catch (e) { console.error(e); }
   };
 
-  // Логика инициализации (Роли + Deep Linking)
+  // Логика инициализации (Роли + Deep Linking + Автологин)
   useEffect(() => {
     const initApp = async () => {
-       const params = new URLSearchParams(window.location.search);
-       if (params.get('role') === 'master') {
-         setScreen('master_welcome');
-         return;
+       setIsAppLoading(true);
+
+       // 1. БЕРЕМ СЕССИЮ ИЗ ПАМЯТИ УСТРОЙСТВА
+       const isMasterLoggedIn = localStorage.getItem('is_master_logged_in') === 'true';
+
+       if (isMasterLoggedIn) {
+           // Если мы уже входили, СРАЗУ переводим в профиль
+           setScreen('master_dashboard');
+           setIsAppLoading(false);
+           // И в фоне незаметно подгружаем данные профиля
+           loadCurrentMaster();
+           return;
        }
 
+       // 2. Если сессии нет, проверяем Deep Link (ссылка на конкретного мастера)
        const startParam = getStartParam();
        if (startParam && startParam.startsWith('master_')) {
           const idStr = startParam.replace('master_', '');
@@ -187,16 +197,28 @@ const App: React.FC = () => {
                      setSelectedMasterId(mId);
                      setSelectedMasterName(mData.name);
                      setScreen('services');
+                     setIsAppLoading(false);
+                     return;
                  }
              } catch (e) {
                  console.error('Deep link error', e);
              }
           }
        }
+
+       // 3. По умолчанию (если не мастер и не по ссылке) открываем приветствие
+       const params = new URLSearchParams(window.location.search);
+       if (params.get('role') === 'master') {
+         setScreen('master_welcome');
+       } else {
+         setScreen('welcome');
+       }
+       setIsAppLoading(false);
     };
 
-    initApp();
-  }, []);
+    // Небольшая задержка, чтобы Telegram API успел "проснуться"
+    setTimeout(initApp, 100);
+  }, []); // <-- Пустой массив, выполняется строго 1 раз
 
   const handleServiceSelected = (service: Service) => {
     setSelectedService(service);
@@ -224,6 +246,16 @@ const App: React.FC = () => {
 
   const platform = tg?.platform || 'base';
   const isIos = ['macos', 'ios'].includes(platform);
+
+    if (isAppLoading) {
+      return (
+          <AppRoot appearance={appearance} platform={isIos ? 'ios' : 'base'}>
+            <div style={{ display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center', color: 'var(--tgui--text_color)' }}>
+              Загрузка...
+            </div>
+          </AppRoot>
+        );
+    }
 
   return (
     <AppRoot appearance={appearance} platform={isIos ? 'ios' : 'base'}>
