@@ -9,8 +9,12 @@ import {
   Spinner,
   SegmentedControl,
   Avatar,
-  Title
+  Title,
+  Modal,
+  Input,
+  Select,
 } from '@telegram-apps/telegram-ui';
+
 import {
   Icon28CalendarOutline,
   Icon28ServicesOutline,
@@ -31,9 +35,10 @@ import {
   rejectBooking,
   fetchMyServices,
   deleteService,
-  deleteAccount
+  deleteAccount,
+  fetchSlotsForService // <-- НОВЫЙ ИМПОРТ
 } from '../helpers/api';
-import type { Booking, Service } from '../helpers/api';
+import type { Booking, Service, Slot } from '../helpers/api'; // <-- НОВЫЙ ИМПОРТ Slot
 
 // --- КОМПОНЕНТ АНИМАЦИИ ---
 const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
@@ -91,6 +96,15 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   const [services, setServices] = useState<Service[]>([]);
   const [loadingServices, setLoadingServices] = useState(false);
 
+  // --- Create Manual Booking State ---
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newClientName, setNewClientName] = useState('');
+  const [newClientPhone, setNewClientPhone] = useState('');
+  const [selectedNewServiceId, setSelectedNewServiceId] = useState<string>('');
+  const [availableSlots, setAvailableSlots] = useState<Slot[]>([]);
+  const [selectedNewSlotId, setSelectedNewSlotId] = useState<string>('');
+  const [isCreatingManual, setIsCreatingManual] = useState(false);
+
   // --- LOADERS ---
   const loadBookings = async () => {
     setLoadingBookings(true);
@@ -121,6 +135,23 @@ export const MasterDashboardScreen: React.FC<Props> = ({
     if (activeTab === 'bookings') loadBookings();
     if (activeTab === 'services') loadServices();
   }, [activeTab, filter, telegramId]);
+
+  // Загрузка слотов при выборе услуги в модалке
+  useEffect(() => {
+    if (selectedNewServiceId) {
+      fetchSlotsForService(Number(selectedNewServiceId))
+        .then((slots) => {
+          // Оставляем только свободные слоты
+          const freeSlots = slots.filter((s) => !s.is_booked);
+          setAvailableSlots(freeSlots);
+          setSelectedNewSlotId('');
+        })
+        .catch(console.error);
+    } else {
+      setAvailableSlots([]);
+      setSelectedNewSlotId('');
+    }
+  }, [selectedNewServiceId]);
 
   // --- ACTIONS ---
   const handleConfirm = async (id: number) => {
@@ -173,8 +204,6 @@ export const MasterDashboardScreen: React.FC<Props> = ({
 
   const handleLogoutClick = () => {
     const tg = (window as any).Telegram?.WebApp;
-
-    // Если мы внутри Telegram, используем красивое нативное окно
     if (tg?.showConfirm) {
       tg.showConfirm('Вы точно хотите выйти из аккаунта мастера?', (isConfirmed: boolean) => {
         if (isConfirmed && onLogout) {
@@ -182,7 +211,6 @@ export const MasterDashboardScreen: React.FC<Props> = ({
         }
       });
     } else {
-      // Фолбэк для браузера вне Telegram
       const isConfirmed = window.confirm('Вы точно хотите выйти из аккаунта мастера?');
       if (isConfirmed && onLogout) {
         onLogout();
@@ -190,9 +218,29 @@ export const MasterDashboardScreen: React.FC<Props> = ({
     }
   };
 
+  // --- MANUAL BOOKING ACTIONS ---
+  const handleCloseCreateModal = () => {
+    setIsCreateModalOpen(false);
+    setNewClientName('');
+    setNewClientPhone('');
+    setSelectedNewServiceId('');
+    setSelectedNewSlotId('');
+    setAvailableSlots([]);
+  };
+
+  const handleManualCreateSubmit = () => {
+    if (!newClientName.trim() || !newClientPhone.trim() || !selectedNewServiceId || !selectedNewSlotId) {
+      alert('Пожалуйста, заполните все поля и выберите время!');
+      return;
+    }
+
+    // Пока просто заглушка для проверки работы UI
+    alert(`Отправляем на бэкенд:\nИмя: ${newClientName}\nТелефон: ${newClientPhone}\nУслуга ID: ${selectedNewServiceId}\nСлот ID: ${selectedNewSlotId}`);
+  };
+
   // --- RENDER CONTENT ---
   const renderBookings = () => (
-    <div style={{ paddingBottom: 100 }}>
+    <div style={{ paddingBottom: 100, position: 'relative', minHeight: '100%' }}>
       <div style={{ padding: '10px 16px' }}>
         <SegmentedControl size="m">
           <SegmentedControl.Item selected={filter === 'today'} onClick={() => setFilter('today')}>
@@ -214,7 +262,6 @@ export const MasterDashboardScreen: React.FC<Props> = ({
             header="Нет записей"
             description="На этот период записей пока нет. Отдыхайте!"
         >
-           {/* АНИМАЦИЯ ДЛЯ ЗАПИСЕЙ */}
            <LottieIcon src="/stickers/duck_out.json" size={140} />
         </Placeholder>
       )}
@@ -239,7 +286,6 @@ export const MasterDashboardScreen: React.FC<Props> = ({
               </div>
             </Cell>
 
-            {/* --- КНОПКА ЗВОНКА (Если есть телефон) --- */}
             {b.client_phone && (
                 <Cell>
                     <Button
@@ -256,7 +302,6 @@ export const MasterDashboardScreen: React.FC<Props> = ({
                 </Cell>
             )}
 
-            {/* Actions for Pending */}
             {b.status === 'pending' && (
               <Cell>
                 <div style={{ display: 'flex', gap: 10 }}>
@@ -285,11 +330,10 @@ export const MasterDashboardScreen: React.FC<Props> = ({
           </Section>
         ))}
       </List>
+
+      {/* ПЛАВАЮЩАЯ КНОПКА (FAB) ДЛЯ ДОБАВЛЕНИЯ ЗАПИСИ */}
       <div
-        onClick={() => {
-          // Пока просто выводим алерт. Позже здесь будет открытие модалки
-          alert('Здесь откроется окно добавления клиента!');
-        }}
+        onClick={() => setIsCreateModalOpen(true)}
         style={{
           position: 'fixed',
           bottom: 120,
@@ -305,7 +349,6 @@ export const MasterDashboardScreen: React.FC<Props> = ({
           boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
           cursor: 'pointer',
           zIndex: 100,
-          // Легкая анимация при нажатии
           transition: 'transform 0.1s',
         }}
         onPointerDown={(e) => e.currentTarget.style.transform = 'scale(0.92)'}
@@ -356,7 +399,6 @@ export const MasterDashboardScreen: React.FC<Props> = ({
              header="Нет услуг"
              description="Добавьте услуги, чтобы клиенты могли записываться."
            >
-              {/* АНИМАЦИЯ ДЛЯ УСЛУГ */}
               <LottieIcon src="/stickers/duck_out.json" size={140} />
            </Placeholder>
         )}
@@ -430,6 +472,90 @@ export const MasterDashboardScreen: React.FC<Props> = ({
           <Icon28UserCircleOutline />
         </Tabbar.Item>
       </Tabbar>
+
+      {/* МОДАЛЬНОЕ ОКНО СОЗДАНИЯ ЗАПИСИ */}
+      <Modal
+        header={<Modal.Header>Новая запись</Modal.Header>}
+        open={isCreateModalOpen}
+        onOpenChange={setIsCreateModalOpen}
+      >
+        <div style={{ padding: '0 16px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          <Input
+            header="Имя клиента"
+            placeholder="Например, Анна"
+            value={newClientName}
+            onChange={(e) => setNewClientName(e.target.value)}
+          />
+
+          <Input
+            header="Телефон клиента"
+            placeholder="+7..."
+            value={newClientPhone}
+            onChange={(e) => setNewClientPhone(e.target.value)}
+          />
+
+          <Select
+            header="Услуга"
+            value={selectedNewServiceId}
+            onChange={(e) => setSelectedNewServiceId(e.target.value)}
+          >
+            <option value="" disabled hidden>Выберите услугу</option>
+            {services.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name} ({s.price} ₽)
+              </option>
+            ))}
+          </Select>
+
+          <Select
+            header="Доступное время (Свободные слоты)"
+            value={selectedNewSlotId}
+            onChange={(e) => setSelectedNewSlotId(e.target.value)}
+            disabled={!selectedNewServiceId || availableSlots.length === 0}
+          >
+            <option value="" disabled hidden>
+              {!selectedNewServiceId
+                ? 'Сначала выберите услугу'
+                : availableSlots.length === 0
+                  ? 'Нет свободных слотов'
+                  : 'Выберите время'}
+            </option>
+            {availableSlots.map((s) => {
+              const d = new Date(s.time);
+              const dateStr = d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+              const timeStr = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+              return (
+                <option key={s.id} value={s.id}>
+                  {dateStr} в {timeStr}
+                </option>
+              );
+            })}
+          </Select>
+
+          <div style={{ marginTop: 8 }}>
+            <Button
+              size="l"
+              mode="filled"
+              stretched
+              loading={isCreatingManual}
+              onClick={handleManualCreateSubmit}
+            >
+              Записать клиента
+            </Button>
+            <Button
+              size="l"
+              mode="plain"
+              stretched
+              onClick={handleCloseCreateModal}
+              style={{ marginTop: 8, color: 'var(--tgui--hint_color)' }}
+            >
+              Отмена
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
     </div>
   );
 };
