@@ -21,8 +21,9 @@ import { MasterAnalyticsScreen } from './screens/MasterAnalyticsScreen';
 import { MasterReviewsScreen } from './screens/MasterReviewsScreen';
 import { MasterCreateServiceScreen } from './screens/MasterCreateServiceScreen';
 import { PortfolioViewerScreen } from './screens/PortfolioViewerScreen';
+import { ClientRegistrationScreen } from './screens/ClientRegistrationScreen';
 
-import type { Service, Slot, Booking } from './helpers/api';
+import type { Service, Slot, Booking, checkClientProfile } from './helpers/api';
 import { getUserFromQuery, getStartParam } from './helpers/telegramQueryUser';
 
 
@@ -65,7 +66,9 @@ type Screen =
   | 'master_analytics'
   | 'master_reviews'
   | 'master_create_service'
-  | 'client_portfolio';
+  | 'client_portfolio'
+  | 'client_registration';
+
 
 type MainTab = 'bookings' | 'masters' | 'settings';
 
@@ -268,20 +271,55 @@ const App: React.FC = () => {
         );
     }
 
+  const handleClientLogin = async () => {
+    if (!user?.id) {
+      alert("Не удалось определить ваш Telegram ID.");
+      return;
+    }
+
+    setIsAppLoading(true);
+    try {
+      const profile = await checkClientProfile(user.id);
+
+      if (profile) {
+        // Профиль найден — идем сразу в личный кабинет клиента
+        setMainTab('bookings'); // открываем вкладку "Записи"
+        setScreen('profile');
+      } else {
+        // Профиля нет — отправляем на экран регистрации
+        setScreen('client_registration');
+      }
+    } catch (e) {
+      console.error(e);
+      // Если что-то пошло не так, все равно пробуем показать регистрацию
+      setScreen('client_registration');
+    } finally {
+      setIsAppLoading(false);
+    }
+  };
+
   return (
     <AppRoot appearance={appearance} platform={isIos ? 'ios' : 'base'}>
 
       {/* CLIENT SCREENS */}
       {screen === 'welcome' && (
         <WelcomeScreen
-          onContinue={() => {
-            setSelectedMasterName(null);
-            setSelectedMasterId(null);
-            setScreen('services');
-          }}
-          onOpenMyBookings={() => { setMainTab('bookings'); setScreen('profile'); }}
+          onContinue={handleClientLogin}
         />
       )}
+
+      {/* ЭКРАН РЕГИСТРАЦИИ НОВОГО КЛИЕНТА */}
+      {screen === 'client_registration' && user && (
+        <ClientRegistrationScreen
+          telegramId={user.id}
+          onBack={() => setScreen('welcome')}
+          onComplete={() => {
+            setMainTab('bookings');
+            setScreen('profile'); // После успешной регистрации кидаем в профиль
+          }}
+        />
+      )}
+
       {screen === 'services' && (
         <ServicesScreen
           onBack={() => setScreen('welcome')}

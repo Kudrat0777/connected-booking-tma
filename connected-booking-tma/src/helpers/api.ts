@@ -443,3 +443,35 @@ export const deleteAccount = async (telegramId: number) => {
   if (!response.ok) throw new Error('Failed to delete account');
   return true;
 };
+
+export async function registerClient(data: {
+  telegram_id: number;
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  phone?: string;
+}) {
+  const res = await fetch(`${API_BASE}/users/register/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to register client');
+  return res.json();
+}
+
+export async function checkClientProfile(telegramId: number) {
+  try {
+    // Используем эндпоинт /me/ который уже отлично работает для мастеров и клиентов
+    const res = await fetch(`${API_BASE}/users/me/?telegram_id=${telegramId}`);
+
+    if (res.ok) {
+      return await res.json(); // Профиль найден
+    }
+
+    return null; // Если 404 или любая другая ошибка - профиля нет
+  } catch (e) {
+    console.error('Check profile error:', e);
+    return null; // В случае сбоя сети тоже считаем, что профиля нет (отправим на регистрацию)
+  }
+}

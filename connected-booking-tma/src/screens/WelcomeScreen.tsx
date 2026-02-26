@@ -18,7 +18,7 @@ import '../css/WelcomeScreen.css';
 
 type Props = {
   onContinue: () => void;
-  onOpenMyBookings?: () => void;
+  // onOpenMyBookings удален, так как теперь у нас единая точка входа
 };
 
 type Slide = {
@@ -59,7 +59,6 @@ const AUTO_SLIDE_INTERVAL = 5000;
 
 export const WelcomeScreen: React.FC<Props> = ({
   onContinue,
-  onOpenMyBookings,
 }) => {
   const webApp = useTelegramWebApp();
   const [index, setIndex] = useState(0);
@@ -258,26 +257,11 @@ export const WelcomeScreen: React.FC<Props> = ({
             stretched
             onClick={() => {
               triggerHaptic();
-              onContinue();
+              onContinue(); // Теперь вызывает проверку профиля/регистрацию в App.tsx
             }}
           >
-            Записаться
+            Войти как клиент
           </Button>
-
-          {onOpenMyBookings && (
-            <Button
-              size="l"
-              mode="bezeled" // 'bezeled' или 'plain' выглядят нативнее как второстепенные
-              stretched
-              onClick={() => {
-                triggerHaptic();
-                onOpenMyBookings();
-              }}
-              className="welcome-secondary-button"
-            >
-              Мои записи
-            </Button>
-          )}
         </div>
       </Placeholder>
     </div>
