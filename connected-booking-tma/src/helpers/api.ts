@@ -437,11 +437,18 @@ export const updateUserProfile = async (telegramId: number, data: { first_name?:
 };
 
 export const deleteAccount = async (telegramId: number) => {
-  const response = await fetch(`${API_BASE}/users/${telegramId}/`, {
-    method: 'DELETE',
-  });
-  if (!response.ok) throw new Error('Failed to delete account');
-  return true;
+  try {
+    const response = await fetch(`${API_BASE}/users/${telegramId}/`, {
+      method: 'DELETE',
+    });
+    if (response.status === 204 || response.status === 404) {
+      return true;
+    }
+    throw new Error('Failed to delete account');
+  } catch (e) {
+    console.error('Delete account error:', e);
+    throw e;
+  }
 };
 
 export async function registerClient(data: {

@@ -10,12 +10,12 @@ import {
 } from '@telegram-apps/telegram-ui';
 import { ScreenLayout } from '../components/ScreenLayout';
 import { Icon28PhoneOutline, Icon28UserCircleOutline } from '@vkontakte/icons';
-import { updateUserProfile, fetchUserProfile } from '../helpers/api';
+import { updateUserProfile, fetchUserProfile, deleteAccount } from '../helpers/api';
 
 type Props = {
   telegramId: number;
   onBack: () => void;
-  onLogout: () => void;
+  onLogout: () => void; // Мы оставим название пропса onLogout, но по факту он будет вызываться после удаления аккаунта
 };
 
 export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }) => {
@@ -72,12 +72,10 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
      if (tg && tg.requestContact) {
          tg.requestContact((ok: boolean, result: any) => {
              if (ok && result?.response?.contact?.phone_number) {
-                 // Telegram может вернуть номер с '+' или без, лучше привести к одному виду
                  let p = result.response.contact.phone_number;
                  if (!p.startsWith('+')) p = '+' + p;
                  setPhone(p);
              } else if (ok && result?.contact?.phone_number) {
-                  // Старая версия API
                  let p = result.contact.phone_number;
                  if (!p.startsWith('+')) p = '+' + p;
                  setPhone(p);
@@ -88,6 +86,38 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
      } else {
          alert('Эта функция работает только в мобильном приложении Telegram.');
      }
+  };
+
+  // 4. Логика УДАЛЕНИЯ аккаунта
+  const handleDeleteAccountClick = () => {
+    const tg = (window as any).Telegram?.WebApp;
+    const confirmMessage = 'Вы уверены, что хотите навсегда удалить свой аккаунт? Ваши данные будут стерты.';
+
+     const executeDeletion = async () => {
+      setLoading(true);
+      try {
+        await deleteAccount(telegramId);
+      } catch (e: any) {
+        console.error("Ошибка при удалении:", e);
+        alert('Не удалось связаться с сервером, но мы все равно выйдем из аккаунта.');
+      } finally {
+        setLoading(false);
+        onLogout();
+      }
+    };
+
+    if (tg?.showConfirm) {
+      tg.showConfirm(confirmMessage, (isConfirmed: boolean) => {
+        if (isConfirmed) {
+          executeDeletion();
+        }
+      });
+    } else {
+      const isConfirmed = window.confirm(confirmMessage);
+      if (isConfirmed) {
+        executeDeletion();
+      }
+    }
   };
 
   return (
@@ -159,10 +189,16 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
                    </Cell>
                 </Section>
 
-                <Section>
+                <Section footer="Удаление аккаунта сотрет ваш профиль из базы данных.">
                     <Cell>
-                        <Button mode="bezeled" size="m" stretched onClick={onLogout} style={{color: 'var(--tgui--destructive_text_color)'}}>
-                            Выйти
+                        <Button
+                          mode="bezeled"
+                          size="m"
+                          stretched
+                          onClick={handleDeleteAccountClick}
+                          style={{color: 'var(--tgui--destructive_text_color)', borderColor: 'var(--tgui--destructive_text_color)'}}
+                        >
+                            Удалить аккаунт
                         </Button>
                     </Cell>
                 </Section>

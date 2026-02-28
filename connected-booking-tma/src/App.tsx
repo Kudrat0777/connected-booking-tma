@@ -194,12 +194,25 @@ const App: React.FC = () => {
           }
        }
 
-       // 4. В��ОД КЛИЕНТА (Если он уже входил, пропускаем Welcome screen)
+       // 4. ВХОД КЛИЕНТА (Если он уже входил, пропускаем Welcome screen, но проверяем базу)
        if (isClientLoggedIn) {
-           setMainTab('bookings');
-           setScreen('profile');
-           setIsAppLoading(false);
-           return;
+           const uid = user?.id || (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id;
+           if (uid) {
+               // Открываем профиль сразу, чтобы не было задержек интерфейса
+               setMainTab('bookings');
+               setScreen('profile');
+               setIsAppLoading(false);
+
+               // В фоне проверяем, жив ли еще профиль в базе
+               checkClientProfile(uid).then((profile) => {
+                   if (!profile) {
+                       // Если профиля в базе нет (удалили), стираем сессию и кидаем на регистрацию
+                       localStorage.removeItem('is_client_logged_in');
+                       setScreen('client_registration');
+                   }
+               });
+               return;
+           }
        }
 
        // 5. ЕСЛИ НИЧЕГО ИЗ ВЫШЕПЕРЕЧИСЛЕННОГО - ПОКАЗЫВАЕМ СТАРТОВЫЙ ЭКРАН
