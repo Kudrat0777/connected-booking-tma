@@ -1,0 +1,9 @@
+{
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3"
+  },
+  "dependencies": {
+    "@telegram-apps/telegram-ui": "^2.1.13"
+  }
+}
