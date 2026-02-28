@@ -49,6 +49,7 @@ type Props = {
   telegramId: number;
   initialTab?: MainTab;
   onBack: () => void;
+  onLogout?: () => void;
   onGoToServices?: (masterName?: string) => void;
   onReview?: (booking: Booking) => void;
   onOpenMasterReviews?: (masterId: number) => void;
@@ -65,6 +66,7 @@ export const ProfileScreen: React.FC<Props> = ({
   telegramId,
   initialTab = 'bookings',
   onBack,
+  onLogout,
   onGoToServices,
   onReview,
   onOpenMasterReviews,
@@ -257,7 +259,9 @@ export const ProfileScreen: React.FC<Props> = ({
         <SettingsScreen
           telegramId={telegramId}
           onBack={onBack}
-          onLogout={() => console.log('logout')}
+          onLogout={() => {
+              if (onLogout) onLogout();
+              }}
         />
       );
     }

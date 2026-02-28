@@ -1,4 +1,4 @@
-const API_BASE = 'https://amao3becylj5.share.zrok.io/api';
+const API_BASE = 'https://rsod7mx79rps.share.zrok.io/api';
 
 export type Service = {
   id: number;

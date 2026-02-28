@@ -10,6 +10,7 @@ import { ProfileScreen } from './screens/ProfileScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { LeaveReviewScreen } from './screens/LeaveReviewScreen';
 import { ReviewsListScreen } from './screens/ReviewsListScreen';
+import { ClientRegistrationScreen } from './screens/ClientRegistrationScreen';
 
 // Master Screens
 import { MasterWelcomeScreen } from './screens/MasterWelcomeScreen';
@@ -21,11 +22,10 @@ import { MasterAnalyticsScreen } from './screens/MasterAnalyticsScreen';
 import { MasterReviewsScreen } from './screens/MasterReviewsScreen';
 import { MasterCreateServiceScreen } from './screens/MasterCreateServiceScreen';
 import { PortfolioViewerScreen } from './screens/PortfolioViewerScreen';
-import { ClientRegistrationScreen } from './screens/ClientRegistrationScreen';
 
-import type { Service, Slot, Booking, checkClientProfile } from './helpers/api';
+import type { Service, Slot, Booking } from './helpers/api';
+import { checkClientProfile } from './helpers/api';
 import { getUserFromQuery, getStartParam } from './helpers/telegramQueryUser';
-
 
 const originalFetch = window.fetch;
 window.fetch = async function () {
@@ -36,17 +36,14 @@ window.fetch = async function () {
     if (!config.headers) {
         config.headers = {};
     }
-    // Добавляем секретные заголовки в КАЖДЫЙ запрос
     config.headers['ngrok-skip-browser-warning'] = 'true';
     config.headers['bypass-tunnel-reminder'] = 'true';
     config.headers['Accept'] = 'application/json';
 
     return await originalFetch(resource, config);
 };
-// ==========================================
 
-
-const API_BASE = 'https://amao3becylj5.share.zrok.io/api';
+const API_BASE = 'https://rsod7mx79rps.share.zrok.io/api';
 
 type Screen =
   | 'welcome'
@@ -69,16 +66,13 @@ type Screen =
   | 'client_portfolio'
   | 'client_registration';
 
-
 type MainTab = 'bookings' | 'masters' | 'settings';
 
 const App: React.FC = () => {
   const tg = (window as any).Telegram?.WebApp;
 
-  // 1. Инициализируем тему СРАЗУ, чтобы избежать мерцания белого
   const [appearance, setAppearance] = useState<'light' | 'dark'>(() => {
     if (tg?.colorScheme === 'dark') return 'dark';
-    // Если tg не готов, проверим системные настройки браузера
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
     return 'light';
   });
@@ -93,13 +87,11 @@ const App: React.FC = () => {
       const params = tg.themeParams;
       const root = document.documentElement;
 
-      // Принудительно устанавливаем CSS переменные для Telegram UI
       if (params.bg_color) {
           root.style.setProperty('--tgui--bg_color', params.bg_color);
           root.style.setProperty('--tgui--secondary_bg_color', params.secondary_bg_color || params.bg_color);
           document.body.style.backgroundColor = params.bg_color;
       } else {
-          // Фоллбэк, если параметров нет (например, в браузере)
           const fallbackBg = isDark ? '#000000' : '#ffffff';
           const fallbackSec = isDark ? '#1c1c1d' : '#f1f1f1';
           root.style.setProperty('--tgui--bg_color', fallbackBg);
@@ -123,11 +115,8 @@ const App: React.FC = () => {
 
     tg.ready();
     tg.expand();
-
-    // Применяем тему сразу
     applyTheme();
 
-    // Слушаем изменения темы (когда пользователь меняет её в настройках ТГ)
     tg.onEvent('themeChanged', applyTheme);
     return () => tg.offEvent('themeChanged', applyTheme);
   }, [tg]);
@@ -141,7 +130,6 @@ const App: React.FC = () => {
   const [mainTab, setMainTab] = useState<MainTab>('bookings');
   const [isAppLoading, setIsAppLoading] = useState(true);
 
-  // State
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
@@ -154,8 +142,7 @@ const App: React.FC = () => {
   const [reviewsMasterId, setReviewsMasterId] = useState<number | null>(null);
   const [portfolioMaster, setPortfolioMaster] = useState<{id: number, name: string} | null>(null);
 
-    const loadCurrentMaster = async () => {
-      // Достаем ID даже если React его еще не обработал
+  const loadCurrentMaster = async () => {
       const uid = user?.id || (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id;
       if (!uid) return;
       try {
@@ -167,24 +154,24 @@ const App: React.FC = () => {
       } catch (e) { console.error(e); }
   };
 
-  // Логика инициализации (Роли + Deep Linking + Автологин)
+  // --- ЛОГИКА ИНИЦИАЛИЗАЦИИ ---
   useEffect(() => {
     const initApp = async () => {
        setIsAppLoading(true);
 
-       // 1. БЕРЕМ СЕССИЮ ИЗ ПАМЯТИ УСТРОЙСТВА
+       // 1. ПРОВЕРЯЕМ СЕССИИ
        const isMasterLoggedIn = localStorage.getItem('is_master_logged_in') === 'true';
+       const isClientLoggedIn = localStorage.getItem('is_client_logged_in') === 'true';
 
+       // 2. ВХОД МАСТЕРА
        if (isMasterLoggedIn) {
-           // Если мы уже входили, СРАЗУ переводим в профиль
            setScreen('master_dashboard');
            setIsAppLoading(false);
-           // И в фоне незаметно подгружаем данные профиля
            loadCurrentMaster();
            return;
        }
 
-       // 2. Если сессии нет, проверяем Deep Link (ссылка на конкретного мастера)
+       // 3. ПРОВЕРКА DEEP LINK (Переход клиента к конкретному мастеру)
        const startParam = getStartParam();
        if (startParam && startParam.startsWith('master_')) {
           const idStr = startParam.replace('master_', '');
@@ -207,7 +194,15 @@ const App: React.FC = () => {
           }
        }
 
-       // 3. По умолчанию (если не мастер и не по ссылке) открываем приветствие
+       // 4. В��ОД КЛИЕНТА (Если он уже входил, пропускаем Welcome screen)
+       if (isClientLoggedIn) {
+           setMainTab('bookings');
+           setScreen('profile');
+           setIsAppLoading(false);
+           return;
+       }
+
+       // 5. ЕСЛИ НИЧЕГО ИЗ ВЫШЕПЕРЕЧИСЛЕННОГО - ПОКАЗЫВАЕМ СТАРТОВЫЙ ЭКРАН
        const params = new URLSearchParams(window.location.search);
        if (params.get('role') === 'master') {
          setScreen('master_welcome');
@@ -217,9 +212,8 @@ const App: React.FC = () => {
        setIsAppLoading(false);
     };
 
-    // Небольшая задержка, чтобы Telegram API успел "проснуться"
     setTimeout(initApp, 100);
-  }, []); // <-- Пустой массив, выполняется строго 1 раз
+  }, []);
 
   const handleServiceSelected = (service: Service) => {
     setSelectedService(service);
@@ -236,17 +230,19 @@ const App: React.FC = () => {
     setScreen('bookingDone');
   };
 
+  // Выход мастера
   const handleMasterLogout = () => {
-    // Удаляем сессию
     localStorage.removeItem('is_master_logged_in');
-
-    // Очищаем текущие данные мастера из стейта
     setCurrentMaster(null);
     setSelectedMasterId(null);
     setSelectedMasterName(null);
-
-    // Перекидываем на экран приветствия мастеров
     setScreen('master_welcome');
+  };
+
+  // Выход клиента
+  const handleClientLogout = () => {
+    localStorage.removeItem('is_client_logged_in');
+    setScreen('welcome');
   };
 
   const resetToStart = () => {
@@ -255,21 +251,14 @@ const App: React.FC = () => {
     setCreatedBooking(null);
     setSelectedMasterName(null);
     setSelectedMasterId(null);
-    setScreen('welcome');
-  };
 
-  const platform = tg?.platform || 'base';
-  const isIos = ['macos', 'ios'].includes(platform);
-
-    if (isAppLoading) {
-      return (
-          <AppRoot appearance={appearance} platform={isIos ? 'ios' : 'base'}>
-            <div style={{ display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center', color: 'var(--tgui--text_color)' }}>
-              Загрузка...
-            </div>
-          </AppRoot>
-        );
+    // Если клиент авторизован, кидаем в профиль, иначе на главную
+    if (localStorage.getItem('is_client_logged_in') === 'true') {
+        setScreen('profile');
+    } else {
+        setScreen('welcome');
     }
+  };
 
   const handleClientLogin = async () => {
     if (!user?.id) {
@@ -282,52 +271,68 @@ const App: React.FC = () => {
       const profile = await checkClientProfile(user.id);
 
       if (profile) {
-        // Профиль найден — идем сразу в личный кабинет клиента
-        setMainTab('bookings'); // открываем вкладку "Записи"
+        // СОХРАНЯЕМ СЕССИЮ КЛИЕНТА
+        localStorage.setItem('is_client_logged_in', 'true');
+        setMainTab('bookings');
         setScreen('profile');
       } else {
-        // Профиля нет — отправляем на экран регистрации
         setScreen('client_registration');
       }
     } catch (e) {
       console.error(e);
-      // Если что-то пошло не так, все равно пробуем показать регистрацию
       setScreen('client_registration');
     } finally {
       setIsAppLoading(false);
     }
   };
 
+  const platform = tg?.platform || 'base';
+  const isIos = ['macos', 'ios'].includes(platform);
+
+  if (isAppLoading) {
+    return (
+        <AppRoot appearance={appearance} platform={isIos ? 'ios' : 'base'}>
+          <div style={{ display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center', color: 'var(--tgui--text_color)' }}>
+            Загрузка...
+          </div>
+        </AppRoot>
+      );
+  }
+
   return (
     <AppRoot appearance={appearance} platform={isIos ? 'ios' : 'base'}>
 
       {/* CLIENT SCREENS */}
       {screen === 'welcome' && (
-        <WelcomeScreen
-          onContinue={handleClientLogin}
-        />
+        <WelcomeScreen onContinue={handleClientLogin} />
       )}
 
-      {/* ЭКРАН РЕГИСТРАЦИИ НОВОГО КЛИЕНТА */}
       {screen === 'client_registration' && user && (
         <ClientRegistrationScreen
           telegramId={user.id}
           onBack={() => setScreen('welcome')}
           onComplete={() => {
+            // СОХРАНЯЕМ СЕССИЮ ПОСЛЕ УСПЕШНОЙ РЕГИСТРАЦИИ
+            localStorage.setItem('is_client_logged_in', 'true');
             setMainTab('bookings');
-            setScreen('profile'); // После успешной регистрации кидаем в профиль
+            setScreen('profile');
           }}
         />
       )}
 
       {screen === 'services' && (
         <ServicesScreen
-          onBack={() => setScreen('welcome')}
+          onBack={() => {
+            // Умная кнопка назад: если залогинен, возвращаем в профиль
+            if (localStorage.getItem('is_client_logged_in') === 'true') setScreen('profile');
+            else setScreen('welcome');
+          }}
           onServiceSelected={handleServiceSelected}
           selectedMasterName={selectedMasterName}
           masterId={selectedMasterId}
         />
       )}
+
       {screen === 'slots' && selectedService && (
         <SlotsScreen
           service={selectedService}
@@ -335,6 +340,7 @@ const App: React.FC = () => {
           onSlotSelected={handleSlotSelected}
         />
       )}
+
       {screen === 'bookingConfirm' && selectedService && selectedSlot && (
         <BookingConfirmScreen
           service={selectedService}
@@ -344,30 +350,28 @@ const App: React.FC = () => {
           user={user}
         />
       )}
+
       {screen === 'bookingDone' && createdBooking && (
         <div style={{ padding: 20, minHeight: '100vh', background: 'var(--tgui--bg_color)' }}>
           <h2 style={{ color: 'var(--tgui--text_color)' }}>Бронь создана!</h2>
           <button onClick={resetToStart} style={{ marginTop: 16, padding: '10px 20px' }}>На главный экран</button>
         </div>
       )}
+
       {screen === 'client_reviews_list' && reviewsMasterId && (
-        <ReviewsListScreen
-            masterId={reviewsMasterId}
-            onBack={() => setScreen('profile')}
-        />
+        <ReviewsListScreen masterId={reviewsMasterId} onBack={() => setScreen('profile')} />
       )}
+
       {screen === 'client_portfolio' && portfolioMaster && (
-        <PortfolioViewerScreen
-            masterId={portfolioMaster.id}
-            masterName={portfolioMaster.name}
-            onBack={() => setScreen('profile')}
-        />
+        <PortfolioViewerScreen masterId={portfolioMaster.id} masterName={portfolioMaster.name} onBack={() => setScreen('profile')} />
       )}
+
       {screen === 'profile' && user && (
         <ProfileScreen
           telegramId={user.id}
           initialTab={mainTab}
           onBack={() => setScreen('welcome')}
+          onLogout={handleClientLogout} // <--- ПЕРЕДАЕМ ФУНКЦИЮ ВЫХОДА В ПРОФИЛЬ
           onGoToServices={(masterName) => {
             setSelectedMasterName(masterName || null);
             setScreen('services');
@@ -388,6 +392,7 @@ const App: React.FC = () => {
           }}
         />
       )}
+
       {screen === 'leave_review' && user && reviewMaster && (
         <LeaveReviewScreen
           telegramId={user.id}
@@ -398,18 +403,12 @@ const App: React.FC = () => {
           onSuccess={() => setScreen('profile')}
         />
       )}
-      {screen === 'settings' && user && (
-        <SettingsScreen telegramId={user.id} onBack={() => setScreen('profile')} />
-      )}
 
       {/* MASTER SCREENS */}
       {screen === 'master_welcome' && (
-        <MasterWelcomeScreen
-          onStart={() => {
-          }}
-          onLogin={() => setScreen('master_login')} // Переход на экран логина
-        />
+        <MasterWelcomeScreen onStart={() => {}} onLogin={() => setScreen('master_login')} />
       )}
+
       {screen === 'master_login' && user && (
         <MasterLoginScreen
           telegramId={user.id}
@@ -417,10 +416,15 @@ const App: React.FC = () => {
           onComplete={() => setScreen('master_dashboard')}
         />
       )}
+
       {screen === 'master_dashboard' && user && (
         <MasterDashboardScreen
           telegramId={user.id}
-          onSwitchToClient={() => setScreen('welcome')}
+          onSwitchToClient={() => {
+              // Если мастер переключается в режим клиента:
+              if (localStorage.getItem('is_client_logged_in') === 'true') setScreen('profile');
+              else setScreen('welcome');
+          }}
           onOpenSchedule={() => setScreen('master_schedule')}
           onEditProfile={() => {
              loadCurrentMaster();
@@ -432,9 +436,11 @@ const App: React.FC = () => {
           onLogout={handleMasterLogout}
         />
       )}
+
       {screen === 'master_schedule' && user && (
         <MasterScheduleScreen telegramId={user.id} onBack={() => setScreen('master_dashboard')} />
       )}
+
       {screen === 'master_edit_profile' && user && (
         <MasterEditProfileScreen
           telegramId={user.id}
@@ -448,14 +454,15 @@ const App: React.FC = () => {
           onSaved={() => { loadCurrentMaster(); setScreen('master_dashboard'); }}
         />
       )}
+
       {screen === 'master_analytics' && user && (
         <MasterAnalyticsScreen telegramId={user.id} onBack={() => setScreen('master_dashboard')} />
       )}
+
       {screen === 'master_reviews' && user && (
         <MasterReviewsScreen telegramId={user.id} onBack={() => setScreen('master_dashboard')} />
       )}
 
-      {/* ЭКРАН СОЗДАНИЯ УСЛУГИ */}
       {screen === 'master_create_service' && user && (
         <MasterCreateServiceScreen
           telegramId={user.id}
