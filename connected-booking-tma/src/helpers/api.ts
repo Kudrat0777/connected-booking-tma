@@ -1,5 +1,7 @@
 const API_BASE = 'https://rsod7mx79rps.share.zrok.io/api';
 
+import { useState, useEffect } from 'react';
+
 export type Service = {
   id: number;
   name: string;
@@ -500,3 +502,28 @@ export async function checkClientProfile(telegramId: number) {
     return null; // В случае сбоя сети тоже считаем, что профиля нет (отправим на регистрацию)
   }
 }
+
+export const getFullImageUrl = (path?: string | null): string | undefined => {
+  if (!path) return undefined;
+
+  // Достаем корень (https://...zrok.io)
+  const origin = new URL(API_BASE).origin;
+
+  // Если бэкенд вернул локальный адрес (127.0.0.1, localhost, 0.0.0.0), жестко вырезаем его!
+  if (path.includes('127.0.0.1') || path.includes('localhost') || path.includes('0.0.0.0')) {
+    try {
+      const urlObj = new URL(path);
+      return `${origin}${urlObj.pathname}`; // Оставляем только /media/... и клеим к zrok
+    } catch (e) {
+      // Если URL не парсится, пробуем вручную
+      const cleanPath = path.replace(/http:\/\/(127\.0\.0\.1|localhost|0\.0\.0\.0):\d+/g, '');
+      return `${origin}${cleanPath}`;
+    }
+  }
+
+  // Если это нормальная внешняя ссылка (например Telegram или другой сайт)
+  if (path.startsWith('http')) return path;
+
+  // Если это просто путь /media/...
+  return `${origin}${path.startsWith('/') ? '' : '/'}${path}`;
+};

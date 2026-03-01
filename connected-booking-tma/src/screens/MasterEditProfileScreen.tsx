@@ -13,14 +13,17 @@ import {
   Icon28DeleteOutline,
   Icon28UserCircleOutline
 } from '@vkontakte/icons';
+
 import { ScreenLayout } from '../components/ScreenLayout';
+
 import {
   updateMasterProfile,
   uploadMasterAvatar,
   fetchPortfolio,
   uploadPortfolioPhoto,
   deletePortfolioPhoto,
-  PortfolioItem
+  PortfolioItem,
+  getFullImageUrl
 } from '../helpers/api';
 
 type Props = {
@@ -54,6 +57,7 @@ export const MasterEditProfileScreen: React.FC<Props> = ({
   useEffect(() => {
       // Загружаем портфолио при открытии
       loadPortfolio();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadPortfolio = async () => {
@@ -88,7 +92,7 @@ export const MasterEditProfileScreen: React.FC<Props> = ({
         const res = await uploadMasterAvatar(telegramId, e.target.files[0]);
         setAvatarUrl(res.avatar_url);
       } catch (err) {
-        alert('Ошибка загрузки аватара');
+        alert('Ошибка загрузки ават��ра');
       } finally {
         setLoading(false);
       }
@@ -127,7 +131,7 @@ export const MasterEditProfileScreen: React.FC<Props> = ({
         {/* --- АВАТАР --- */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 16px 24px' }}>
           <label style={{ position: 'relative', cursor: 'pointer' }}>
-             <Avatar size={96} src={avatarUrl || undefined} fallbackIcon={<Icon28UserCircleOutline />} />
+             <Avatar size={96} src={getFullImageUrl(avatarUrl)} fallbackIcon={<Icon28UserCircleOutline />} />
              <div style={{
                position: 'absolute',
                bottom: 0,
@@ -183,7 +187,7 @@ export const MasterEditProfileScreen: React.FC<Props> = ({
                     {portfolio.map(item => (
                         <div key={item.id} style={{ position: 'relative', aspectRatio: '1/1', borderRadius: 12, overflow: 'hidden' }}>
                             <img
-                                src={item.image_url}
+                                src={getFullImageUrl(item.image_url)}
                                 alt="work"
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             />
