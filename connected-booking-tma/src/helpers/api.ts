@@ -246,10 +246,28 @@ export type MasterPublicProfile = {
   avatar_url: string;
   rating: number;
   reviews_count: number;
+  city?: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
 };
 
-export async function fetchMasters(): Promise<MasterPublicProfile[]> {
-  const res = await fetch(`${API_BASE}/masters/`);
+export async function fetchMasters(params?: {
+  search?: string;
+  city?: string;
+  specialization?: string;
+  ordering?: string;
+}): Promise<MasterPublicProfile[]> {
+  const url = new URL(`${API_BASE}/masters/`, window.location.origin);
+
+  if (params) {
+    if (params.search) url.searchParams.append('search', params.search);
+    if (params.city) url.searchParams.append('city', params.city);
+    if (params.specialization) url.searchParams.append('specialization', params.specialization);
+    if (params.ordering) url.searchParams.append('ordering', params.ordering);
+  }
+
+  const res = await fetch(url.toString());
   if (!res.ok) throw new Error('Failed to fetch masters');
   return res.json();
 }

@@ -8,7 +8,8 @@ import {
   Cell,
   Input,
   Placeholder,
-  Spinner
+  Spinner,
+  Select // Импортируем Select для выбора города
 } from '@telegram-apps/telegram-ui';
 import { ScreenLayout } from '../components/ScreenLayout';
 import { MyBookingsScreen } from './MyBookingsScreen';
@@ -18,7 +19,8 @@ import {
   Icon28UserStarBadgeOutline,
   Icon28SettingsOutline,
   Icon24Search,
-  Icon28ChevronRightOutline
+  Icon28ChevronRightOutline,
+  Icon24LocationOutline // Иконка для города
 } from '@vkontakte/icons';
 import lottie from 'lottie-web';
 
@@ -62,6 +64,10 @@ const tabs: { id: MainTab; text: string; Icon: React.ComponentType<any> }[] = [
   { id: 'settings', text: 'Настройки', Icon: Icon28SettingsOutline },
 ];
 
+// --- ДОСТУПНЫЕ ГОРОДА И КАТЕГОРИИ (Пока хардкод, позже можно тянуть с сервера) ---
+const CITIES = ['Ургенч', 'Ташкент', 'Самарканд', 'Бухара', 'Хива'];
+const CATEGORIES = ['Все', 'Барбер', 'Стрижка', 'Маникюр', 'Ресницы', 'Массаж', 'Брови', 'Макияж'];
+
 export const ProfileScreen: React.FC<Props> = ({
   telegramId,
   initialTab = 'bookings',
@@ -75,17 +81,41 @@ export const ProfileScreen: React.FC<Props> = ({
   const [currentTab, setCurrentTab] = useState<MainTab>(initialTab);
   const [masters, setMasters] = useState<MasterPublicProfile[]>([]);
   const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState<string>('');
 
+  // --- СТЕЙТЫ ФИЛЬТРОВ ---
+  const [search, setSearch] = useState<string>('');
+  const [selectedCity, setSelectedCity] = useState<string>('Ургенч');
+  const [selectedCategory, setSelectedCategory] = useState<string>('Все');
+  const [debounceTimeout, setDebounceTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  // --- ЗАГРУЗКА МАСТЕРОВ С ФИЛЬТРАМИ ---
+  // Мы используем debounce для поиска, чтобы не спамить сервер при каждом нажатии клавиши
   useEffect(() => {
     if (currentTab === 'masters') {
-      setLoading(true);
-      fetchMasters()
-        .then(setMasters)
-        .catch(console.error)
-        .finally(() => setLoading(false));
+      if (debounceTimeout) clearTimeout(debounceTimeout);
+
+      const timeout = setTimeout(() => {
+        setLoading(true);
+        fetchMasters({
+            search: search.trim() !== '' ? search.trim() : undefined,
+            city: selectedCity,
+            specialization: selectedCategory !== 'Все' ? selectedCategory : undefined,
+            ordering: 'rating' // По умолчанию сортируем по рейтингу
+        })
+          .then(setMasters)
+          .catch(console.error)
+          .finally(() => setLoading(false));
+      }, 500); // Ждем 500мс после последнего изменения
+
+      setDebounceTimeout(timeout);
     }
-  }, [currentTab]);
+
+    // Cleanup timeout on unmount
+    return () => {
+        if (debounceTimeout) clearTimeout(debounceTimeout);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTab, search, selectedCity, selectedCategory]);
 
   const handleMasterBook = (master: MasterPublicProfile) => {
     if (onGoToServices) {
@@ -93,43 +123,100 @@ export const ProfileScreen: React.FC<Props> = ({
     }
   };
 
-  const filteredMasters = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return masters;
-    return masters.filter((m) => {
-      const inName = m.name.toLowerCase().includes(q);
-      const inBio = m.bio ? m.bio.toLowerCase().includes(q) : false;
-      return inName || inBio;
-    });
-  }, [masters, search]);
-
-  const hasQuery = Boolean(search.trim());
-  const isEmptyResult = hasQuery && filteredMasters.length === 0;
+  const hasQuery = Boolean(search.trim()) || selectedCategory !== 'Все';
+  const isEmptyResult = masters.length === 0;
 
   const renderMastersContent = () => {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        {/* 1. Блок поиска (Фиксированный, не скроллится) */}
-        <div style={{ padding: '10px 16px 6px', flexShrink: 0, background: 'var(--tgui--bg_color)' }}>
+
+        {/* --- ШАПКА ФИЛЬТРОВ (Не скроллится) --- */}
+        <div style={{ padding: '10px 16px 0', flexShrink: 0, background: 'var(--tgui--bg_color)' }}>
+
+          {/* Выбор города */}
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
+            <Icon24LocationOutline style={{ color: 'var(--tgui--hint_color)', marginRight: 8 }} />
+            <select
+                value={selectedCity}
+                onChange={(e) => setSelectedCity(e.target.value)}
+                style={{
+                    appearance: 'none',
+                    border: 'none',
+                    background: 'transparent',
+                    fontSize: 16,
+                    fontWeight: 'bold',
+                    color: 'var(--tgui--text_color)',
+                    outline: 'none',
+                    padding: 0,
+                    margin: 0,
+                    cursor: 'pointer'
+                }}
+            >
+                {CITIES.map(city => (
+                    <option key={city} value={city}>{city}</option>
+                ))}
+            </select>
+            <Icon28ChevronRightOutline style={{ color: 'var(--tgui--hint_color)', transform: 'rotate(90deg)', width: 16, height: 16, marginLeft: 4 }} />
+          </div>
+
+          {/* Строка поиска */}
           <Input
-            placeholder="Имя, описание..."
+            placeholder="Имя, специальность..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             before={<Icon24Search style={{ color: 'var(--tgui--hint_color)' }} />}
             clearable
           />
+
+          {/* Карусель категорий */}
+          <div style={{
+              display: 'flex',
+              overflowX: 'auto',
+              gap: 8,
+              padding: '12px 0 8px',
+              WebkitOverflowScrolling: 'touch',
+              scrollbarWidth: 'none', // Скрываем скроллбар в Firefox
+              msOverflowStyle: 'none',  // Скрываем скроллбар в IE
+          }}>
+              <style dangerouslySetInnerHTML={{__html: `
+                div::-webkit-scrollbar { display: none; }
+              `}} />
+
+              {CATEGORIES.map(cat => {
+                  const isSelected = selectedCategory === cat;
+                  return (
+                      <div
+                          key={cat}
+                          onClick={() => setSelectedCategory(cat)}
+                          style={{
+                              padding: '6px 14px',
+                              borderRadius: 16,
+                              background: isSelected ? 'var(--tgui--button_color)' : 'var(--tgui--secondary_bg_color)',
+                              color: isSelected ? 'var(--tgui--button_text_color)' : 'var(--tgui--text_color)',
+                              fontSize: 14,
+                              fontWeight: 500,
+                              whiteSpace: 'nowrap',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease'
+                          }}
+                      >
+                          {cat}
+                      </div>
+                  );
+              })}
+          </div>
         </div>
 
-        {/* 2. Область списка (Скроллится) */}
+        {/* --- ОБЛАСТЬ СПИСКА МАСТЕРОВ (Скроллится) --- */}
         <div style={{
-            height: 'calc(100vh - 180px)',
+            flex: 1,
             overflowY: 'auto',
             WebkitOverflowScrolling: 'touch',
-            paddingBottom: 40 // Доп. отступ снизу
+            paddingBottom: 40
         }}>
             <List style={{ background: 'var(--tgui--secondary_bg_color)', minHeight: '100%' }}>
                 {loading && (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: 20 }}>
+                <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
                     <Spinner size="m" />
                 </div>
                 )}
@@ -137,21 +224,17 @@ export const ProfileScreen: React.FC<Props> = ({
                 {!loading && isEmptyResult && (
                 <Placeholder
                     header="Ничего не найдено"
-                    description="Попробуйте изменить запрос"
+                    description={`В городе ${selectedCity} по вашему запросу нет мастеров.`}
                 >
                     <LottieIcon src="/stickers/duck_out.json" size={140} />
                 </Placeholder>
                 )}
 
-                {!loading && !hasQuery && masters.length === 0 && (
-                <Placeholder header="Нет мастеров" description="Список пока пуст." />
-                )}
-
-                {!loading && filteredMasters.length > 0 && (
+                {!loading && masters.length > 0 && (
                 <>
-                    {filteredMasters.map((m) => (
+                    {masters.map((m) => (
                     <Section key={m.id}>
-                        {/* Кликабельная карточка мастера (открывает отзывы) */}
+                        {/* Кликабельная карточка мастера */}
                         <Cell
                         onClick={() => {
                             if (onOpenMasterReviews) onOpenMasterReviews(m.id);
@@ -181,6 +264,11 @@ export const ProfileScreen: React.FC<Props> = ({
                                 <span style={{ opacity: 0.7, fontSize: 12, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                 {m.bio || 'Мастер'}
                                 </span>
+                                {m.address && (
+                                    <span style={{ fontSize: 11, color: 'var(--tgui--hint_color)' }}>
+                                    📍 {m.address}
+                                    </span>
+                                )}
                                 {m.reviews_count > 0 && (
                                     <span style={{ fontSize: 11, color: 'var(--tgui--link_color)' }}>
                                     Смотреть отзывы ({m.reviews_count})
@@ -196,20 +284,18 @@ export const ProfileScreen: React.FC<Props> = ({
                         {/* Блок кнопок */}
                         <Cell>
                             <div style={{ display: 'flex', gap: 8, position: 'relative', zIndex: 2 }}>
-                                {/* Кнопка ПОРТФОЛИО */}
                                 <Button
                                 mode="bezeled"
                                 size="m"
                                 style={{ flex: 1 }}
                                 onClick={(e) => {
-                                    e.stopPropagation(); // Важно: остановить всплытие
+                                    e.stopPropagation();
                                     if (onOpenPortfolio) onOpenPortfolio(m.id, m.name);
                                 }}
                                 >
                                 Портфолио
                                 </Button>
 
-                                {/* Кнопка ЗАПИСАТЬСЯ */}
                                 <Button
                                 mode="filled"
                                 size="m"
@@ -235,7 +321,6 @@ export const ProfileScreen: React.FC<Props> = ({
 
   const renderContent = () => {
     if (currentTab === 'bookings') {
-      // MyBookingsScreen уже имеет свой скролл и логику
       return (
         <MyBookingsScreen
            telegramId={telegramId}
