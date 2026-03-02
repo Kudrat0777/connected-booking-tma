@@ -248,6 +248,7 @@ export type MasterPublicProfile = {
   avatar_url: string;
   rating: number;
   reviews_count: number;
+  phone?: string;
   city?: string;
   address?: string;
   latitude?: number;
@@ -280,7 +281,7 @@ export async function fetchMasterById(id: number): Promise<MasterPublicProfile> 
   return res.json();
 }
 
-export async function updateMasterProfile(telegramId: number, data: { name?: string; bio?: string; phone?: string }) {
+export async function updateMasterProfile(telegramId: number, data: { name?: string; bio?: string; phone?: string; city?: string; address?: string }) {
   const res = await fetch(`${API_BASE}/masters/me_update/`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

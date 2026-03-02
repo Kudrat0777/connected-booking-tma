@@ -457,7 +457,9 @@ const App: React.FC = () => {
              name: currentMaster.name,
              bio: currentMaster.bio,
              avatarUrl: currentMaster.avatar_url,
-             phone: currentMaster.phone
+             phone: currentMaster.phone,
+             city: currentMaster.city,
+             address: currentMaster.address
           } : undefined}
           onBack={() => setScreen('master_dashboard')}
           onSaved={() => { loadCurrentMaster(); setScreen('master_dashboard'); }}
