@@ -156,31 +156,22 @@ const App: React.FC = () => {
       } catch (e) { console.error(e); }
   };
 
-  // --- ЛОГИКА ИНИЦИАЛИЗАЦИИ ---
+    // --- ЛОГИКА ИНИЦИАЛИЗАЦИИ ---
   useEffect(() => {
     const initApp = async () => {
        setIsAppLoading(true);
 
-       // 1. ПРОВЕРЯЕМ СЕССИИ
-       const isMasterLoggedIn = localStorage.getItem('is_master_logged_in') === 'true';
-       const isClientLoggedIn = localStorage.getItem('is_client_logged_in') === 'true';
+       const uid = user?.id || (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id;
 
-       // 2. ВХОД МАСТЕРА
-       if (isMasterLoggedIn) {
-           setScreen('master_dashboard');
-           setIsAppLoading(false);
-           loadCurrentMaster();
-           return;
-       }
-
-       // 3. ПРОВЕРКА DEEP LINK (Переход клиента к конкретному мастеру)
+       // 1. ПРОВЕРКА DEEP LINK (Переход клиента к конкретному мастеру)
+       // Deep link всегда имеет приоритет (даже если мастер перешел по ссылке другого мастера,
+       // он откроет его как клиент).
        const startParam = getStartParam();
        if (startParam && startParam.startsWith('master_')) {
           const idStr = startParam.replace('master_', '');
           const mId = parseInt(idStr);
 
           if (!isNaN(mId)) {
-             // Отправляем клиента на красивый профиль мастера!
              setSelectedMasterId(mId);
              setScreen('client_master_profile');
              setIsAppLoading(false);
@@ -188,28 +179,51 @@ const App: React.FC = () => {
           }
        }
 
-       // 4. ВХОД КЛИЕНТА (Если он уже входил, пропускаем Welcome screen, но проверяем базу)
-       if (isClientLoggedIn) {
-           const uid = user?.id || (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id;
-           if (uid) {
-               // Открываем профиль сразу, чтобы не было задержек интерфейса
-               setMainTab('bookings');
-               setScreen('profile');
-               setIsAppLoading(false);
+       if (uid) {
+           try {
+               // 2. УМНАЯ ПРОВЕРКА РОЛИ
+               // Сначала спрашиваем бэкенд: "Этот Telegram ID принадлежит мастеру?"
+               const masterRes = await fetch(`${API_BASE}/masters/by_telegram/?telegram_id=${uid}`);
+               if (masterRes.ok) {
+                   const masterData = await masterRes.json();
 
-               // В фоне проверяем, жив ли еще профиль в базе
-               checkClientProfile(uid).then((profile) => {
-                   if (!profile) {
-                       // Если профиля в базе нет (удалили), стираем сессию и кидаем на регистрацию
-                       localStorage.removeItem('is_client_logged_in');
-                       setScreen('client_registration');
+                   if (masterData.exists) {
+                       // ЭТО МАСТЕР!
+                       // Проверяем, не нажал ли он кнопку "Вернуться в режим клиента"
+                       const isClientMode = localStorage.getItem('force_client_mode') === 'true';
+
+                       if (!isClientMode) {
+                           localStorage.setItem('is_master_logged_in', 'true');
+                           setCurrentMaster(masterData.master);
+                           setScreen('master_dashboard');
+                           setIsAppLoading(false);
+                           return;
+                       }
                    }
-               });
-               return;
+               }
+
+               // 3. ЕСЛИ ЭТО НЕ МАСТЕР (или он включил режим клиента)
+               // Проверяем, есть ли он в базе клиентов
+               const profile = await checkClientProfile(uid);
+               if (profile) {
+                   localStorage.setItem('is_client_logged_in', 'true');
+                   setMainTab('bookings'); // Сразу показываем будущие записи
+                   setScreen('profile');
+                   setIsAppLoading(false);
+                   return;
+               } else {
+                   // Новый клиент -> Регистрация
+                   setScreen('client_registration');
+                   setIsAppLoading(false);
+                   return;
+               }
+
+           } catch (e) {
+               console.error("Auth check error:", e);
            }
        }
 
-       // 5. ЕСЛИ НИЧЕГО ИЗ ВЫШЕПЕРЕЧИСЛЕННОГО - ПОКАЗЫВАЕМ СТАРТОВЫЙ ЭКРАН
+       // 4. ЕСЛИ НИЧЕГО НЕ СРАБОТАЛО ИЛИ НЕТ UID - ПОКАЗЫВАЕМ СТАРТОВЫЙ ЭКРАН
        const params = new URLSearchParams(window.location.search);
        if (params.get('role') === 'master') {
          setScreen('master_welcome');
@@ -220,6 +234,7 @@ const App: React.FC = () => {
     };
 
     setTimeout(initApp, 100);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleServiceSelected = (service: Service) => {
@@ -426,13 +441,18 @@ const App: React.FC = () => {
         />
       )}
 
-      {screen === 'master_dashboard' && user && (
+            {screen === 'master_dashboard' && user && (
         <MasterDashboardScreen
           telegramId={user.id}
           onSwitchToClient={() => {
-              // Если мастер переключается в режим клиента:
-              if (localStorage.getItem('is_client_logged_in') === 'true') setScreen('profile');
-              else setScreen('welcome');
+              // Включаем "режим клиента" для мастера
+              localStorage.setItem('force_client_mode', 'true');
+              if (localStorage.getItem('is_client_logged_in') === 'true') {
+                  setScreen('profile');
+              } else {
+                  // Если мастер еще ни разу не заходил как клиент, отправим его на логин/регистрацию клиента
+                  handleClientLogin();
+              }
           }}
           onOpenSchedule={() => setScreen('master_schedule')}
           onEditProfile={() => {

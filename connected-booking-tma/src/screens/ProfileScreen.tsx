@@ -330,15 +330,38 @@ export const ProfileScreen: React.FC<Props> = ({
       );
     }
 
-    if (currentTab === 'settings') {
+        if (currentTab === 'settings') {
+      // Проверяем, является ли текущий клиент на самом деле мастером
+      const isMasterInClientMode = localStorage.getItem('is_master_logged_in') === 'true' && localStorage.getItem('force_client_mode') === 'true';
+
       return (
-        <SettingsScreen
-          telegramId={telegramId}
-          onBack={onBack}
-          onLogout={() => {
-              if (onLogout) onLogout();
+        <div style={{ height: '100%', overflowY: 'auto' }}>
+            <SettingsScreen
+              telegramId={telegramId}
+              onBack={onBack}
+              onLogout={() => {
+                  if (onLogout) onLogout();
               }}
-        />
+            />
+
+            {/* Кнопка возврата в панель мастера */}
+            {isMasterInClientMode && (
+                <div style={{ padding: '0 16px 40px' }}>
+                    <Button
+                        size="l"
+                        mode="filled"
+                        stretched
+                        style={{ background: 'var(--tgui--button_color)', marginTop: -20 }}
+                        onClick={() => {
+                            localStorage.removeItem('force_client_mode');
+                            window.location.reload(); // Перезагружаем, чтобы App.tsx подхватил роль мастера
+                        }}
+                    >
+                        Вернуться в панель мастера
+                    </Button>
+                </div>
+            )}
+        </div>
       );
     }
 
