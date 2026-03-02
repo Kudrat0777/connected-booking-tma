@@ -1,287 +1,229 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Button,
-  Select,
-  Input,
   Section,
-  Cell,
-  List,
-  SegmentedControl,
+  Input,
+  Select,
+  Button,
   Spinner,
-  Placeholder,
+  Placeholder
 } from '@telegram-apps/telegram-ui';
 import { ScreenLayout } from '../components/ScreenLayout';
-import { Icon28DeleteOutline } from '@vkontakte/icons';
-import lottie from 'lottie-web';
-import {
-  fetchMyServices,
-  bulkGenerateSlots,
-  fetchSlotsForService,
-  createManualBooking,
-  deleteSlot,
-  Service,
-  Slot
-} from '../helpers/api';
-
-// --- Lottie Component ---
-const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
-  const container = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!container.current) return;
-    try {
-      const anim = lottie.loadAnimation({
-        container: container.current,
-        renderer: 'svg',
-        loop: true,
-        autoplay: true,
-        path: src,
-      });
-      return () => anim.destroy();
-    } catch (e) { console.error(e); }
-  }, [src]);
-  return <div ref={container} style={{ width: size, height: size, margin: '0 auto 16px' }} />;
-};
-// ------------------------
+import { fetchMyServices, bulkGenerateSlots, Service } from '../helpers/api';
 
 type Props = {
   telegramId: number;
   onBack: () => void;
 };
 
+const DAYS = [
+  { id: 0, label: 'Пн' },
+  { id: 1, label: 'Вт' },
+  { id: 2, label: 'Ср' },
+  { id: 3, label: 'Чт' },
+  { id: 4, label: 'Пт' },
+  { id: 5, label: 'Сб' },
+  { id: 6, label: 'Вс' },
+];
+
 export const MasterScheduleScreen: React.FC<Props> = ({ telegramId, onBack }) => {
-  const [mode, setMode] = useState<'manage' | 'generate'>('manage');
+  const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
-  const [selectedServiceId, setSelectedServiceId] = useState<string>('');
-  const [loading, setLoading] = useState(false);
 
-  // --- STATES FOR GENERATE ---
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [startHour, setStartHour] = useState('09:00');
-  const [endHour, setEndHour] = useState('18:00');
-  const [stepMinutes, setStepMinutes] = useState('60');
+  // Значения по умолчанию для дат (Сегодня -> через месяц)
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1);
+    return d.toISOString().split('T')[0];
+  });
 
-  // --- STATES FOR MANAGE ---
-  const [manageDate, setManageDate] = useState(new Date().toISOString().split('T')[0]);
-  const [slots, setSlots] = useState<Slot[]>([]);
-  const [loadingSlots, setLoadingSlots] = useState(false);
-  const [manualClientName, setManualClientName] = useState('');
-  const [selectedSlotForBooking, setSelectedSlotForBooking] = useState<number | null>(null);
+  const [startTime, setStartTime] = useState('10:00');
+  const [endTime, setEndTime] = useState('19:00');
+  const [step, setStep] = useState('30'); // Шаг в минутах
+  const [selectedDays, setSelectedDays] = useState<number[]>([0, 1, 2, 3, 4]); // Пн-Пт по умолчанию
 
   useEffect(() => {
-    fetchMyServices(telegramId).then(data => {
-      setServices(data);
-      if (data.length > 0) setSelectedServiceId(String(data[0].id));
-    });
-  }, [telegramId]);
+    loadServices();
+  }, []);
 
-  useEffect(() => {
-    if (mode === 'manage' && selectedServiceId) {
-      loadSlots();
-    }
-  }, [mode, selectedServiceId, manageDate]);
-
-  const loadSlots = async () => {
-      setLoadingSlots(true);
-      try {
-          // Получаем ВСЕ слоты услуги, а потом фильтруем по дате на клиенте
-          // (Для продакшена лучше фильтровать на сервере, но пока так)
-          const allSlots = await fetchSlotsForService(Number(selectedServiceId));
-          const filtered = allSlots.filter(s => s.time.startsWith(manageDate));
-          // Сортируем по времени
-          filtered.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
-          setSlots(filtered);
-      } catch (e) {
-          console.error(e);
-      } finally {
-          setLoadingSlots(false);
-      }
-  };
-
-  // --- HANDLERS GENERATE ---
-  const handleGenerate = async () => {
-    if (!startDate || !endDate || !selectedServiceId) return alert('Заполните все поля');
-    setLoading(true);
+  const loadServices = async () => {
     try {
-      // Генерируем массив времен с шагом
-      const times: string[] = [];
-      let current = parseInt(startHour.split(':')[0]) * 60 + parseInt(startHour.split(':')[1]);
-      const end = parseInt(endHour.split(':')[0]) * 60 + parseInt(endHour.split(':')[1]);
-      const step = parseInt(stepMinutes);
-
-      while (current < end) {
-        const h = Math.floor(current / 60).toString().padStart(2, '0');
-        const m = (current % 60).toString().padStart(2, '0');
-        times.push(`${h}:${m}`);
-        current += step;
-      }
-
-      await bulkGenerateSlots(
-         Number(selectedServiceId),
-         startDate,
-         endDate,
-         times,
-         [0,1,2,3,4,5,6]
-      );
-      alert('Слоты созданы!');
-      setMode('manage'); // Переходим к управлению
+      const data = await fetchMyServices(telegramId);
+      setServices(data);
     } catch (e) {
-      alert('Ошибка генерации');
+      console.error(e);
     } finally {
       setLoading(false);
     }
   };
 
-  // --- HANDLERS MANAGE ---
-  const handleManualBook = async () => {
-      if (!selectedSlotForBooking || !manualClientName) return;
-      try {
-          await createManualBooking(selectedSlotForBooking, manualClientName);
-          setManualClientName('');
-          setSelectedSlotForBooking(null);
-          loadSlots(); // Обновляем список
-      } catch (e) {
-          alert('Ошибка записи');
-      }
+  const toggleDay = (dayId: number) => {
+    setSelectedDays(prev =>
+      prev.includes(dayId) ? prev.filter(id => id !== dayId) : [...prev, dayId]
+    );
   };
 
-  const handleDeleteSlot = async (id: number) => {
-      if(!window.confirm('Удалить этот слот?')) return;
-      try {
-          await deleteSlot(id);
-          loadSlots();
-      } catch (e) {
-          alert('Ошибка удаления');
-      }
+  // Функция для создания массива времени (например: ["10:00", "10:30", "11:00"...])
+  const generateTimesArray = () => {
+    const times: string[] = [];
+    const [startH, startM] = startTime.split(':').map(Number);
+    const [endH, endM] = endTime.split(':').map(Number);
+
+    let currentMins = startH * 60 + startM;
+    const endMins = endH * 60 + endM;
+    const stepMins = parseInt(step);
+
+    while (currentMins < endMins) {
+      const h = Math.floor(currentMins / 60).toString().padStart(2, '0');
+      const m = (currentMins % 60).toString().padStart(2, '0');
+      times.push(`${h}:${m}`);
+      currentMins += stepMins;
+    }
+    return times;
   };
 
-  const renderGenerate = () => (
-    <div style={{ padding: 16 }}>
-      <Section header="Настройки генерации">
-         <Select header="Услуга" value={selectedServiceId} onChange={e => setSelectedServiceId(e.target.value)}>
-            {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-         </Select>
-         <Input type="date" header="С даты" value={startDate} onChange={e => setStartDate(e.target.value)} />
-         <Input type="date" header="По дату" value={endDate} onChange={e => setEndDate(e.target.value)} />
-      </Section>
+  const handleGenerate = async () => {
+    if (selectedDays.length === 0) {
+      return alert('Выберите хотя бы один рабочий день');
+    }
+    if (new Date(startDate) > new Date(endDate)) {
+      return alert('Дата начала не может быть позже даты окончания');
+    }
 
-      <Section header="Время работы">
-         <Input type="time" header="Начало дня" value={startHour} onChange={e => setStartHour(e.target.value)} />
-         <Input type="time" header="Конец дня" value={endHour} onChange={e => setEndHour(e.target.value)} />
-         <Select header="Длительность слота" value={stepMinutes} onChange={e => setStepMinutes(e.target.value)}>
-             <option value="30">30 мин</option>
-             <option value="60">1 час</option>
-             <option value="90">1.5 часа</option>
-             <option value="120">2 часа</option>
-         </Select>
-      </Section>
+    const times = generateTimesArray();
+    if (times.length === 0) {
+      return alert('Неверно указано время работы');
+    }
 
-      <Button size="l" mode="filled" stretched loading={loading} onClick={handleGenerate} style={{ marginTop: 16 }}>
-        Сгенерировать слоты
-      </Button>
-    </div>
-  );
+    setGenerating(true);
+    try {
+      // Генерируем слоты для КАЖДОЙ услуги мастера,
+      // чтобы клиенты видели свободное время независимо от выбранной процедуры.
+      // (Наш "умный" бэкенд потом сам будет скрывать занятые слоты)
+      let totalCreated = 0;
+      for (const service of services) {
+        const res = await bulkGenerateSlots(service.id, startDate, endDate, times, selectedDays);
+        totalCreated += res.created || 0;
+      }
 
-  const renderManage = () => (
-    <div>
-       <div style={{ padding: 16, background: 'var(--tgui--bg_color)' }}>
-          <Select header="Услуга" value={selectedServiceId} onChange={e => setSelectedServiceId(e.target.value)} style={{ marginBottom: 12 }}>
-              {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </Select>
-          <Input type="date" header="Дата" value={manageDate} onChange={e => setManageDate(e.target.value)} />
-       </div>
+      alert(`Расписание успешно создано! Сгенерировано слотов: ${totalCreated}`);
+      onBack();
+    } catch (e) {
+      console.error(e);
+      alert('Ошибка при генерации расписания');
+    } finally {
+      setGenerating(false);
+    }
+  };
 
-       {loadingSlots ? <Spinner size="m" style={{ margin: 20 }} /> : (
-         <List>
-            {slots.length === 0 ? (
-                <Placeholder
-                  header="Нет слотов"
-                  description="На этот день слотов нет. Перейдите в 'Создать', чтобы добавить их."
-                >
-                    {/* АНИМАЦИЯ КАЛЕНДАРЯ */}
-                    <LottieIcon src="/stickers/duck_out.json" size={140} />
-                </Placeholder>
-            ) : (
-                slots.map(slot => {
-                    const timeStr = new Date(slot.time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
-                    return (
-                        <Section key={slot.id}>
-                            <Cell
-                                description={slot.is_booked ? "Занято" : "Свободно"}
-                                after={
-                                    slot.is_booked ? (
-                                        <span style={{ color: 'red', fontSize: 12 }}>ЗАБРОНИРОВАНО</span>
-                                    ) : (
-                                        <div style={{ display: 'flex', gap: 8 }}>
-                                            <Button
-                                                size="s"
-                                                mode="bezeled"
-                                                onClick={() => setSelectedSlotForBooking(slot.id)}
-                                            >
-                                                + Записать
-                                            </Button>
-                                            <Button
-                                                size="s"
-                                                mode="plain"
-                                                style={{ color: 'var(--tgui--destructive_text_color)' }}
-                                                onClick={() => handleDeleteSlot(slot.id)}
-                                            >
-                                                <Icon28DeleteOutline />
-                                            </Button>
-                                        </div>
-                                    )
-                                }
-                            >
-                                {timeStr}
-                            </Cell>
-                        </Section>
-                    );
-                })
-            )}
-         </List>
-       )}
+  if (loading) {
+    return (
+      <ScreenLayout title="Расписание" onBack={onBack}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 50 }}><Spinner size="l" /></div>
+      </ScreenLayout>
+    );
+  }
 
-       {/* Простая модалка для ввода имени (эмуляция) */}
-       {selectedSlotForBooking && (
-           <div style={{
-               position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-               background: 'rgba(0,0,0,0.5)', zIndex: 100,
-               display: 'flex', alignItems: 'center', justifyContent: 'center'
-           }}>
-               <div style={{
-                   background: 'var(--tgui--bg_color)',
-                   padding: 24, borderRadius: 16, width: '80%', maxWidth: 300
-               }}>
-                   <h3 style={{ marginTop: 0, color: 'var(--tgui--text_color)' }}>Ручная запись</h3>
-                   <Input
-                      placeholder="Имя клиента / Телефон"
-                      value={manualClientName}
-                      onChange={e => setManualClientName(e.target.value)}
-                   />
-                   <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-                       <Button stretched mode="plain" onClick={() => setSelectedSlotForBooking(null)}>Отмена</Button>
-                       <Button stretched mode="filled" onClick={handleManualBook}>Записать</Button>
-                   </div>
-               </div>
-           </div>
-       )}
-    </div>
-  );
+  if (services.length === 0) {
+    return (
+      <ScreenLayout title="Расписание" onBack={onBack}>
+        <Placeholder
+          header="Нет услуг"
+          description="Сначала добавьте хотя бы одну услугу в меню, чтобы сгенерировать для неё слоты записи."
+        />
+      </ScreenLayout>
+    );
+  }
 
   return (
-    <ScreenLayout title="Расписание" onBack={onBack}>
-      <div style={{ padding: '10px 16px' }}>
-        <SegmentedControl size="m">
-           <SegmentedControl.Item selected={mode === 'manage'} onClick={() => setMode('manage')}>
-              Управление
-           </SegmentedControl.Item>
-           <SegmentedControl.Item selected={mode === 'generate'} onClick={() => setMode('generate')}>
-              Создать
-           </SegmentedControl.Item>
-        </SegmentedControl>
-      </div>
+    <ScreenLayout title="Авто-расписание" onBack={onBack}>
+      <div style={{ padding: '16px', paddingBottom: 100 }}>
+        <p style={{ color: 'var(--tgui--hint_color)', fontSize: 14, marginBottom: 16 }}>
+          Укажите ваш график работы. Система автоматически создаст пустые окна для записи на этот период.
+        </p>
 
-      {mode === 'generate' ? renderGenerate() : renderManage()}
+        <Section header="Период генерации">
+          <Input
+            header="С какого числа"
+            type="date"
+            value={startDate}
+            onChange={e => setStartDate(e.target.value)}
+          />
+          <Input
+            header="По какое число"
+            type="date"
+            value={endDate}
+            onChange={e => setEndDate(e.target.value)}
+          />
+        </Section>
+
+        <Section header="Рабочие дни недели">
+          <div style={{ padding: '12px 16px', display: 'flex', gap: 8, justifyContent: 'space-between' }}>
+            {DAYS.map(day => {
+              const isSelected = selectedDays.includes(day.id);
+              return (
+                <div
+                  key={day.id}
+                  onClick={() => toggleDay(day.id)}
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 14,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: '0.2s',
+                    backgroundColor: isSelected ? 'var(--tgui--button_color)' : 'var(--tgui--secondary_bg_color)',
+                    color: isSelected ? 'var(--tgui--button_text_color)' : 'var(--tgui--text_color)',
+                  }}
+                >
+                  {day.label}
+                </div>
+              );
+            })}
+          </div>
+        </Section>
+
+        <Section header="Время работы">
+          <Input
+            header="Начало рабочего дня"
+            type="time"
+            value={startTime}
+            onChange={e => setStartTime(e.target.value)}
+          />
+          <Input
+            header="Конец рабочего дня"
+            type="time"
+            value={endTime}
+            onChange={e => setEndTime(e.target.value)}
+          />
+          <Select
+            header="Шаг записи (интервал слотов)"
+            value={step}
+            onChange={e => setStep(e.target.value)}
+          >
+            <option value="15">Каждые 15 минут</option>
+            <option value="30">Каждые 30 минут</option>
+            <option value="60">Каждый 1 час</option>
+          </Select>
+        </Section>
+
+        <div style={{ marginTop: 24 }}>
+          <Button
+            size="l"
+            mode="filled"
+            stretched
+            loading={generating}
+            onClick={handleGenerate}
+          >
+            Сгенерировать расписание
+          </Button>
+        </div>
+      </div>
     </ScreenLayout>
   );
 };
