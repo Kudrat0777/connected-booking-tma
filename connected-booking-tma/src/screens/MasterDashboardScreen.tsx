@@ -392,7 +392,26 @@ export const MasterDashboardScreen: React.FC<Props> = ({
                 </div>
               </Cell>
             )}
+
+            {b.status === 'confirmed' && new Date(b.slot.time) > new Date() && (
+              <Cell>
+                <Button
+                   size="m"
+                   mode="bezeled"
+                   stretched
+                   style={{ color: 'var(--tgui--destructive_text_color)', background: 'rgba(255, 0, 0, 0.1)' }}
+                   onClick={() => {
+                     if(window.confirm('Вы уверены, что хотите отменить эту подтвержденную запись? Слоты будут освобождены, а клиенту придет уведомление.')) {
+                       handleReject(b.id);
+                     }
+                   }}
+                >
+                  Отменить визит
+                </Button>
+              </Cell>
+            )}
           </Section>
+
         ))}
       </List>
 
