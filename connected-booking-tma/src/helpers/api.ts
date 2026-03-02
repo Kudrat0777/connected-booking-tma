@@ -506,24 +506,64 @@ export async function checkClientProfile(telegramId: number) {
 export const getFullImageUrl = (path?: string | null): string | undefined => {
   if (!path) return undefined;
 
-  // Достаем корень (https://...zrok.io)
-  const origin = new URL(API_BASE).origin;
+  const origin = new URL(API_BASE).origin; // Получаем https://...zrok.io
 
-  // Если бэкенд вернул локальный адрес (127.0.0.1, localhost, 0.0.0.0), жестко вырезаем его!
+  // Очищаем путь от любых локальных доменов, если они застряли в базе
+  let cleanPath = path;
   if (path.includes('127.0.0.1') || path.includes('localhost') || path.includes('0.0.0.0')) {
-    try {
-      const urlObj = new URL(path);
-      return `${origin}${urlObj.pathname}`; // Оставляем только /media/... и клеим к zrok
-    } catch (e) {
-      // Если URL не парсится, пробуем вручную
-      const cleanPath = path.replace(/http:\/\/(127\.0\.0\.1|localhost|0\.0\.0\.0):\d+/g, '');
-      return `${origin}${cleanPath}`;
-    }
+    cleanPath = path.replace(/http:\/\/(127\.0\.0\.1|localhost|0\.0\.0\.0):\d+/g, '');
   }
 
-  // Если это нормальная внешняя ссылка (например Telegram или другой сайт)
-  if (path.startsWith('http')) return path;
+  // Если это внешняя ссылка (например, Telegram аватарка)
+  if (cleanPath.startsWith('http')) return cleanPath;
 
-  // Если это просто путь /media/...
-  return `${origin}${path.startsWith('/') ? '' : '/'}${path}`;
+  // Если это наша картинка из /media/, добавляем слэш, если нужно
+  cleanPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
+
+  // === ХАК ДЛЯ ZROK ===
+  // Добавляем случайный параметр (timestamp) в конец ссылки.
+  // Это заставляет браузер и туннель скачивать картинку заново, обходя кэш и блокировки.
+  return `${origin}${cleanPath}?t=${new Date().getTime()}`;
+};
+
+
+export const useTunnelImage = (src?: string | null) => {
+  const [blobUrl, setBlobUrl] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    let isMounted = true; // Защита от утечек памяти
+
+    const load = async () => {
+      const fullUrl = getFullImageUrl(src);
+      if (!fullUrl) {
+        if (isMounted) setBlobUrl(undefined);
+        return;
+      }
+
+      try {
+        const res = await fetch(fullUrl);
+        if (!res.ok) throw new Error('Bad response');
+
+        const blob = await res.blob();
+        if (isMounted) {
+            setBlobUrl(URL.createObjectURL(blob));
+        }
+      } catch (e) {
+        console.error("Image load failed:", e);
+        // Если fetch не сработал (например, сломался zrok),
+        // вставляем хотя бы обычную ссылку, чтобы картинка попыталась загрузиться
+        if (isMounted) {
+            setBlobUrl(fullUrl);
+        }
+      }
+    };
+
+    load();
+
+    return () => {
+        isMounted = false; // Очистка при удалении компонента
+    };
+  }, [src]); // <- Теперь он сработает строго 1 раз на каждую картинку!
+
+  return blobUrl;
 };

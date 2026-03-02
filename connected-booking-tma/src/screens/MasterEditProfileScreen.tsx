@@ -26,6 +26,79 @@ import {
   getFullImageUrl
 } from '../helpers/api';
 
+
+// =========================================================
+// УМНЫЕ КОМПОНЕНТЫ ДЛЯ КАРТИНОК (ОБХОДЯТ ZROK И ПИШУТ ОШИБКИ)
+// =========================================================
+const SafeAvatar: React.FC<{ path: string, onChange: (e: any) => void }> = ({ path, onChange }) => {
+    const [src, setSrc] = useState<string | undefined>(undefined);
+
+    useEffect(() => {
+        if (!path) return;
+        const url = getFullImageUrl(path);
+        if (!url) return;
+
+        fetch(url)
+            .then(res => res.ok ? res.blob() : Promise.reject())
+            .then(blob => setSrc(URL.createObjectURL(blob)))
+            .catch(() => {});
+    }, [path]);
+
+    return (
+      <label style={{ position: 'relative', cursor: 'pointer' }}>
+          <Avatar size={96} src={src || undefined} fallbackIcon={<Icon28UserCircleOutline />} />
+          <div style={{
+              position: 'absolute', bottom: 0, right: 0, background: 'var(--tgui--button_color)',
+              border: '4px solid var(--tgui--secondary_bg_color)', borderRadius: '50%', width: 32, height: 32,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+          }}>
+              <span style={{ color: 'var(--tgui--button_text_color)', fontSize: 24, lineHeight: '24px', marginTop: -2 }}>+</span>
+          </div>
+          <input type="file" hidden accept="image/*" onChange={onChange} />
+      </label>
+    );
+};
+
+const SafePortfolioImage: React.FC<{ path: string }> = ({ path }) => {
+    const [src, setSrc] = useState<string | undefined>(undefined);
+    const [err, setErr] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!path) return;
+        const url = getFullImageUrl(path);
+        if (!url) return;
+
+        fetch(url)
+            .then(async (res) => {
+                if (!res.ok) throw new Error(`Ошибка Django: ${res.status}`);
+                const blob = await res.blob();
+                if (blob.type.includes('text/html')) throw new Error('Заблокировал Zrok');
+                setSrc(URL.createObjectURL(blob));
+            })
+            .catch(e => setErr(e.message));
+    }, [path]);
+
+    if (err) {
+        return (
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#ffebee', padding: 8, textAlign: 'center' }}>
+                <span style={{ color: 'red', fontSize: 11, fontWeight: 'bold' }}>{err}</span>
+            </div>
+        );
+    }
+
+    if (!src) {
+        return (
+            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--tgui--secondary_bg_color)' }}>
+                <Spinner size="s" />
+            </div>
+        );
+    }
+
+    return <img src={src} alt="work" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
+};
+// =========================================================
+
+
 type Props = {
   telegramId: number;
   initialData?: {
@@ -50,12 +123,10 @@ export const MasterEditProfileScreen: React.FC<Props> = ({
   const [avatarUrl, setAvatarUrl] = useState(initialData?.avatarUrl || '');
   const [loading, setLoading] = useState(false);
 
-  // State для портфолио
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [loadingPortfolio, setLoadingPortfolio] = useState(false);
 
   useEffect(() => {
-      // Загружаем портфолио при открытии
       loadPortfolio();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -92,7 +163,7 @@ export const MasterEditProfileScreen: React.FC<Props> = ({
         const res = await uploadMasterAvatar(telegramId, e.target.files[0]);
         setAvatarUrl(res.avatar_url);
       } catch (err) {
-        alert('Ошибка загрузки ават��ра');
+        alert('Ошибка загрузки аватара');
       } finally {
         setLoading(false);
       }
@@ -104,7 +175,7 @@ export const MasterEditProfileScreen: React.FC<Props> = ({
           setLoadingPortfolio(true);
           try {
               await uploadPortfolioPhoto(telegramId, e.target.files[0]);
-              await loadPortfolio(); // Перезагружаем список
+              await loadPortfolio();
           } catch (err) {
               alert('Ошибка загрузки фото');
           } finally {
@@ -125,31 +196,13 @@ export const MasterEditProfileScreen: React.FC<Props> = ({
 
   return (
     <ScreenLayout title="Редактировать профиль" onBack={onBack}>
-      {/* Оборачиваем ВСЁ в List для применения нативных стилей Telegram */}
       <List style={{ background: 'var(--tgui--secondary_bg_color)', minHeight: '100vh', paddingBottom: 60 }}>
 
         {/* --- АВАТАР --- */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 16px 24px' }}>
-          <label style={{ position: 'relative', cursor: 'pointer' }}>
-             <Avatar size={96} src={getFullImageUrl(avatarUrl)} fallbackIcon={<Icon28UserCircleOutline />} />
-             <div style={{
-               position: 'absolute',
-               bottom: 0,
-               right: 0,
-               background: 'var(--tgui--button_color)',
-               border: '4px solid var(--tgui--secondary_bg_color)',
-               borderRadius: '50%',
-               width: 32,
-               height: 32,
-               display: 'flex',
-               alignItems: 'center',
-               justifyContent: 'center',
-               boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-             }}>
-               <span style={{ color: 'var(--tgui--button_text_color)', fontSize: 24, lineHeight: '24px', marginTop: -2 }}>+</span>
-             </div>
-             <input type="file" hidden accept="image/*" onChange={handleAvatarChange} />
-          </label>
+
+          <SafeAvatar path={avatarUrl} onChange={handleAvatarChange} />
+
           <div style={{ marginTop: 12, color: 'var(--tgui--hint_color)', fontSize: 14 }}>
             Нажмите на фото, чтобы изменить
           </div>
@@ -157,50 +210,26 @@ export const MasterEditProfileScreen: React.FC<Props> = ({
 
         {/* --- ЛИЧНЫЕ ДАННЫЕ --- */}
         <Section header="Личные данные">
-          <Input
-            header="Имя"
-            placeholder="Как вас зовут?"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <Input
-            header="Телефон"
-            placeholder="+7 999 000 00 00"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
-          <Textarea
-            header="О себе"
-            placeholder="Расскажите о своем опыте и специализации..."
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-          />
+          <Input header="Имя" placeholder="Как вас зовут?" value={name} onChange={(e) => setName(e.target.value)} />
+          <Input header="Телефон" placeholder="+7 999 000 00 00" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          <Textarea header="О себе" placeholder="Расскажите о своем опыте и специализации..." value={bio} onChange={(e) => setBio(e.target.value)} />
         </Section>
 
         {/* --- ПОРТФОЛИО --- */}
-        <Section header="Мое портфолио" footer="Загрузите фото ваших лучших работ. Клиенты увидят их в вашем профиле.">
+        <Section header="Мое портфолио" footer="Загрузите фото ваших лучших работ.">
             <div style={{ padding: '16px', background: 'var(--tgui--bg_color)' }}>
-
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
 
-                    {/* Фотографии */}
+                    {/* Фотографии портфолио */}
                     {portfolio.map(item => (
                         <div key={item.id} style={{ position: 'relative', aspectRatio: '1/1', borderRadius: 12, overflow: 'hidden' }}>
-                            <img
-                                src={getFullImageUrl(item.image_url)}
-                                alt="work"
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            />
+                            <SafePortfolioImage path={item.image_url} />
                             <div
                                 onClick={() => handleDeletePhoto(item.id)}
                                 style={{
-                                    position: 'absolute', top: 6, right: 6,
-                                    background: 'rgba(0,0,0,0.5)',
-                                    borderRadius: '50%',
-                                    width: 28, height: 28,
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    cursor: 'pointer',
-                                    backdropFilter: 'blur(4px)'
+                                    position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.5)',
+                                    borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center',
+                                    justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)'
                                 }}
                             >
                                 <Icon28DeleteOutline width={20} height={20} style={{ color: '#fff' }} />
@@ -211,14 +240,9 @@ export const MasterEditProfileScreen: React.FC<Props> = ({
                     {/* Кнопка добавления фото */}
                     <label style={{
                         backgroundColor: 'var(--tgui--secondary_bg_color)',
-                        borderRadius: 12,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        aspectRatio: '1/1',
-                        transition: 'opacity 0.2s',
+                        borderRadius: 12, display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                        aspectRatio: '1/1', transition: 'opacity 0.2s',
                     }}>
                         {loadingPortfolio ? (
                             <Spinner size="m" />
@@ -235,7 +259,6 @@ export const MasterEditProfileScreen: React.FC<Props> = ({
             </div>
         </Section>
 
-        {/* --- КНОПКА СОХРАНИТЬ --- */}
         <div style={{ padding: '24px 16px' }}>
            <Button size="l" mode="filled" stretched loading={loading} onClick={handleSave}>
              Сохранить изменения
