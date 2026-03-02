@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Tabbar,
   Button,
@@ -9,7 +9,6 @@ import {
   Input,
   Placeholder,
   Spinner,
-  Select // Импортируем Select для выбора города
 } from '@telegram-apps/telegram-ui';
 import { ScreenLayout } from '../components/ScreenLayout';
 import { MyBookingsScreen } from './MyBookingsScreen';
@@ -20,11 +19,11 @@ import {
   Icon28SettingsOutline,
   Icon24Search,
   Icon28ChevronRightOutline,
-  Icon24LocationOutline // Иконка для города
+  Icon24LocationOutline
 } from '@vkontakte/icons';
 import lottie from 'lottie-web';
 
-import { fetchMasters } from '../helpers/api';
+import { fetchMasters, getFullImageUrl } from '../helpers/api';
 import type { MasterPublicProfile, Booking } from '../helpers/api';
 
 const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
@@ -52,7 +51,7 @@ type Props = {
   initialTab?: MainTab;
   onBack: () => void;
   onLogout?: () => void;
-  onGoToServices?: (masterName?: string) => void;
+  onGoToServices?: (masterId: number, masterName: string) => void;
   onReview?: (booking: Booking) => void;
   onOpenMasterReviews?: (masterId: number) => void;
   onOpenPortfolio?: (masterId: number, masterName: string) => void;
@@ -64,7 +63,6 @@ const tabs: { id: MainTab; text: string; Icon: React.ComponentType<any> }[] = [
   { id: 'settings', text: 'Настройки', Icon: Icon28SettingsOutline },
 ];
 
-// --- ДОСТУПНЫЕ ГОРОДА И КАТЕГОРИИ (Пока хардкод, позже можно тянуть с сервера) ---
 const CITIES = ['Ургенч', 'Ташкент', 'Самарканд', 'Бухара', 'Хива'];
 const CATEGORIES = ['Все', 'Барбер', 'Стрижка', 'Маникюр', 'Ресницы', 'Массаж', 'Брови', 'Макияж'];
 
@@ -82,14 +80,11 @@ export const ProfileScreen: React.FC<Props> = ({
   const [masters, setMasters] = useState<MasterPublicProfile[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // --- СТЕЙТЫ ФИЛЬТРОВ ---
   const [search, setSearch] = useState<string>('');
   const [selectedCity, setSelectedCity] = useState<string>('Ургенч');
   const [selectedCategory, setSelectedCategory] = useState<string>('Все');
   const [debounceTimeout, setDebounceTimeout] = useState<NodeJS.Timeout | null>(null);
 
-  // --- ЗАГРУЗКА МАСТЕРОВ С ФИЛЬТРАМИ ---
-  // Мы используем debounce для поиска, чтобы не спамить сервер при каждом нажатии клавиши
   useEffect(() => {
     if (currentTab === 'masters') {
       if (debounceTimeout) clearTimeout(debounceTimeout);
@@ -100,17 +95,16 @@ export const ProfileScreen: React.FC<Props> = ({
             search: search.trim() !== '' ? search.trim() : undefined,
             city: selectedCity,
             specialization: selectedCategory !== 'Все' ? selectedCategory : undefined,
-            ordering: 'rating' // По умолчанию сортируем по рейтингу
+            ordering: 'rating'
         })
           .then(setMasters)
           .catch(console.error)
           .finally(() => setLoading(false));
-      }, 500); // Ждем 500мс после последнего изменения
+      }, 500);
 
       setDebounceTimeout(timeout);
     }
 
-    // Cleanup timeout on unmount
     return () => {
         if (debounceTimeout) clearTimeout(debounceTimeout);
     };
@@ -119,7 +113,7 @@ export const ProfileScreen: React.FC<Props> = ({
 
   const handleMasterBook = (master: MasterPublicProfile) => {
     if (onGoToServices) {
-      onGoToServices(master.name);
+      onGoToServices(master.id, master.name);
     }
   };
 
@@ -130,10 +124,7 @@ export const ProfileScreen: React.FC<Props> = ({
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
-        {/* --- ШАПКА ФИЛЬТРОВ (Не скроллится) --- */}
         <div style={{ padding: '10px 16px 0', flexShrink: 0, background: 'var(--tgui--bg_color)' }}>
-
-          {/* Выбор города */}
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
             <Icon24LocationOutline style={{ color: 'var(--tgui--hint_color)', marginRight: 8 }} />
             <select
@@ -159,7 +150,6 @@ export const ProfileScreen: React.FC<Props> = ({
             <Icon28ChevronRightOutline style={{ color: 'var(--tgui--hint_color)', transform: 'rotate(90deg)', width: 16, height: 16, marginLeft: 4 }} />
           </div>
 
-          {/* Строка поиска */}
           <Input
             placeholder="Имя, специальность..."
             value={search}
@@ -168,15 +158,14 @@ export const ProfileScreen: React.FC<Props> = ({
             clearable
           />
 
-          {/* Карусель категорий */}
           <div style={{
               display: 'flex',
               overflowX: 'auto',
               gap: 8,
               padding: '12px 0 8px',
               WebkitOverflowScrolling: 'touch',
-              scrollbarWidth: 'none', // Скрываем скроллбар в Firefox
-              msOverflowStyle: 'none',  // Скрываем скроллбар в IE
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
           }}>
               <style dangerouslySetInnerHTML={{__html: `
                 div::-webkit-scrollbar { display: none; }
@@ -207,7 +196,6 @@ export const ProfileScreen: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* --- ОБЛАСТЬ СПИСКА МАСТЕРОВ (Скроллится) --- */}
         <div style={{
             flex: 1,
             overflowY: 'auto',
@@ -234,11 +222,9 @@ export const ProfileScreen: React.FC<Props> = ({
                 <>
                     {masters.map((m) => (
                     <Section key={m.id}>
-                        {/* Кликабельная карточка мастера */}
+                        {/* Клик по всей карточке ведет на визитку */}
                         <Cell
-                        onClick={() => {
-                            if (onOpenMasterReviews) onOpenMasterReviews(m.id);
-                        }}
+                        onClick={() => handleMasterBook(m)}
                         after={
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                 {m.rating > 0 && (
@@ -258,7 +244,7 @@ export const ProfileScreen: React.FC<Props> = ({
                                 <Icon28ChevronRightOutline style={{ color: 'var(--tgui--hint_color)' }} />
                             </div>
                         }
-                        before={<Avatar size={48} src={m.avatar_url} fallbackIcon={<Icon28UserStarBadgeOutline />} />}
+                        before={<Avatar size={48} src={getFullImageUrl(m.avatar_url)} fallbackIcon={<Icon28UserStarBadgeOutline />} />}
                         description={
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                 <span style={{ opacity: 0.7, fontSize: 12, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
@@ -270,8 +256,14 @@ export const ProfileScreen: React.FC<Props> = ({
                                     </span>
                                 )}
                                 {m.reviews_count > 0 && (
-                                    <span style={{ fontSize: 11, color: 'var(--tgui--link_color)' }}>
-                                    Смотреть отзывы ({m.reviews_count})
+                                    <span
+                                      style={{ fontSize: 11, color: 'var(--tgui--link_color)', cursor: 'pointer' }}
+                                      onClick={(e) => {
+                                        e.stopPropagation(); // Чтобы не открылась визитка
+                                        if (onOpenMasterReviews) onOpenMasterReviews(m.id);
+                                      }}
+                                    >
+                                      Смотреть отзывы ({m.reviews_count})
                                     </span>
                                 )}
                             </div>
@@ -281,7 +273,6 @@ export const ProfileScreen: React.FC<Props> = ({
                         {m.name}
                         </Cell>
 
-                        {/* Блок кнопок */}
                         <Cell>
                             <div style={{ display: 'flex', gap: 8, position: 'relative', zIndex: 2 }}>
                                 <Button

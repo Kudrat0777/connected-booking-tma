@@ -22,6 +22,7 @@ import { MasterAnalyticsScreen } from './screens/MasterAnalyticsScreen';
 import { MasterReviewsScreen } from './screens/MasterReviewsScreen';
 import { MasterCreateServiceScreen } from './screens/MasterCreateServiceScreen';
 import { PortfolioViewerScreen } from './screens/PortfolioViewerScreen';
+import { MasterPublicProfileScreen } from './screens/MasterPublicProfileScreen';
 
 import type { Service, Slot, Booking } from './helpers/api';
 import { checkClientProfile } from './helpers/api';
@@ -64,7 +65,8 @@ type Screen =
   | 'master_reviews'
   | 'master_create_service'
   | 'client_portfolio'
-  | 'client_registration';
+  | 'client_registration'
+  | 'client_master_profile';
 
 type MainTab = 'bookings' | 'masters' | 'settings';
 
@@ -178,19 +180,11 @@ const App: React.FC = () => {
           const mId = parseInt(idStr);
 
           if (!isNaN(mId)) {
-             try {
-                 const res = await fetch(`${API_BASE}/masters/${mId}/`);
-                 if (res.ok) {
-                     const mData = await res.json();
-                     setSelectedMasterId(mId);
-                     setSelectedMasterName(mData.name);
-                     setScreen('services');
-                     setIsAppLoading(false);
-                     return;
-                 }
-             } catch (e) {
-                 console.error('Deep link error', e);
-             }
+             // Отправляем клиента на красивый профиль мастера!
+             setSelectedMasterId(mId);
+             setScreen('client_master_profile');
+             setIsAppLoading(false);
+             return;
           }
        }
 
@@ -384,10 +378,12 @@ const App: React.FC = () => {
           telegramId={user.id}
           initialTab={mainTab}
           onBack={() => setScreen('welcome')}
-          onLogout={handleClientLogout} // <--- ПЕРЕДАЕМ ФУНКЦИЮ ВЫХОДА В ПРОФИЛЬ
-          onGoToServices={(masterName) => {
+          onLogout={handleClientLogout}
+          onGoToServices={(masterId, masterName) => {
+            // Теперь мы сохраняем ID и Имя, и открываем ВИЗИТКУ!
+            setSelectedMasterId(masterId);
             setSelectedMasterName(masterName || null);
-            setScreen('services');
+            setScreen('client_master_profile');
           }}
           onReview={(booking) => {
               const masterId = booking.slot.service.master;
@@ -483,7 +479,19 @@ const App: React.FC = () => {
           onSuccess={() => setScreen('master_dashboard')}
         />
       )}
-
+      {screen === 'client_master_profile' && selectedMasterId && (
+        <MasterPublicProfileScreen
+          masterId={selectedMasterId}
+          onBack={() => {
+            if (localStorage.getItem('is_client_logged_in') === 'true') setScreen('profile');
+            else setScreen('welcome');
+          }}
+          onBook={(name) => {
+            setSelectedMasterName(name);
+            setScreen('services');
+          }}
+        />
+      )}
     </AppRoot>
   );
 };

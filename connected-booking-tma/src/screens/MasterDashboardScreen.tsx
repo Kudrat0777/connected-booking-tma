@@ -269,10 +269,10 @@ export const MasterDashboardScreen: React.FC<Props> = ({
     }
   };
 
-  const handleShareLink = () => {
+    const handleShareLink = () => {
     const tg = (window as any).Telegram?.WebApp;
-    // Формируем ссылку на бота с параметром deep link (master_ID)
-    const botUrl = `https://t.me/cbtestconnected_bot?start=master_${telegramId}`;
+
+    const botUrl = `https://t.me/ВАШ_БОТ/КОРОТКОЕ_ИМЯ_APP?startapp=master_${telegramId}`;
 
     const text = `Здравствуйте, ${newClientDetails.name}! Я записал(а) вас на процедуру.\n\nПожалуйста, перейдите по ссылке ниже в мой профиль, чтобы посмотреть детали записи и в будущем записываться самостоятельно:\n\n${botUrl}`;
 

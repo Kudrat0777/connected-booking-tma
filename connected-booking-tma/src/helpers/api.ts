@@ -274,6 +274,11 @@ export async function fetchMasters(params?: {
   return res.json();
 }
 
+export async function fetchMasterById(id: number): Promise<MasterPublicProfile> {
+  const res = await fetch(`${API_BASE}/masters/${id}/`);
+  if (!res.ok) throw new Error('Master not found');
+  return res.json();
+}
 
 export async function updateMasterProfile(telegramId: number, data: { name?: string; bio?: string; phone?: string }) {
   const res = await fetch(`${API_BASE}/masters/me_update/`, {
