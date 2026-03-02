@@ -422,7 +422,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
         {services.map((s) => (
            <Section key={s.id}>
              <Cell
-               description={`${s.duration} мин • ${s.price} ₽`}
+               description={`${s.duration} мин • ${s.price} сум`}
                multiline
                after={
                   <Button
@@ -552,7 +552,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
             <option value="" disabled hidden>Выберите услугу</option>
             {services.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.name} ({s.price} ₽)
+                {s.name} ({s.price} сум)
               </option>
             ))}
           </Select>

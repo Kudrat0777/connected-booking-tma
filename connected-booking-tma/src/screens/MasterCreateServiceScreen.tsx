@@ -18,7 +18,7 @@ type Props = {
 export const MasterCreateServiceScreen: React.FC<Props> = ({ telegramId, onBack, onSuccess }) => {
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
-  const [duration, setDuration] = useState('60'); // 60 минут по умолчанию
+  const [duration, setDuration] = useState('60'); // 1 час по умолчанию
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -58,8 +58,8 @@ export const MasterCreateServiceScreen: React.FC<Props> = ({ telegramId, onBack,
              onChange={(e) => setName(e.target.value)}
            />
            <Input
-             header="Цена (₽)"
-             placeholder="1000"
+             header="Цена (сум)"
+             placeholder="50000"
              type="number"
              value={price}
              onChange={(e) => setPrice(e.target.value)}
@@ -67,17 +67,20 @@ export const MasterCreateServiceScreen: React.FC<Props> = ({ telegramId, onBack,
         </Section>
 
         <Section header="Длительность и описание">
-           {/* Используем header прямо в Select, как в Input */}
            <Select
              header="Длительность"
              value={duration}
              onChange={(e) => setDuration(e.target.value)}
            >
+                <option value="15">15 мин</option>
                 <option value="30">30 мин</option>
+                <option value="45">45 мин</option>
                 <option value="60">1 час</option>
                 <option value="90">1.5 часа</option>
                 <option value="120">2 часа</option>
+                <option value="150">2.5 часа</option>
                 <option value="180">3 часа</option>
+                <option value="240">4 часа</option>
            </Select>
 
            <Textarea
