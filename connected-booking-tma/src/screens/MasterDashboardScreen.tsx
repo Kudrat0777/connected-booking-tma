@@ -390,45 +390,128 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   };
 
   const renderServices = () => (
-    <div style={{ paddingBottom: 100 }}>
-      <div style={{ padding: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Title level="2">Мои услуги</Title>
-        <Button size="s" onClick={onAddService}>+ Добавить</Button>
+    <div style={{ paddingBottom: 100, background: 'var(--tgui--bg_color)', minHeight: '100%' }}>
+      {/* Шапка с кнопкой добавления */}
+      <div style={{
+          padding: '20px 16px 16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          position: 'sticky',
+          top: 0,
+          background: 'var(--tgui--bg_color)',
+          zIndex: 10,
+          borderBottom: '1px solid rgba(0,0,0,0.05)'
+      }}>
+        <Title level="2" style={{ margin: 0, fontSize: 22, fontWeight: '700' }}>Мои услуги</Title>
+        <Button size="s" mode="filled" onClick={onAddService} style={{ borderRadius: 14 }}>
+          + Добавить
+        </Button>
       </div>
 
-      {loadingServices && <div style={{ display: 'flex', justifyContent: 'center', padding: 20 }}><Spinner size="m"/></div>}
+      {loadingServices && <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><Spinner size="m"/></div>}
 
-      <List style={{ background: 'var(--tgui--secondary_bg_color)' }}>
-        {services.map((s) => (
-           <Section key={s.id}>
-             <Cell
-               description={`${s.duration} мин • ${s.price?.toLocaleString()} сум`}
-               multiline
-               after={
-                  <Button
-                    mode="bezeled"
-                    size="s"
-                    style={{ color: 'var(--tgui--destructive_text_color)' }}
-                    onClick={(e) => {
-                       e.stopPropagation();
-                       handleDeleteService(s.id);
-                    }}
-                  >
-                    <Icon28DeleteOutline />
-                  </Button>
-               }
+      {!loadingServices && services.length === 0 && (
+         <Placeholder header="Нет услуг" description="Добавьте услуги, чтобы клиенты могли записываться.">
+            <LottieIcon src="/stickers/duck_out.json" size={140} />
+         </Placeholder>
+      )}
+
+      {/* Список услуг */}
+      {!loadingServices && services.length > 0 && (
+        <div style={{ padding: '16px' }}>
+          {services.map((s) => (
+             <div
+                key={s.id}
+                style={{
+                   background: 'var(--tgui--secondary_bg_color)',
+                   borderRadius: 16,
+                   padding: '16px',
+                   marginBottom: 12,
+                   boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                   position: 'relative'
+                }}
              >
-               {s.name}
-             </Cell>
-           </Section>
-        ))}
+                {/* Название услуги */}
+                <div style={{
+                   fontSize: 17,
+                   fontWeight: 600,
+                   color: 'var(--tgui--text_color)',
+                   marginBottom: 8,
+                   paddingRight: 40 // чтобы текст не налезал на кнопку удаления
+                }}>
+                   {s.name}
+                </div>
 
-        {services.length === 0 && !loadingServices && (
-           <Placeholder header="Нет услуг" description="Добавьте услуги, чтобы клиенты могли записываться.">
-              <LottieIcon src="/stickers/duck_out.json" size={140} />
-           </Placeholder>
-        )}
-      </List>
+                {/* Описание (если есть) */}
+                {s.description && (
+                   <div style={{
+                      fontSize: 14,
+                      color: 'var(--tgui--hint_color)',
+                      marginBottom: 12,
+                      lineHeight: '1.4'
+                   }}>
+                      {s.description}
+                   </div>
+                )}
+
+                {/* Бейджи цены и времени */}
+                <div style={{ display: 'flex', gap: 8 }}>
+                   <div style={{
+                      background: 'var(--tgui--bg_color)',
+                      padding: '6px 10px',
+                      borderRadius: 8,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: 'var(--tgui--text_color)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4
+                   }}>
+                      🕒 {s.duration} мин
+                   </div>
+
+                   <div style={{
+                      background: 'rgba(52, 199, 89, 0.1)', // Нежно-зеленый фон
+                      color: '#34C759', // Зеленый текст
+                      padding: '6px 10px',
+                      borderRadius: 8,
+                      fontSize: 13,
+                      fontWeight: 700,
+                   }}>
+                      {s.price?.toLocaleString()} сум
+                   </div>
+                </div>
+
+                {/* Кнопка удаления (Иконка в правом верхнем углу) */}
+                <div
+                   onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteService(s.id);
+                   }}
+                   style={{
+                      position: 'absolute',
+                      top: 12,
+                      right: 12,
+                      width: 32,
+                      height: 32,
+                      borderRadius: '50%',
+                      background: 'rgba(255, 59, 48, 0.1)', // Нежно-красный фон
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      transition: 'transform 0.1s'
+                   }}
+                   onPointerDown={(e) => e.currentTarget.style.transform = 'scale(0.9)'}
+                   onPointerUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                   <Icon28DeleteOutline width={20} height={20} style={{ color: '#FF3B30' }} />
+                </div>
+             </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 
