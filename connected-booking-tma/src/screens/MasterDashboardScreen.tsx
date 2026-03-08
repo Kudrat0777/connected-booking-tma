@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Tabbar,
-  List,
-  Section,
   Cell,
   Button,
   Placeholder,
@@ -39,6 +37,8 @@ import {
 } from '../helpers/api';
 
 import type { Booking, Service, Slot } from '../helpers/api';
+
+import '../css/MasterDashboardScreen.css';
 
 const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
   const container = useRef<HTMLDivElement>(null);
@@ -245,11 +245,11 @@ export const MasterDashboardScreen: React.FC<Props> = ({
     }, {});
 
     return (
-      <div style={{ paddingBottom: 100, position: 'relative', minHeight: '100%', background: 'var(--tgui--bg_color)' }}>
+      <div className="master-dashboard-bookings-container">
 
         {/* Sticky шапка фильтров */}
         <div style={{ padding: '12px 16px', position: 'sticky', top: 0, zIndex: 10, background: 'var(--tgui--bg_color)', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-          <SegmentedControl size="m">
+          <SegmentedControl>
             <SegmentedControl.Item selected={filter === 'today'} onClick={() => setFilter('today')}>
               Сегодня
             </SegmentedControl.Item>
@@ -307,7 +307,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
                                 }}>
 
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                        <Avatar size={44} src={b.photo_url || undefined} fallbackIcon={<Icon28UserCircleOutline />} />
+                                        <Avatar size={48} src={b.photo_url || undefined} fallbackIcon={<Icon28UserCircleOutline />} />
                                         <div style={{ flex: 1 }}>
                                             <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 2, color: 'var(--tgui--text_color)' }}>
                                                 {b.client_name || b.name || 'Клиент'}
@@ -390,7 +390,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   };
 
   const renderServices = () => (
-    <div style={{ paddingBottom: 100, background: 'var(--tgui--bg_color)', minHeight: '100%' }}>
+    <div className="master-dashboard-services-container">
       {/* Шапка с кнопкой добавления */}
       <div style={{
           padding: '20px 16px 16px',
@@ -516,17 +516,10 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   );
 
   const renderProfile = () => (
-     <div style={{ paddingBottom: 100, background: 'var(--tgui--secondary_bg_color)', minHeight: '100%' }}>
+     <div className="master-dashboard-settings-container">
 
         {/* Шапка профиля */}
-        <div style={{
-            background: 'var(--tgui--bg_color)',
-            padding: '32px 16px 24px',
-            borderBottomLeftRadius: 24,
-            borderBottomRightRadius: 24,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-            marginBottom: 16
-        }}>
+        <div className="master-dashboard-settings-header">
             <Title level="1" weight="2" style={{ marginBottom: 8 }}>Мой кабинет</Title>
             <p style={{ color: 'var(--tgui--hint_color)', margin: 0, fontSize: 15, lineHeight: '1.4' }}>
                 Управляйте своим профилем, расписанием и настройками аккаунта.
@@ -614,8 +607,8 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--tgui--bg_color)' }}>
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+    <div className="master-dashboard-root">
+      <div className="master-dashboard-content">
         {activeTab === 'bookings' && renderBookings()}
         {activeTab === 'services' && renderServices()}
         {activeTab === 'profile' && renderProfile()}

@@ -10,7 +10,7 @@ import {
   Banner
 } from '@telegram-apps/telegram-ui';
 import {
-  Icon28CalendarOutline,
+  
   Icon28ClockOutline,
   Icon28CoinsOutline,
   Icon28UserOutline

@@ -7,7 +7,7 @@ import React, {
   CSSProperties,
 } from 'react';
 import {
-  Placeholder,
+  
   Button,
   Title,
   Text,
