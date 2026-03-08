@@ -4,12 +4,11 @@ import {
   Input,
   Button,
   Section,
-  Title,
-  Text,
   Cell
 } from '@telegram-apps/telegram-ui';
 import { Icon28PhoneOutline } from '@vkontakte/icons';
 import { registerClient } from '../helpers/api';
+import '../css/ClientRegistrationScreen.css';
 
 type Props = {
   telegramId: number;
@@ -81,61 +80,65 @@ export const ClientRegistrationScreen: React.FC<Props> = ({
   };
 
   return (
-    <div style={{ padding: 16, minHeight: '100vh', background: 'var(--tgui--secondary_bg_color)' }}>
-      <div style={{ textAlign: 'center', margin: '32px 0 24px' }}>
-        <Title level="1" weight="1" style={{ marginBottom: 8 }}>Давайте знакомиться!</Title>
-        <Text style={{ color: 'var(--tgui--hint_color)' }}>
-          Укажите свои данные, чтобы мастера могли связаться с вами, а вы — управлять своими записями.
-        </Text>
-      </div>
+    <div className="client-registration-root">
+      <div className="client-registration-container">
+        <div className="client-registration-header">
+          <h1 className="client-registration-title">Давайте знакомиться!</h1>
+          <p className="client-registration-description">
+            Укажите свои данные, чтобы мастера могли связаться с вами, а вы — управлять своими записями.
+          </p>
+        </div>
 
-      <List>
-        <Section header="Контактные данные">
-          <Input
-            header="Имя"
-            placeholder="Иван"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-          />
-          <Input
-            header="Фамилия (необязательно)"
-            placeholder="Иванов"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-          />
-          <Input
-            header="Номер телефона"
-            placeholder="+7 999 000 00 00"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
+        <div className="client-registration-form">
+          <List>
+            <Section header="Контактные данные">
+              <Input
+                header="Имя"
+                placeholder="Иван"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+              />
+              <Input
+                header="Фамилия (необязательно)"
+                placeholder="Иванов"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+              />
+              <Input
+                header="Номер телефона"
+                placeholder="+7 999 000 00 00"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
 
-          <Cell>
-            <Button
-              mode="bezeled"
-              before={<Icon28PhoneOutline />}
-              stretched
-              onClick={requestPhone}
-            >
-              Поделиться контактом из Telegram
-            </Button>
-          </Cell>
-        </Section>
-      </List>
+              <Cell>
+                <Button
+                  mode="bezeled"
+                  before={<Icon28PhoneOutline />}
+                  stretched
+                  onClick={requestPhone}
+                >
+                  Поделиться контактом из Telegram
+                </Button>
+              </Cell>
+            </Section>
+          </List>
 
-      {error && (
-        <Text style={{ color: 'var(--tgui--destructive_text_color)', marginTop: 12, display: 'block', textAlign: 'center' }}>
-          {error}
-        </Text>
-      )}
+          {error && (
+            <span className="client-registration-error">
+              {error}
+            </span>
+          )}
+        </div>
 
-      <div style={{ marginTop: 32, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <Button size="l" stretched loading={loading} onClick={handleRegister}>
-          Сохранить и продолжить
-        </Button>
-        <Button size="l" mode="plain" stretched onClick={onBack} style={{ color: 'var(--tgui--hint_color)' }}>
-          Назад
-        </Button>
+        <div className="client-registration-actions">
+          <Button size="l" stretched loading={loading} onClick={handleRegister}>
+            Сохранить и продолжить
+          </Button>
+          <Button size="l" mode="plain" stretched onClick={onBack} style={{ color: 'var(--tgui--hint_color)' }}>
+            Назад
+          </Button>
+        </div>
       </div>
     </div>
   );
