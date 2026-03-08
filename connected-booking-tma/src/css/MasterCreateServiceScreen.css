@@ -1,0 +1,52 @@
+.master-create-service-root {
+  min-height: 100vh;
+  background-color: var(--tgui--secondary_bg_color);
+  color: var(--tgui--text_color);
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.master-create-service-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: max(32px, env(safe-area-inset-bottom));
+  padding-top: max(24px, env(safe-area-inset-top));
+}
+
+.master-create-service-header {
+  padding: 0 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.master-create-service-back-btn {
+  background: none;
+  border: none;
+  color: var(--tgui--button_color);
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.master-create-service-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0;
+  line-height: 34px;
+}
+
+.master-create-service-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.master-create-service-actions {
+  padding: 24px 16px 0px;
+}

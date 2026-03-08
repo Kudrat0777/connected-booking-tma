@@ -4,10 +4,12 @@ import {
   Button,
   Section,
   Select,
-  Textarea
+  Textarea,
+  List
 } from '@telegram-apps/telegram-ui';
-import { ScreenLayout } from '../components/ScreenLayout';
+import { Icon28ChevronLeftOutline } from '@vkontakte/icons';
 import { createServiceByMaster } from '../helpers/api';
+import '../css/MasterCreateServiceScreen.css';
 
 type Props = {
   telegramId: number;
@@ -18,7 +20,7 @@ type Props = {
 export const MasterCreateServiceScreen: React.FC<Props> = ({ telegramId, onBack, onSuccess }) => {
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
-  const [duration, setDuration] = useState('60'); // 1 час по умолчанию
+  const [duration, setDuration] = useState('60'); // 1 χас по емолчанию
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -47,31 +49,39 @@ export const MasterCreateServiceScreen: React.FC<Props> = ({ telegramId, onBack,
   };
 
   return (
-    <ScreenLayout title="Новая услуга" onBack={onBack}>
-      <div style={{ padding: 16 }}>
+    <div className="master-create-service-root">
+      <div className="master-create-service-container">
+        <div className="master-create-service-header">
+          <button className="master-create-service-back-btn" onClick={onBack}>
+            <Icon28ChevronLeftOutline />
+          </button>
+          <h1 className="master-create-service-title">Новая услуга</h1>
+        </div>
 
-        <Section header="Основное">
-           <Input
-             header="Название"
-             placeholder="Например: Мужская стрижка"
-             value={name}
-             onChange={(e) => setName(e.target.value)}
-           />
-           <Input
-             header="Цена (сум)"
-             placeholder="50000"
-             type="number"
-             value={price}
-             onChange={(e) => setPrice(e.target.value)}
-           />
-        </Section>
+        <div className="master-create-service-content">
+          <List>
+            <Section header="Основное">
+              <Input
+                header="Название"
+                placeholder="Например: Мужская стрижка"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+              <Input
+                header="Цена (сум)"
+                placeholder="50000"
+                type="number"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+              />
+            </Section>
 
-        <Section header="Длительность и описание">
-           <Select
-             header="Длительность"
-             value={duration}
-             onChange={(e) => setDuration(e.target.value)}
-           >
+            <Section header="Длительность и описание">
+              <Select
+                header="Фдлительность"
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+              >
                 <option value="15">15 мин</option>
                 <option value="30">30 мин</option>
                 <option value="45">45 мин</option>
@@ -81,29 +91,30 @@ export const MasterCreateServiceScreen: React.FC<Props> = ({ telegramId, onBack,
                 <option value="150">2.5 часа</option>
                 <option value="180">3 часа</option>
                 <option value="240">4 часа</option>
-           </Select>
+              </Select>
 
-           <Textarea
-             header="Описание (необязательно)"
-             placeholder="Что входит в услугу..."
-             value={description}
-             onChange={(e) => setDescription(e.target.value)}
-           />
-        </Section>
+              <Textarea
+                header="Описание (необязательно)"
+                placeholder="Что входит в услугу..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </Section>
+          </List>
 
-        <div style={{ marginTop: 24 }}>
-           <Button
-             size="l"
-             mode="filled"
-             stretched
-             loading={loading}
-             onClick={handleSubmit}
-           >
-             Создать услугу
-           </Button>
+          <div className="master-create-service-actions">
+            <Button
+              size="l"
+              mode="filled"
+              stretched
+              loading={loading}
+              onClick={handleSubmit}
+            >
+              Создать услугь
+            </Button>
+          </div>
         </div>
-
       </div>
-    </ScreenLayout>
+    </div>
   );
 };
