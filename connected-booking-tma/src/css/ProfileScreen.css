@@ -1,132 +1,123 @@
-.app-layout {
+.tma-container {
   display: flex;
   flex-direction: column;
   height: 100vh;
   background-color: var(--tgui--secondary_bg_color);
 }
 
-.screen-content {
+.main-viewport {
   flex: 1;
   overflow-y: auto;
-  padding-bottom: 80px;
+  padding-bottom: calc(80px + env(safe-area-inset-bottom));
 }
 
-/* Header Styles */
-.masters-header-modern {
-  background: var(--tgui--bg_color);
-  padding: 16px;
-  border-bottom-left-radius: 24px;
-  border-bottom-right-radius: 24px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+.masters-page-root {
+  display: flex;
+  flex-direction: column;
+}
+
+.masters-fixed-header {
   position: sticky;
   top: 0;
   z-index: 100;
+  background-color: var(--tgui--bg_color);
+  padding: 12px 16px;
+  border-bottom: 0.5px solid var(--tgui--separator_color);
 }
 
-.city-selector-modern {
+.location-row {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 16px;
-  color: var(--tgui--link_color);
-}
-
-.city-selector-modern select {
-  appearance: none;
-  border: none;
-  background: transparent;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--tgui--text_color);
-  outline: none;
+  margin-bottom: 12px;
   cursor: pointer;
 }
 
-.city-chevron {
-  transform: rotate(90deg);
-  width: 16px;
-  height: 16px;
-  opacity: 0.5;
+.native-city-select {
+  appearance: none;
+  border: none;
+  background: transparent;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--tgui--text_color);
+  outline: none;
+  padding: 0;
 }
 
-.categories-scroll-modern {
+.dropdown-chevron {
+  width: 16px;
+  height: 16px;
+  transform: rotate(90deg);
+  opacity: 0.4;
+}
+
+.accent-icon {
+  color: var(--tgui--button_color);
+}
+
+.horizontal-chips {
   display: flex;
-  gap: 8px;
   overflow-x: auto;
-  margin-top: 16px;
+  gap: 8px;
+  margin-top: 12px;
+  padding-bottom: 4px;
   scrollbar-width: none;
 }
 
-.categories-scroll-modern::-webkit-scrollbar { display: none; }
+.horizontal-chips::-webkit-scrollbar { display: none; }
 
-.category-pill {
-  padding: 8px 16px;
-  background: var(--tgui--secondary_bg_color);
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 600;
-  white-space: nowrap;
+.chip-button {
+  border: none;
+  padding: 6px 14px;
+  border-radius: 100px;
+  background-color: var(--tgui--secondary_bg_color);
   color: var(--tgui--text_color);
-  transition: 0.2s all ease;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: all 0.2s ease;
 }
 
-.category-pill.active {
-  background: var(--tgui--button_color);
+.chip-button.active {
+  background-color: var(--tgui--button_color);
   color: var(--tgui--button_text_color);
 }
 
-/* Master Cards */
-.masters-list-modern {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.master-card-modern {
-  background: var(--tgui--bg_color);
-  border-radius: 20px;
+/* Master Card Styling */
+.master-card-section {
+  margin: 12px 16px !important;
+  border-radius: 12px !important;
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
-  transition: transform 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
-.master-avatar {
-  border: 2px solid var(--tgui--secondary_bg_color);
-}
-
-.master-info-row {
+.master-metadata {
   display: flex;
   flex-direction: column;
   gap: 4px;
   margin-top: 4px;
 }
 
-.rating-tag {
+.rating-pill {
+  font-size: 12px;
+  font-weight: 700;
   color: #FF9500;
-  font-weight: 800;
-  font-size: 13px;
 }
 
-.location-text {
-  font-size: 12px;
+.address-text {
+  font-size: 11px;
   color: var(--tgui--hint_color);
 }
 
-.master-card-actions {
+.card-footer-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   padding: 0 16px 16px;
+  background-color: var(--tgui--bg_color);
 }
 
-.spinner-center {
-  display: flex;
-  justify-content: center;
-  padding: 50px;
-}
-
-.app-tabbar {
-  background: var(--tgui--bg_color);
-  backdrop-filter: blur(15px);
+.system-tabbar {
+  background-color: var(--tgui--bg_color);
+  backdrop-filter: blur(20px);
   border-top: 0.5px solid var(--tgui--separator_color);
 }

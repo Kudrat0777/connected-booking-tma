@@ -11,6 +11,7 @@ import {
   Spinner,
   Headline,
   Subheadline,
+  Text,
 } from '@telegram-apps/telegram-ui';
 import '../css/ProfileScreen.css';
 import { ScreenLayout } from '../components/ScreenLayout';
@@ -22,7 +23,8 @@ import {
   Icon28SettingsOutline,
   Icon24Search,
   Icon28ChevronRightOutline,
-  Icon24LocationOutline
+  Icon24LocationOutline,
+  Icon28SlidersOutline
 } from '@vkontakte/icons';
 import lottie from 'lottie-web';
 
@@ -91,6 +93,7 @@ export const ProfileScreen: React.FC<Props> = ({
   useEffect(() => {
     if (currentTab === 'masters') {
       if (debounceTimeout) clearTimeout(debounceTimeout);
+
       const timeout = setTimeout(() => {
         setLoading(true);
         fetchMasters({
@@ -103,93 +106,123 @@ export const ProfileScreen: React.FC<Props> = ({
           .catch(console.error)
           .finally(() => setLoading(false));
       }, 500);
+
       setDebounceTimeout(timeout);
     }
+
     return () => { if (debounceTimeout) clearTimeout(debounceTimeout); };
   }, [currentTab, search, selectedCity, selectedCategory]);
 
   const renderMastersContent = () => (
-    <div className="masters-page">
-      <div className="masters-header-modern">
-        <div className="city-selector-modern">
-          <Icon24LocationOutline className="city-icon" />
-          <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)}>
-            {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+    <div className="masters-page-root">
+      {/* Search and Filters Header */}
+      <header className="masters-fixed-header">
+        <div className="location-row" onClick={() => {/* logic */}}>
+          <Icon24LocationOutline className="accent-icon" />
+          <select
+            value={selectedCity}
+            onChange={(e) => setSelectedCity(e.target.value)}
+            className="native-city-select"
+          >
+            {CITIES.map(city => <option key={city} value={city}>{city}</option>)}
           </select>
-          <Icon28ChevronRightOutline className="city-chevron" />
+          <Icon28ChevronRightOutline className="dropdown-chevron" />
         </div>
 
         <Input
-          placeholder="Поиск мастера или услуги..."
+          placeholder="Имя специалиста или услуга"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          before={<Icon24Search className="search-icon" />}
-          className="search-input-modern"
+          before={<Icon24Search className="input-icon" />}
+          className="modern-input"
         />
 
-        <div className="categories-scroll-modern">
+        <div className="horizontal-chips">
           {CATEGORIES.map(cat => (
-            <div
+            <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`category-pill ${selectedCategory === cat ? 'active' : ''}`}
+              className={`chip-button ${selectedCategory === cat ? 'active' : ''}`}
             >
               {cat}
-            </div>
+            </button>
           ))}
         </div>
-      </div>
+      </header>
 
-      <div className="masters-list-modern">
+      {/* Content Area */}
+      <div className="scrollable-content">
         {loading ? (
-          <div className="spinner-center"><Spinner size="l" /></div>
+          <div className="centered-state"><Spinner size="l" /></div>
         ) : masters.length === 0 ? (
-          <Placeholder header="Никого не нашли" description="Попробуйте другой город">
+          <Placeholder
+            header="Специалисты не найдены"
+            description="Попробуйте изменить параметры фильтра"
+          >
             <LottieIcon src="/stickers/duck_out.json" size={140} />
           </Placeholder>
         ) : (
-          masters.map((m) => (
-            <div key={m.id} className="master-card-modern">
-              <Cell
-                onClick={() => onGoToServices?.(m.id, m.name)}
-                before={<Avatar size={64} src={getFullImageUrl(m.avatar_url)} className="master-avatar" />}
-                subtitle={m.bio || 'Специалист'}
-                description={
-                  <div className="master-info-row">
-                    {m.rating > 0 && <span className="rating-tag">★ {m.rating.toFixed(1)}</span>}
-                    {m.address && <span className="location-text">📍 {m.address}</span>}
-                  </div>
-                }
-                multiline
-              >
-                <Headline weight="1">{m.name}</Headline>
-              </Cell>
+          <List className="masters-list">
+            {masters.map((m) => (
+              <Section key={m.id} className="master-card-section">
+                <Cell
+                  onClick={() => onGoToServices?.(m.id, m.name)}
+                  before={<Avatar size={56} src={getFullImageUrl(m.avatar_url)} />}
+                  after={<Icon28ChevronRightOutline className="cell-chevron" />}
+                  subhead={m.bio || 'Мастер'}
+                  description={
+                    <div className="master-metadata">
+                      {m.rating > 0 && <span className="rating-pill">⭐ {m.rating.toFixed(1)}</span>}
+                      {m.address && <span className="address-text">📍 {m.address}</span>}
+                    </div>
+                  }
+                  multiline
+                >
+                  <Headline weight="2">{m.name}</Headline>
+                </Cell>
 
-              <div className="master-card-actions">
-                <Button mode="bezeled" size="m" stretched onClick={() => onOpenPortfolio?.(m.id, m.name)}>
-                  Портфолио
-                </Button>
-                <Button mode="filled" size="m" stretched onClick={() => onGoToServices?.(m.id, m.name)}>
-                  Записаться
-                </Button>
-              </div>
-            </div>
-          ))
+                <footer className="card-footer-actions">
+                  <Button
+                    mode="bezeled"
+                    size="m"
+                    stretched
+                    onClick={(e) => { e.stopPropagation(); onOpenPortfolio?.(m.id, m.name); }}
+                  >
+                    Портфолио
+                  </Button>
+                  <Button
+                    mode="filled"
+                    size="m"
+                    stretched
+                    onClick={(e) => { e.stopPropagation(); onGoToServices?.(m.id, m.name); }}
+                  >
+                    Записаться
+                  </Button>
+                </footer>
+              </Section>
+            ))}
+          </List>
         )}
       </div>
     </div>
   );
 
   return (
-    <div className="app-layout">
-      <div className="screen-content">
+    <div className="tma-container">
+      <main className="main-viewport">
         {currentTab === 'bookings' && <MyBookingsScreen telegramId={telegramId} onReview={onReview} />}
         {currentTab === 'masters' && renderMastersContent()}
         {currentTab === 'settings' && <SettingsScreen telegramId={telegramId} onLogout={onLogout} />}
-      </div>
-      <Tabbar className="app-tabbar">
+      </main>
+
+      <Tabbar className="system-tabbar">
         {tabs.map(({ id, text, Icon }) => (
-          <Tabbar.Item key={id} text={text} selected={id === currentTab} onClick={() => setCurrentTab(id)}>
+          <Tabbar.Item
+            key={id}
+            text={text}
+            selected={id === currentTab}
+            onClick={() => setCurrentTab(id)}
+          >
             <Icon />
           </Tabbar.Item>
         ))}
