@@ -1,96 +1,84 @@
+/* Основной контейнер экрана */
 .welcome-root {
-  min-height: 100vh;
-  /* Принудительно используем фон темы */
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
   background-color: var(--tgui--bg_color);
   color: var(--tgui--text_color);
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
+  overflow: hidden;
+  position: relative;
 }
 
-.welcome-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 16px;
-  padding-top: max(16px, env(safe-area-inset-top));
-  padding-bottom: max(32px, env(safe-area-inset-bottom));
-}
-
-
+/* Область, которую можно свайпать */
 .welcome-slide-area {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  touch-action: pan-y;
-  width: 100%;
+  padding: 0 24px;
+  cursor: grab;
+  /* Базовое состояние без анимации */
+  opacity: 1;
+  transition: transform 0s; 
 }
 
-.welcome-sticker-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+/* Состояние во время смены слайда */
+.welcome-slide-area.animating {
+  opacity: 0;
+  transition: transform 0.25s ease-out, opacity 0.25s ease-out;
+}
+
+/* Контейнер для анимации стикера */
+.welcome-lottie-container {
+  width: 220px;
   height: 220px;
-  width: 100%;
-  margin-bottom: 24px;
+  margin-bottom: 32px;
 }
 
-.welcome-lottie {
-  width: 200px;
-  height: 200px;
-}
-
-.welcome-text-content {
-  text-align: center;
-  padding: 0 16px;
-  min-height: 140px;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-}
-
+/* Заголовок слайда */
 .welcome-title {
-  margin-bottom: 12px;
+  font-size: 24px;
   text-align: center;
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 34px;
+  margin-bottom: 12px;
+  line-height: 1.2;
 }
 
+/* Описание слайда */
 .welcome-description {
-  color: var(--tgui--hint_color);
   font-size: 16px;
-  font-weight: 400;
-  line-height: 22px;
+  text-align: center;
+  color: var(--tgui--hint_color);
+  line-height: 1.4;
 }
 
+/* Блок с точками пагинации */
 .welcome-pagination {
   display: flex;
   justify-content: center;
-  margin-top: auto;
-  padding-bottom: 40px;
-  gap: 8px;
+  gap: 6px;
+  margin-bottom: 32px;
 }
 
-.welcome-pagination-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--tgui--secondary_hint_color);
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+/* Отдельная точка пагинации */
+.welcome-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background-color: var(--tgui--hint_color);
+  opacity: 0.4;
+  transition: all 0.3s ease;
   cursor: pointer;
 }
 
-.welcome-pagination-dot_active {
-  transform: scale(1.25);
-  background: var(--tgui--button_color);
+/* Активная точка пагинации (вытянутая, цвета кнопки) */
+.welcome-dot.active {
+  width: 18px;
+  background-color: var(--tgui--button_color);
+  opacity: 1;
 }
 
+/* Область нижней кнопки */
 .welcome-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 100%;
+  padding: 0 16px 32px;
 }

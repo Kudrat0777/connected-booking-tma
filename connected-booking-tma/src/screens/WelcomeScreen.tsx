@@ -2,23 +2,16 @@ import React, {
   useEffect,
   useRef,
   useState,
-  PointerEvent,
-  TouchEvent,
-  CSSProperties,
+  PointerEvent as ReactPointerEvent,
+  TouchEvent as ReactTouchEvent,
 } from 'react';
-import {
-  
-  Button,
-  Title,
-  Text,
-} from '@telegram-apps/telegram-ui';
+import { Button, Title, Text } from '@telegram-apps/telegram-ui';
 import lottie, { AnimationItem } from 'lottie-web';
 import { useTelegramWebApp } from '../hooks/useTelegramWebApp';
 import '../css/WelcomeScreen.css';
 
 type Props = {
   onContinue: () => void;
-  // onOpenMyBookings удален, так как теперь у нас единая точка входа
 };
 
 type Slide = {
@@ -31,35 +24,29 @@ const SLIDES: Slide[] = [
   {
     lottieSrc: '/stickers/booking.json',
     title: 'Лучшая система бронирования',
-    description:
-      'Выбирай услугу и время — всё остальное мы сделаем сами.',
+    description: 'Выбирай услугу и время — всё остальное мы сделаем сами.',
   },
   {
     lottieSrc: '/stickers/notifications.json',
     title: 'Все уведомления в Telegram',
-    description:
-      'Подтверждение записи, напоминания и изменения — сразу в мессенджере.',
+    description: 'Подтверждение записи, напоминания и изменения — сразу в мессенджере.',
   },
   {
     lottieSrc: '/stickers/favorites.json',
     title: 'Любимые мастера под рукой',
-    description:
-      'Сохраняй мастеров, оставляй отзывы и возвращайся к лучшим.',
+    description: 'Сохраняй мастеров, оставляй отзывы и возвращайся к лучшим.',
   },
   {
     lottieSrc: '/stickers/duck_wallet.json',
     title: 'Современная оплата',
-    description:
-      'Оплачивайте услуги картами, TON или Stars. Быстро и безопасно.',
+    description: 'Оплачивайте услуги картами, TON или Stars. Быстро и безопасно.',
   },
 ];
 
 const SWIPE_THRESHOLD = 40;
-const AUTO_SLIDE_INTERVAL = 5000;
+const AUTO_SLIDE_INTERVAL = 4000;
 
-export const WelcomeScreen: React.FC<Props> = ({
-  onContinue,
-}) => {
+export const WelcomeScreen: React.FC<Props> = ({ onContinue }) => {
   const webApp = useTelegramWebApp();
   const [index, setIndex] = useState(0);
   const slide = SLIDES[index];
@@ -73,23 +60,19 @@ export const WelcomeScreen: React.FC<Props> = ({
 
   const autoSlideTimerRef = useRef<number | null>(null);
 
-  // Функция для тактильного отклика
   const triggerHaptic = () => {
     if (webApp?.HapticFeedback) {
       webApp.HapticFeedback.selectionChanged();
     }
   };
 
-  // Lottie
   useEffect(() => {
     if (lottieInstanceRef.current) {
       lottieInstanceRef.current.destroy();
       lottieInstanceRef.current = null;
     }
 
-    if (!slide.lottieSrc || !lottieContainerRef.current) {
-      return;
-    }
+    if (!slide.lottieSrc || !lottieContainerRef.current) return;
 
     const anim = lottie.loadAnimation({
       container: lottieContainerRef.current,
@@ -100,10 +83,7 @@ export const WelcomeScreen: React.FC<Props> = ({
     });
 
     lottieInstanceRef.current = anim;
-
-    return () => {
-      anim.destroy();
-    };
+    return () => anim.destroy();
   }, [slide.lottieSrc]);
 
   const changeSlide = (newIndex: number) => {
@@ -112,21 +92,11 @@ export const WelcomeScreen: React.FC<Props> = ({
   };
 
   const nextSlide = () => changeSlide((index + 1) % SLIDES.length);
+  const prevSlide = () => changeSlide(index === 0 ? SLIDES.length - 1 : index - 1);
 
-  const prevSlide = () =>
-    changeSlide(index === 0 ? SLIDES.length - 1 : index - 1);
-
-  const goTo = (i: number) => {
-    if (i !== index) changeSlide(i);
-  };
-
-  // --- Авто-слайдер ---
   const resetAutoSlideTimer = () => {
-    if (autoSlideTimerRef.current != null) {
-      window.clearInterval(autoSlideTimerRef.current);
-    }
+    if (autoSlideTimerRef.current != null) clearInterval(autoSlideTimerRef.current);
     autoSlideTimerRef.current = window.setInterval(() => {
-      // Не вызываем тактильный отклик на авто-переключении, чтобы не раздражать
       setIndex((prev) => (prev + 1) % SLIDES.length);
     }, AUTO_SLIDE_INTERVAL);
   };
@@ -134,9 +104,7 @@ export const WelcomeScreen: React.FC<Props> = ({
   useEffect(() => {
     resetAutoSlideTimer();
     return () => {
-      if (autoSlideTimerRef.current != null) {
-        window.clearInterval(autoSlideTimerRef.current);
-      }
+      if (autoSlideTimerRef.current != null) clearInterval(autoSlideTimerRef.current);
     };
   }, []);
 
@@ -144,7 +112,6 @@ export const WelcomeScreen: React.FC<Props> = ({
     resetAutoSlideTimer();
   }, [index]);
 
-  // --- SWIPE Logic ---
   const handleStart = (x: number) => {
     if (isAnimating) return;
     swipeStartXRef.current = x;
@@ -153,112 +120,86 @@ export const WelcomeScreen: React.FC<Props> = ({
 
   const handleMove = (x: number) => {
     if (swipeStartXRef.current == null || isAnimating) return;
-    const dx = x - swipeStartXRef.current;
-    setSwipeDeltaX(dx);
+    setSwipeDeltaX(x - swipeStartXRef.current);
   };
 
   const handleEnd = () => {
-    if (swipeStartXRef.current == null) return;
+    if (swipeStartXRef.current == null || isAnimating) return;
     const dx = swipeDeltaX;
     swipeStartXRef.current = null;
 
-    if (isAnimating) return;
-
     if (dx > SWIPE_THRESHOLD) {
       setIsAnimating(true);
-      setSwipeDeltaX(100); // Визуальный отлет вправо
+      setSwipeDeltaX(window.innerWidth);
       setTimeout(() => {
         setSwipeDeltaX(0);
         prevSlide();
         setIsAnimating(false);
-      }, 200);
+      }, 250);
     } else if (dx < -SWIPE_THRESHOLD) {
       setIsAnimating(true);
-      setSwipeDeltaX(-100); // Визуальный отлет влево
+      setSwipeDeltaX(-window.innerWidth);
       setTimeout(() => {
         setSwipeDeltaX(0);
         nextSlide();
         setIsAnimating(false);
-      }, 200);
+      }, 250);
     } else {
-      // Возврат
       setIsAnimating(true);
       setSwipeDeltaX(0);
       setTimeout(() => setIsAnimating(false), 200);
     }
   };
 
-  // Pointer events
-  const onPointerDown = (e: PointerEvent) => handleStart(e.clientX);
-  const onPointerMove = (e: PointerEvent) => handleMove(e.clientX);
-  const onPointerUp = () => handleEnd();
-  const onPointerCancel = () => handleEnd();
-
-  // Touch events (fallback)
-  const onTouchStart = (e: TouchEvent) => handleStart(e.touches[0].clientX);
-  const onTouchMove = (e: TouchEvent) => handleMove(e.touches[0].clientX);
-  const onTouchEnd = () => handleEnd();
-
-  const slideAreaStyle: CSSProperties = {
-    transform: `translateX(${swipeDeltaX}px)`,
-    opacity: isAnimating ? 0.5 : 1, // Добавляем небольшую прозрачность при смене
-    transition: isAnimating ? 'transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s' : 'none',
-  };
-
   return (
     <div className="welcome-root">
-      <div className="welcome-container">
-        {/* Контейнер свайпа */}
-        <div
-          className="welcome-slide-area"
-          style={slideAreaStyle}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerCancel}
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
+      {/* Главная контентная область (свайпается) */}
+      <div
+        className={`welcome-slide-area ${isAnimating ? 'animating' : ''}`}
+        style={{ transform: `translateX(${swipeDeltaX}px)` }}
+        onPointerDown={(e: ReactPointerEvent) => handleStart(e.clientX)}
+        onPointerMove={(e: ReactPointerEvent) => handleMove(e.clientX)}
+        onPointerUp={handleEnd}
+        onPointerCancel={handleEnd}
+        onTouchStart={(e: ReactTouchEvent) => handleStart(e.touches[0].clientX)}
+        onTouchMove={(e: ReactTouchEvent) => handleMove(e.touches[0].clientX)}
+        onTouchEnd={handleEnd}
+      >
+        <div className="welcome-lottie-container" ref={lottieContainerRef} />
+
+        <Title weight="1" className="welcome-title">
+          {slide.title}
+        </Title>
+
+        <Text className="welcome-description">
+          {slide.description}
+        </Text>
+      </div>
+
+      {/* Пагинация (точки) */}
+      <div className="welcome-pagination">
+        {SLIDES.map((_, i) => (
+          <div
+            key={i}
+            className={`welcome-dot ${i === index ? 'active' : ''}`}
+            onClick={() => { if (i !== index) changeSlide(i); }}
+          />
+        ))}
+      </div>
+
+      {/* Кнопка действия (зафиксирована внизу) */}
+      <div className="welcome-actions">
+        <Button
+          size="l"
+          mode="filled"
+          stretched
+          onClick={() => {
+            triggerHaptic();
+            onContinue();
+          }}
         >
-          <div className="welcome-sticker-wrapper">
-            <div ref={lottieContainerRef} className="welcome-lottie" />
-          </div>
-
-          <div className="welcome-text-content">
-            <Title level="1" weight="1" className="welcome-title">
-              {slide.title}
-            </Title>
-            <Text className="welcome-description">
-              {slide.description}
-            </Text>
-          </div>
-        </div>
-
-        {/* Пагинация */}
-        <div className="welcome-pagination">
-          {SLIDES.map((_, i) => (
-            <div
-              key={i}
-              className={`welcome-pagination-dot ${i === index ? 'welcome-pagination-dot_active' : ''}`}
-              onClick={() => goTo(i)}
-            />
-          ))}
-        </div>
-
-        {/* Кнопки действий внизу */}
-        <div className="welcome-actions">
-          <Button
-            size="l"
-            mode="filled"
-            stretched
-            onClick={() => {
-              triggerHaptic();
-              onContinue(); // Теперь вызывает проверку профиля/регистрацию в App.tsx
-            }}
-          >
-            Войти как клиент
-          </Button>
-        </div>
+          Войти как клиент
+        </Button>
       </div>
     </div>
   );
