@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import {
   Placeholder,
-  Spinner
+  Spinner,
+  AppRoot,
 } from '@telegram-apps/telegram-ui';
 import { Icon28PictureStackOutline } from '@vkontakte/icons';
 import { ScreenLayout } from '../components/ScreenLayout';
-import { fetchPortfolio, PortfolioItem } from '../helpers/api';
+import { fetchPortfolio, PortfolioItem, getFullImageUrl } from '../helpers/api';
+import '../css/PortfolioViewer.css';
 
 type Props = {
   masterId: number;
@@ -25,43 +27,43 @@ export const PortfolioViewerScreen: React.FC<Props> = ({ masterId, masterName, o
   }, [masterId]);
 
   return (
-    <ScreenLayout title={`Работы ${masterName}`} onBack={onBack}>
-      {loading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 40 }}>
-          <Spinner size="l" />
-        </div>
-      ) : photos.length === 0 ? (
-        <Placeholder
-          header="Нет фото"
-          description="Мастер пока не загрузил примеры работ."
-        >
-          <Icon28PictureStackOutline style={{ width: 64, height: 64, color: 'var(--tgui--hint_color)' }} />
-        </Placeholder>
-      ) : (
-        <div style={{ padding: 4, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4 }}>
-           {photos.map((p) => (
-             <div
-               key={p.id}
-               style={{
-                 aspectRatio: '1/1',
-                 overflow: 'hidden',
-                 borderRadius: 4,
-                 background: '#eee',
-                 cursor: 'pointer'
-               }}
-               onClick={() => {
-                  // Можно добавить логику открытия на весь экран
-               }}
-             >
-               <img
-                 src={p.image_url}
-                 alt="Portfolio"
-                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-               />
-             </div>
-           ))}
-        </div>
-      )}
+    <ScreenLayout title={masterName} onBack={onBack}>
+      <div className="portfolio-container">
+        {loading ? (
+          <div className="portfolio-loader">
+            <Spinner size="l" />
+          </div>
+        ) : photos.length === 0 ? (
+          <div className="portfolio-empty">
+            <Placeholder
+              header="Примеры работ"
+              description="Мастер пока не загрузил фотографии своих работ в портфолио."
+            >
+              <Icon28PictureStackOutline className="empty-icon" />
+            </Placeholder>
+          </div>
+        ) : (
+          <div className="portfolio-grid">
+            {photos.map((p) => (
+              <div
+                key={p.id}
+                className="portfolio-item"
+                onClick={() => {
+                  // Здесь в будущем можно вызвать tg.showPhoto() или внутренний модал
+                }}
+              >
+                <img
+                  src={getFullImageUrl(p.image_url)}
+                  alt={`Work by ${masterName}`}
+                  className="portfolio-img"
+                  loading="lazy"
+                />
+                <div className="portfolio-item-overlay" />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </ScreenLayout>
   );
 };

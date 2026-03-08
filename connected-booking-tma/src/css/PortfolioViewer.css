@@ -1,0 +1,75 @@
+.portfolio-container {
+  min-height: 100vh;
+  background-color: var(--tgui--bg_color);
+}
+
+.portfolio-loader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50vh;
+}
+
+.portfolio-empty {
+  padding-top: 20vh;
+}
+
+.empty-icon {
+  width: 72px;
+  height: 72px;
+  color: var(--tgui--hint_color);
+  opacity: 0.6;
+}
+
+/* Сетка как в Telegram Media */
+.portfolio-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px; /* Тонкие разделители, как в нативном месседжере */
+  padding: 1px;
+  background-color: var(--tgui--separator_color); /* Цвет разделителя берется из темы */
+}
+
+.portfolio-item {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  background-color: var(--tgui--secondary_bg_color);
+  overflow: hidden;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.portfolio-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+/* Эффект при нажатии */
+.portfolio-item:active .portfolio-img {
+  transform: scale(0.95);
+}
+
+.portfolio-item-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: black;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.portfolio-item:active .portfolio-item-overlay {
+  opacity: 0.1;
+}
+
+/* Адаптация под десктоп/планшеты в TMA */
+@media (min-width: 600px) {
+  .portfolio-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
