@@ -9,6 +9,8 @@ import {
   Input,
   Placeholder,
   Spinner,
+  Headline,
+  Subheadline,
 } from '@telegram-apps/telegram-ui';
 import '../css/ProfileScreen.css';
 import { ScreenLayout } from '../components/ScreenLayout';
@@ -89,7 +91,6 @@ export const ProfileScreen: React.FC<Props> = ({
   useEffect(() => {
     if (currentTab === 'masters') {
       if (debounceTimeout) clearTimeout(debounceTimeout);
-
       const timeout = setTimeout(() => {
         setLoading(true);
         fetchMasters({
@@ -102,291 +103,93 @@ export const ProfileScreen: React.FC<Props> = ({
           .catch(console.error)
           .finally(() => setLoading(false));
       }, 500);
-
       setDebounceTimeout(timeout);
     }
-
-    return () => {
-        if (debounceTimeout) clearTimeout(debounceTimeout);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => { if (debounceTimeout) clearTimeout(debounceTimeout); };
   }, [currentTab, search, selectedCity, selectedCategory]);
 
-  const handleMasterBook = (master: MasterPublicProfile) => {
-    if (onGoToServices) {
-      onGoToServices(master.id, master.name);
-    }
-  };
-
-  const hasQuery = Boolean(search.trim()) || selectedCategory !== 'Все';
-  const isEmptyResult = masters.length === 0;
-
-  const renderMastersContent = () => {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-
-        <div style={{ padding: '10px 16px 0', flexShrink: 0, background: 'var(--tgui--bg_color)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
-            <Icon24LocationOutline style={{ color: 'var(--tgui--hint_color)', marginRight: 8 }} />
-            <select
-                value={selectedCity}
-                onChange={(e) => setSelectedCity(e.target.value)}
-                style={{
-                    appearance: 'none',
-                    border: 'none',
-                    background: 'transparent',
-                    fontSize: 16,
-                    fontWeight: 'bold',
-                    color: 'var(--tgui--text_color)',
-                    outline: 'none',
-                    padding: 0,
-                    margin: 0,
-                    cursor: 'pointer'
-                }}
-            >
-                {CITIES.map(city => (
-                    <option key={city} value={city}>{city}</option>
-                ))}
-            </select>
-            <Icon28ChevronRightOutline style={{ color: 'var(--tgui--hint_color)', transform: 'rotate(90deg)', width: 16, height: 16, marginLeft: 4 }} />
-          </div>
-
-          <Input
-            placeholder="Имя, специальность..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            before={<Icon24Search style={{ color: 'var(--tgui--hint_color)' }} />}
-            clearable
-          />
-
-          <div style={{
-              display: 'flex',
-              overflowX: 'auto',
-              gap: 8,
-              padding: '12px 0 8px',
-              WebkitOverflowScrolling: 'touch',
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none',
-          }}>
-              <style dangerouslySetInnerHTML={{__html: `
-                div::-webkit-scrollbar { display: none; }
-              `}} />
-
-              {CATEGORIES.map(cat => {
-                  const isSelected = selectedCategory === cat;
-                  return (
-                      <div
-                          key={cat}
-                          onClick={() => setSelectedCategory(cat)}
-                          style={{
-                              padding: '6px 14px',
-                              borderRadius: 16,
-                              background: isSelected ? 'var(--tgui--button_color)' : 'var(--tgui--secondary_bg_color)',
-                              color: isSelected ? 'var(--tgui--button_text_color)' : 'var(--tgui--text_color)',
-                              fontSize: 14,
-                              fontWeight: 500,
-                              whiteSpace: 'nowrap',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease'
-                          }}
-                      >
-                          {cat}
-                      </div>
-                  );
-              })}
-          </div>
+  const renderMastersContent = () => (
+    <div className="masters-page">
+      <div className="masters-header-modern">
+        <div className="city-selector-modern">
+          <Icon24LocationOutline className="city-icon" />
+          <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)}>
+            {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <Icon28ChevronRightOutline className="city-chevron" />
         </div>
 
-        <div style={{
-            flex: 1,
-            overflowY: 'auto',
-            WebkitOverflowScrolling: 'touch',
-            paddingBottom: 40
-        }}>
-            <List style={{ background: 'var(--tgui--secondary_bg_color)', minHeight: '100%' }}>
-                {loading && (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
-                    <Spinner size="m" />
-                </div>
-                )}
+        <Input
+          placeholder="Поиск мастера или услуги..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          before={<Icon24Search className="search-icon" />}
+          className="search-input-modern"
+        />
 
-                {!loading && isEmptyResult && (
-                <Placeholder
-                    header="Ничего не найдено"
-                    description={`В городе ${selectedCity} по вашему запросу нет мастеров.`}
-                >
-                    <LottieIcon src="/stickers/duck_out.json" size={140} />
-                </Placeholder>
-                )}
-
-                {!loading && masters.length > 0 && (
-                <>
-                    {masters.map((m) => (
-                    <Section key={m.id}>
-                        {/* Клик по всей карточке ведет на визитку */}
-                        <Cell
-                        onClick={() => handleMasterBook(m)}
-                        after={
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                {m.rating > 0 && (
-                                    <div style={{
-                                    background: 'orange',
-                                    padding: '2px 6px',
-                                    borderRadius: 6,
-                                    fontSize: 12,
-                                    fontWeight: 600,
-                                    color: '#fff',
-                                    display: 'flex',
-                                    gap: 4
-                                    }}>
-                                    ★ {m.rating.toFixed(1)}
-                                    </div>
-                                )}
-                                <Icon28ChevronRightOutline style={{ color: 'var(--tgui--hint_color)' }} />
-                            </div>
-                        }
-                        before={<Avatar size={48} src={getFullImageUrl(m.avatar_url)} fallbackIcon={<Icon28UserStarBadgeOutline />} />}
-                        description={
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                <span style={{ opacity: 0.7, fontSize: 12, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                {m.bio || 'Мастер'}
-                                </span>
-                                {m.address && (
-                                    <span style={{ fontSize: 11, color: 'var(--tgui--hint_color)' }}>
-                                    📍 {m.address}
-                                    </span>
-                                )}
-                                {m.reviews_count > 0 && (
-                                    <span
-                                      style={{ fontSize: 11, color: 'var(--tgui--link_color)', cursor: 'pointer' }}
-                                      onClick={(e) => {
-                                        e.stopPropagation(); // Чтобы не открылась визитка
-                                        if (onOpenMasterReviews) onOpenMasterReviews(m.id);
-                                      }}
-                                    >
-                                      Смотреть отзывы ({m.reviews_count})
-                                    </span>
-                                )}
-                            </div>
-                        }
-                        multiline
-                        >
-                        {m.name}
-                        </Cell>
-
-                        <Cell>
-                            <div style={{ display: 'flex', gap: 8, position: 'relative', zIndex: 2 }}>
-                                <Button
-                                mode="bezeled"
-                                size="m"
-                                style={{ flex: 1 }}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (onOpenPortfolio) onOpenPortfolio(m.id, m.name);
-                                }}
-                                >
-                                Портфолио
-                                </Button>
-
-                                <Button
-                                mode="filled"
-                                size="m"
-                                style={{ flex: 1 }}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleMasterBook(m);
-                                }}
-                                >
-                                Записаться
-                                </Button>
-                            </div>
-                        </Cell>
-                    </Section>
-                    ))}
-                </>
-                )}
-            </List>
+        <div className="categories-scroll-modern">
+          {CATEGORIES.map(cat => (
+            <div
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`category-pill ${selectedCategory === cat ? 'active' : ''}`}
+            >
+              {cat}
+            </div>
+          ))}
         </div>
       </div>
-    );
-  };
 
-  const renderContent = () => {
-    if (currentTab === 'bookings') {
-      return (
-        <MyBookingsScreen
-           telegramId={telegramId}
-           onBack={onBack}
-           onGoToServices={onGoToServices}
-           onReview={onReview}
-        />
-      );
-    }
+      <div className="masters-list-modern">
+        {loading ? (
+          <div className="spinner-center"><Spinner size="l" /></div>
+        ) : masters.length === 0 ? (
+          <Placeholder header="Никого не нашли" description="Попробуйте другой город">
+            <LottieIcon src="/stickers/duck_out.json" size={140} />
+          </Placeholder>
+        ) : (
+          masters.map((m) => (
+            <div key={m.id} className="master-card-modern">
+              <Cell
+                onClick={() => onGoToServices?.(m.id, m.name)}
+                before={<Avatar size={64} src={getFullImageUrl(m.avatar_url)} className="master-avatar" />}
+                subtitle={m.bio || 'Специалист'}
+                description={
+                  <div className="master-info-row">
+                    {m.rating > 0 && <span className="rating-tag">★ {m.rating.toFixed(1)}</span>}
+                    {m.address && <span className="location-text">📍 {m.address}</span>}
+                  </div>
+                }
+                multiline
+              >
+                <Headline weight="1">{m.name}</Headline>
+              </Cell>
 
-    if (currentTab === 'masters') {
-      return (
-        <ScreenLayout title="Мастера" onBack={onBack}>
-          {renderMastersContent()}
-        </ScreenLayout>
-      );
-    }
-
-        if (currentTab === 'settings') {
-      // Проверяем, является ли текущий клиент на самом деле мастером
-      const isMasterInClientMode = localStorage.getItem('is_master_logged_in') === 'true' && localStorage.getItem('force_client_mode') === 'true';
-
-      return (
-        <div style={{ height: '100%', overflowY: 'auto' }}>
-            <SettingsScreen
-              telegramId={telegramId}
-              onBack={onBack}
-              onLogout={() => {
-                  if (onLogout) onLogout();
-              }}
-            />
-
-            {/* Кнопка возврата в панель мастера */}
-            {isMasterInClientMode && (
-                <div style={{ padding: '0 16px 40px' }}>
-                    <Button
-                        size="l"
-                        mode="filled"
-                        stretched
-                        style={{ background: 'var(--tgui--button_color)', marginTop: -20 }}
-                        onClick={() => {
-                            localStorage.removeItem('force_client_mode');
-                            window.location.reload(); // Перезагружаем, чтобы App.tsx подхватил роль мастера
-                        }}
-                    >
-                        Вернуться в панель мастера
-                    </Button>
-                </div>
-            )}
-        </div>
-      );
-    }
-
-    return null;
-  };
+              <div className="master-card-actions">
+                <Button mode="bezeled" size="m" stretched onClick={() => onOpenPortfolio?.(m.id, m.name)}>
+                  Портфолио
+                </Button>
+                <Button mode="filled" size="m" stretched onClick={() => onGoToServices?.(m.id, m.name)}>
+                  Записаться
+                </Button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
 
   return (
-    <div style={{
-       display: 'flex',
-       flexDirection: 'column',
-       height: '100vh',
-       overflow: 'hidden'
-    }}>
-      <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-        {renderContent()}
+    <div className="app-layout">
+      <div className="screen-content">
+        {currentTab === 'bookings' && <MyBookingsScreen telegramId={telegramId} onReview={onReview} />}
+        {currentTab === 'masters' && renderMastersContent()}
+        {currentTab === 'settings' && <SettingsScreen telegramId={telegramId} onLogout={onLogout} />}
       </div>
-      <Tabbar>
+      <Tabbar className="app-tabbar">
         {tabs.map(({ id, text, Icon }) => (
-          <Tabbar.Item
-            key={id}
-            text={text}
-            selected={id === currentTab}
-            onClick={() => setCurrentTab(id)}
-          >
+          <Tabbar.Item key={id} text={text} selected={id === currentTab} onClick={() => setCurrentTab(id)}>
             <Icon />
           </Tabbar.Item>
         ))}
