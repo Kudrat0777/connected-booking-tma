@@ -207,11 +207,7 @@ export const WelcomeScreen: React.FC<Props> = ({
 
   return (
     <div className="welcome-root">
-      <Placeholder
-        className="welcome-placeholder"
-        header="" // Используем кастомный рендер внутри для анимации
-        description=""
-      >
+      <div className="welcome-container">
         {/* Контейнер свайпа */}
         <div
           className="welcome-slide-area"
@@ -263,7 +259,7 @@ export const WelcomeScreen: React.FC<Props> = ({
             Войти как клиент
           </Button>
         </div>
-      </Placeholder>
+      </div>
     </div>
   );
 };

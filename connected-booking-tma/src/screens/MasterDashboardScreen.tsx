@@ -516,32 +516,100 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   );
 
   const renderProfile = () => (
-     <div style={{ paddingBottom: 100 }}>
-        <List style={{ background: 'var(--tgui--secondary_bg_color)' }}>
-          <Section header="Мой профиль">
-             <Cell before={<Icon28EditOutline />} onClick={onEditProfile} expandable>Редактировать профиль</Cell>
-             <Cell before={<Icon28StatisticsOutline />} onClick={onOpenAnalytics} expandable>Статистика и доходы</Cell>
-             <Cell before={<Icon28FavoriteOutline />} onClick={onOpenReviews} expandable>Мои отзывы</Cell>
-          </Section>
-          <Section header="Управление расписанием">
-             <Cell before={<Icon28CalendarOutline />} onClick={onOpenSchedule} expandable>Настроить слоты</Cell>
-          </Section>
-          <Section header="Аккаунт">
-             <Cell>
-               <Button mode="filled" size="l" stretched onClick={onSwitchToClient} style={{ background: 'var(--tgui--button_color)' }}>
-                  Вернуться в режим клиента
-               </Button>
-             </Cell>
-             <Cell>
-                <Button mode="bezeled" size="l" stretched onClick={handleLogoutClick}>Выйти из аккаунта</Button>
-             </Cell>
-             <Cell>
-                <Button mode="bezeled" size="m" stretched onClick={handleDeleteAccount} style={{ color: 'var(--tgui--destructive_text_color)', borderColor: 'var(--tgui--destructive_text_color)' }}>
-                    Удалить аккаунт
+     <div style={{ paddingBottom: 100, background: 'var(--tgui--secondary_bg_color)', minHeight: '100%' }}>
+
+        {/* Шапка профиля */}
+        <div style={{
+            background: 'var(--tgui--bg_color)',
+            padding: '32px 16px 24px',
+            borderBottomLeftRadius: 24,
+            borderBottomRightRadius: 24,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+            marginBottom: 16
+        }}>
+            <Title level="1" weight="2" style={{ marginBottom: 8 }}>Мой кабинет</Title>
+            <p style={{ color: 'var(--tgui--hint_color)', margin: 0, fontSize: 15, lineHeight: '1.4' }}>
+                Управляйте своим профилем, расписанием и настройками аккаунта.
+            </p>
+        </div>
+
+        <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+            {/* Блок: Основное */}
+            <div style={{ background: 'var(--tgui--bg_color)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                <Cell
+                    before={<div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28EditOutline style={{ color: '#007AFF' }} /></div>}
+                    onClick={onEditProfile}
+                    description="Имя, фото, контакты, портфолио"
+                    after={<span style={{ color: 'var(--tgui--hint_color)' }}>›</span>}
+                >
+                    Редактировать профиль
+                </Cell>
+                <div style={{ height: 1, background: 'var(--tgui--secondary_bg_color)', marginLeft: 56 }} />
+                <Cell
+                    before={<div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(255, 149, 0, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28CalendarOutline style={{ color: '#FF9500' }} /></div>}
+                    onClick={onOpenSchedule}
+                    description="Генерация свободных слотов"
+                    after={<span style={{ color: 'var(--tgui--hint_color)' }}>›</span>}
+                >
+                    Управление расписанием
+                </Cell>
+            </div>
+
+            {/* Блок: Аналитика и Отзывы */}
+            <div style={{ background: 'var(--tgui--bg_color)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                <Cell
+                    before={<div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(52, 199, 89, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28StatisticsOutline style={{ color: '#34C759' }} /></div>}
+                    onClick={onOpenAnalytics}
+                    description="Ваш доход и количество клиентов"
+                    after={<span style={{ color: 'var(--tgui--hint_color)' }}>›</span>}
+                >
+                    Статистика
+                </Cell>
+                <div style={{ height: 1, background: 'var(--tgui--secondary_bg_color)', marginLeft: 56 }} />
+                <Cell
+                    before={<div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(255, 45, 85, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28FavoriteOutline style={{ color: '#FF2D55' }} /></div>}
+                    onClick={onOpenReviews}
+                    description="Что о вас пишут клиенты"
+                    after={<span style={{ color: 'var(--tgui--hint_color)' }}>›</span>}
+                >
+                    Мои отзывы
+                </Cell>
+            </div>
+
+            {/* Блок: Аккаунт */}
+            <div style={{ marginTop: 8 }}>
+                <Title level="3" style={{ fontSize: 15, color: 'var(--tgui--hint_color)', marginLeft: 16, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>Система</Title>
+                <div style={{ background: 'var(--tgui--bg_color)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                    <Cell
+                        before={<div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--tgui--secondary_bg_color)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28UserCircleOutline style={{ color: 'var(--tgui--text_color)' }} /></div>}
+                        onClick={onSwitchToClient}
+                    >
+                        Вернуться в режим клиента
+                    </Cell>
+                    <div style={{ height: 1, background: 'var(--tgui--secondary_bg_color)', marginLeft: 56 }} />
+                    <Cell
+                        before={<div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--tgui--secondary_bg_color)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 20 }}>🚪</span></div>}
+                        onClick={handleLogoutClick}
+                    >
+                        Выйти из аккаунта
+                    </Cell>
+                </div>
+            </div>
+
+            {/* Опасная зона */}
+            <div style={{ marginTop: 16, marginBottom: 24, display: 'flex', justifyContent: 'center' }}>
+                <Button
+                    mode="plain"
+                    size="s"
+                    onClick={handleDeleteAccount}
+                    style={{ color: '#FF3B30', fontSize: 14 }}
+                >
+                    Навсегда удалить аккаунт
                 </Button>
-             </Cell>
-          </Section>
-        </List>
+            </div>
+
+        </div>
      </div>
   );
 
