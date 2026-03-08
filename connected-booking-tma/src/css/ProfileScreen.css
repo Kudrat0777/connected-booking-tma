@@ -1,0 +1,98 @@
+.profile-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--tgui--bg_color);
+  color: var(--tgui--text_color);
+  box-sizing: border-box;
+}
+
+.profile-content {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.masters-layout-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.masters-header {
+  padding: 0 16px;
+  padding-top: max(16px, env(safe-area-inset-top));
+  flex-shrink: 0;
+  background: var(--tgui--bg_color);
+}
+
+.masters-city-select {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.masters-city-native-select {
+  appearance: none;
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--tgui--text_color);
+  outline: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.masters-categories-wrapper {
+  display: flex;
+  overflow-x: auto;
+  gap: 8px;
+  padding: 12px 0 8px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.masters-categories-wrapper::-webkit-scrollbar {
+  display: none;
+}
+
+.masters-category-btn {
+  padding: 6px 16px;
+  border-radius: 100px;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.masters-category-btn_active {
+  background: var(--tgui--button_color);
+  color: var(--tgui--button_text_color);
+}
+
+.masters-category-btn_inactive {
+  background: var(--tgui--secondary_bg_color);
+  color: var(--tgui--text_color);
+}
+
+.masters-list-container {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Do not add extra padding for tabbar as Tabbar Component already has its own */
+  background: var(--tgui--secondary_bg_color);
+}
+
+.profile-settings-container {
+  height: 100%;
+  overflow-y: auto;
+  background: var(--tgui--secondary_bg_color);
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}

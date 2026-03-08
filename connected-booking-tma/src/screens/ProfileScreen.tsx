@@ -10,6 +10,7 @@ import {
   Placeholder,
   Spinner,
 } from '@telegram-apps/telegram-ui';
+import '../css/ProfileScreen.css';
 import { ScreenLayout } from '../components/ScreenLayout';
 import { MyBookingsScreen } from './MyBookingsScreen';
 import { SettingsScreen } from './SettingsScreen';
