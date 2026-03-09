@@ -1,10 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Tabbar,
-  Button,
   Placeholder,
   Spinner,
   Card,
+  List,
+  Section,
+  Select,
+  Input
 } from '@telegram-apps/telegram-ui';
 import '../css/ProfileScreen.css';
 import { MyBookingsScreen } from './MyBookingsScreen';
@@ -13,9 +16,7 @@ import {
   Icon28CalendarOutline,
   Icon28UserStarBadgeOutline,
   Icon28SettingsOutline,
-  Icon24Search,
-  Icon28ChevronRightOutline,
-  Icon24LocationOutline,
+  Icon24Search
 } from '@vkontakte/icons';
 import lottie from 'lottie-web';
 
@@ -60,7 +61,6 @@ const tabs: { id: MainTab; text: string; Icon: React.ComponentType<any> }[] = [
 ];
 
 const CITIES = ['Ургенч', 'Ташкент', 'Самарканд', 'Бухара', 'Хива'];
-const CATEGORIES = ['Все', 'Барбер', 'Стрижка', 'Маникюр', 'Ресницы', 'Массаж', 'Брови', 'Макияж'];
 
 export const ProfileScreen: React.FC<Props> = ({
   telegramId,
@@ -69,8 +69,6 @@ export const ProfileScreen: React.FC<Props> = ({
   onLogout,
   onGoToServices,
   onReview,
-  onOpenMasterReviews,
-  onOpenPortfolio,
 }) => {
   const [currentTab, setCurrentTab] = useState<MainTab>(initialTab);
   const [masters, setMasters] = useState<MasterPublicProfile[]>([]);
@@ -78,9 +76,9 @@ export const ProfileScreen: React.FC<Props> = ({
 
   const [search, setSearch] = useState<string>('');
   const [selectedCity, setSelectedCity] = useState<string>('Ургенч');
-  const [selectedCategory, setSelectedCategory] = useState<string>('Все');
   const [debounceTimeout, setDebounceTimeout] = useState<NodeJS.Timeout | null>(null);
 
+  // Запрашиваем всех мастеров для выбранного города
   useEffect(() => {
     if (currentTab === 'masters') {
       if (debounceTimeout) clearTimeout(debounceTimeout);
@@ -89,7 +87,6 @@ export const ProfileScreen: React.FC<Props> = ({
         fetchMasters({
             search: search.trim() !== '' ? search.trim() : undefined,
             city: selectedCity,
-            specialization: selectedCategory !== 'Все' ? selectedCategory : undefined,
             ordering: 'rating'
         })
           .then(setMasters)
@@ -99,120 +96,96 @@ export const ProfileScreen: React.FC<Props> = ({
       setDebounceTimeout(timeout);
     }
     return () => { if (debounceTimeout) clearTimeout(debounceTimeout); };
-  }, [currentTab, search, selectedCity, selectedCategory]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTab, search, selectedCity]);
+
+  // Группируем мастеров по специализации
+  const groupedMasters = useMemo(() => {
+    const groups: Record<string, MasterPublicProfile[]> = {};
+    masters.forEach(m => {
+        const cat = (m as any).specialization || 'Рекомендации';
+        if (!groups[cat]) {
+            groups[cat] = [];
+        }
+        groups[cat].push(m);
+    });
+    return groups;
+  }, [masters]);
 
   const renderMastersContent = () => (
     <div className="masters-page-root">
-      <header className="masters-fixed-header">
-        <div className="location-row">
-          <Icon24LocationOutline width={18} height={18} />
-          <span className="city-label">{selectedCity}</span>
-          <Icon28ChevronRightOutline width={16} height={16} style={{ transform: 'rotate(90deg)' }} />
-          <select
-            value={selectedCity}
-            onChange={(e) => setSelectedCity(e.target.value)}
-            className="native-city-select"
-          >
-            {CITIES.map(city => <option key={city} value={city}>{city}</option>)}
-          </select>
-        </div>
 
-        {/* ЧИСТЫЙ КАСТОМНЫЙ ПОИСК */}
-        <div className="custom-search-wrapper">
-          <div className="custom-search-container">
-            <Icon24Search width={20} height={20} style={{ color: 'var(--tg-theme-hint-color)' }} />
-            <input
-              type="text"
-              className="custom-search-input"
-              placeholder="Поиск мастера или услуги"
+      {/* Шапка с формами поиска (Без заголовка) */}
+      <div className="masters-header">
+        <List style={{ margin: 0 }}>
+          <Section style={{ margin: 0 }}>
+            <Select
+              header="Город"
+              value={selectedCity}
+              onChange={(e) => setSelectedCity(e.target.value)}
+            >
+              {CITIES.map(city => <option key={city} value={city}>{city}</option>)}
+            </Select>
+
+            <Input
+              header="Поиск"
+              placeholder="Кого ищем?"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              before={<Icon24Search style={{ color: 'var(--tg-theme-hint-color)' }} />}
             />
-          </div>
-        </div>
+          </Section>
+        </List>
+      </div>
 
-        <div className="horizontal-chips">
-          {CATEGORIES.map(cat => (
-            <Button
-              key={cat}
-              size="s"
-              mode={selectedCategory === cat ? 'filled' : 'bezeled'}
-              onClick={() => setSelectedCategory(cat)}
-              style={{ flexShrink: 0, borderRadius: 100 }}
-            >
-              {cat}
-            </Button>
-          ))}
-        </div>
-      </header>
-
+      {/* Список мастеров горизонтальными скроллами */}
       <div className="scrollable-content">
         {loading ? (
           <div className="centered-state"><Spinner size="l" /></div>
         ) : masters.length === 0 ? (
           <Placeholder
             header="Никого не нашли"
-            description="Попробуйте изменить город или фильтры"
+            description="Попробуйте изменить город или поисковой запрос"
           >
             <LottieIcon src="/stickers/duck_out.json" size={140} />
           </Placeholder>
         ) : (
-          <div style={{ padding: '0 16px 16px 16px' }}>
-            {masters.map((m) => (
-              <Card
-                key={m.id}
-                type="plain"
-                style={{ marginBottom: 16, backgroundColor: 'var(--tg-theme-bg-color)' }}
-              >
-                <React.Fragment>
-                  {/* Вызываем Chip через точку, чтобы не было ошибки импорта */}
-                  {m.rating > 0 && (
-                    <Card.Chip readOnly>
-                      ⭐ {m.rating.toFixed(1)}
-                    </Card.Chip>
-                  )}
+          <div>
+             {Object.entries(groupedMasters).map(([categoryName, catMasters]) => (
+                <div key={categoryName} className="category-group">
+                   <h3 className="category-title">{categoryName}</h3>
 
-                  <img
-                    alt={m.name}
-                    src={getFullImageUrl(m.avatar_url)}
-                    style={{
-                      display: 'block',
-                      height: 240,
-                      objectFit: 'cover',
-                      width: '100%'
-                    }}
-                  />
-
-                  {/* Вызываем Cell через точку */}
-                  <Card.Cell
-                    readOnly
-                    subtitle={m.address ? `📍 ${m.address}` : m.bio || 'Мастер'}
-                  >
-                    {m.name}
-                  </Card.Cell>
-
-                  {/* Кнопки вынесены вниз карточки */}
-                  <div className="card-buttons">
-                    <Button
-                      mode="bezeled"
-                      size="m"
-                      stretched
-                      onClick={() => onOpenPortfolio?.(m.id, m.name)}
-                    >
-                      Портфолио
-                    </Button>
-                    <Button
-                      mode="filled"
-                      size="m"
-                      stretched
-                      onClick={() => onGoToServices?.(m.id, m.name)}
-                    >
-                      Записаться
-                    </Button>
-                  </div>
-                </React.Fragment>
-              </Card>
-            ))}
+                   <div className="category-scroll">
+                      {catMasters.map(m => (
+                         // Клик по карточке ве��ет в профиль мастера
+                         <Card
+                           key={m.id}
+                           onClick={() => onGoToServices?.(m.id, m.name)}
+                           style={{ width: 140, flexShrink: 0, overflow: 'hidden', cursor: 'pointer' }}
+                         >
+                            <React.Fragment>
+                              <img
+                                alt={m.name}
+                                src={getFullImageUrl(m.avatar_url)}
+                                style={{
+                                  display: 'block',
+                                  height: 140,
+                                  objectFit: 'cover',
+                                  width: '100%'
+                                }}
+                              />
+                              <Card.Cell
+                                readOnly
+                                subtitle={m.bio || 'Специалист'}
+                              >
+                                <span style={{ fontWeight: 600, fontSize: 15 }}>{m.name}</span>
+                              </Card.Cell>
+                            </React.Fragment>
+                         </Card>
+                      ))}
+                   </div>
+                </div>
+             ))}
           </div>
         )}
       </div>
@@ -222,11 +195,13 @@ export const ProfileScreen: React.FC<Props> = ({
   return (
     <div className="tma-container">
       <main className="main-viewport">
-        {currentTab === 'bookings' && <MyBookingsScreen telegramId={telegramId} onReview={onReview} />}
+        {/* Передаем onBack и onGoToServices для MyBookingsScreen */}
+        {currentTab === 'bookings' && <MyBookingsScreen telegramId={telegramId} onReview={onReview} onBack={onBack} onGoToServices={() => setCurrentTab('masters')} />}
         {currentTab === 'masters' && renderMastersContent()}
-        {currentTab === 'settings' && <SettingsScreen telegramId={telegramId} onLogout={onLogout} />}
+        {currentTab === 'settings' && <SettingsScreen telegramId={telegramId} onBack={onBack} onLogout={onLogout} />}
       </main>
 
+      {/* Нижняя навигация */}
       <Tabbar className="system-tabbar">
         {tabs.map(({ id, text, Icon }) => (
           <Tabbar.Item

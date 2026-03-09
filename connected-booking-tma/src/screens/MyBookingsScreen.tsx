@@ -16,7 +16,6 @@ import lottie from 'lottie-web';
 
 import type { Booking } from '../helpers/api';
 import { fetchMyBookings, cancelBooking } from '../helpers/api';
-import { ScreenLayout } from '../components/ScreenLayout';
 import { RateBookingModal } from '../components/RateBookingModal';
 
 import '../css/MyBookings.css';
@@ -43,6 +42,7 @@ type Props = {
   telegramId: number;
   onBack: () => void;
   onGoToServices?: () => void;
+  onReview?: (booking: Booking) => void;
 };
 
 function formatDateTime(iso: string): string {
@@ -61,7 +61,8 @@ type StatusFilter = 'all' | 'confirmed' | 'pending' | 'rejected';
 export const MyBookingsScreen: React.FC<Props> = ({
   telegramId,
   onBack,
-  onGoToServices
+  onGoToServices,
+  onReview
 }) => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,7 +82,7 @@ export const MyBookingsScreen: React.FC<Props> = ({
       setBookings(data);
     } catch (e) {
       console.error(e);
-      setError('Не удалось загрузить в��ши записи.');
+      setError('Не удалось загрузить ваши записи.');
     } finally {
       setLoading(false);
     }
@@ -125,7 +126,6 @@ export const MyBookingsScreen: React.FC<Props> = ({
     }
   };
 
-  // Вспомогательная функция для иконки статуса баннера
   const getBannerIcon = (status: string, isPast: boolean) => {
     if (isPast) {
       return (
@@ -173,10 +173,10 @@ export const MyBookingsScreen: React.FC<Props> = ({
   };
 
   return (
-    <ScreenLayout title="Мои записи" onBack={onBack}>
+    <>
       <div className="bookings-container">
 
-        {/* --- ОРИГИНАЛЬНАЯ ШАПКА ФИЛЬТРОВ ИЗ ВАШЕГО КОДА --- */}
+        {/* Шапка с фильтрами */}
         <div className="bookings-header">
           <div className="bookings-segment-wrapper">
             <SegmentedControl size="m">
@@ -231,7 +231,7 @@ export const MyBookingsScreen: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* --- КОНТЕНТ --- */}
+        {/* Контейнер для списков и плейсхолдеров */}
         <div className="bookings-content">
           {loading && (
             <div className="bookings-loader">
@@ -245,7 +245,6 @@ export const MyBookingsScreen: React.FC<Props> = ({
             </Placeholder>
           )}
 
-          {/* ОРИГИНАЛЬНЫЙ ПЛЕЙСХОЛДЕР ИЗ ВАШЕГО КОДА */}
           {!loading && !error && displayedList.length === 0 && (
             <Placeholder
               header={statusFilter === 'all' ? 'Список пуст' : 'Ничего не найдено'}
@@ -267,9 +266,8 @@ export const MyBookingsScreen: React.FC<Props> = ({
             </Placeholder>
           )}
 
-          {/* НОВЫЕ БАННЕРЫ ВМЕСТО КАРТОЧЕК */}
           {!loading && !error && displayedList.length > 0 && (
-            <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div className="bookings-banner-list">
               {displayedList.map((b) => {
                 const serviceName = b.service_name || b.slot.service?.name || 'Услуга';
                 const masterName = b.master_name || b.slot.service?.master_name || 'Мастер';
@@ -300,7 +298,10 @@ export const MyBookingsScreen: React.FC<Props> = ({
                        <Button
                          size="s"
                          mode="bezeled"
-                         onClick={() => setReviewBooking(b)}
+                         onClick={() => {
+                             if (onReview) onReview(b);
+                             setReviewBooking(b);
+                         }}
                          before={<Icon28FavoriteOutline width={16} height={16} />}
                        >
                          Оценить мастера
@@ -322,6 +323,6 @@ export const MyBookingsScreen: React.FC<Props> = ({
             setReviewBooking(null);
          }}
       />
-    </ScreenLayout>
+    </>
   );
 };
