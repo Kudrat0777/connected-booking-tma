@@ -44,7 +44,7 @@ window.fetch = async function () {
     return await originalFetch(resource, config);
 };
 
-const API_BASE = 'https://ql2ubxwvw4yq.share.zrok.io/api';
+const API_BASE = 'https://vdw9a2moqg9j.share.zrok.io/api';
 
 type Screen =
   | 'welcome'

@@ -1,0 +1,83 @@
+/* Основной контейнер экрана */
+.bookings-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--tg-theme-secondary-bg-color);
+}
+
+/* Шапка с табами и фильтрами */
+.bookings-header {
+  background-color: var(--tg-theme-bg-color);
+  padding-top: 12px;
+  border-bottom: 1px solid var(--tg-theme-secondary-bg-color);
+}
+
+.bookings-segment-wrapper {
+  padding: 0 16px;
+}
+
+/* Горизонтальный скролл для фильтров (скрываем скроллбар) */
+.bookings-filters {
+  padding: 16px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  -webkit-overflow-scrolling: touch;
+}
+
+.bookings-filters::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Контейнер со списком записей */
+.bookings-content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-top: 16px;
+  /* Учитываем системную шторку (челку/жесты) снизу */
+  padding-bottom: calc(24px + var(--tg-content-safe-area-inset-bottom, env(safe-area-inset-bottom)));
+}
+
+/* Состояния загрузки */
+.bookings-loader {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+/* Стили для интерактивных ячеек (кнопки в виде Cell) */
+.bookings-action-destructive {
+  color: var(--tg-theme-destructive-text-color);
+  cursor: pointer;
+}
+
+.bookings-action-destructive-text {
+  width: 100%;
+  text-align: center;
+  font-weight: 500;
+}
+
+.bookings-action-destructive.is-loading {
+  cursor: wait;
+  opacity: 0.5;
+}
+
+.bookings-action-primary {
+  color: var(--tg-theme-button-color);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+/* Стили для иконок внутри ячеек */
+.bookings-icon-link {
+  color: var(--tg-theme-link-color);
+}
+
+.bookings-icon-primary {
+  color: var(--tg-theme-button-color);
+}

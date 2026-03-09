@@ -15,8 +15,9 @@ import type { Booking } from '../helpers/api';
 import { fetchMyBookings, cancelBooking } from '../helpers/api';
 import { ScreenLayout } from '../components/ScreenLayout';
 import { StatusBadge } from '../components/StatusBadge';
-import { RateBookingModal } from '../components/RateBookingModal'; // <--- ИМПОРТ
+import { RateBookingModal } from '../components/RateBookingModal';
 
+import '../css/MyBookings.css';
 const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
   const container = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -39,7 +40,6 @@ type Props = {
   telegramId: number;
   onBack: () => void;
   onGoToServices?: () => void;
-  // onReview убрали, теперь логика внутри
 };
 
 function formatDateTime(iso: string): string {
@@ -65,10 +65,8 @@ export const MyBookingsScreen: React.FC<Props> = ({
   const [error, setError] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
 
-  // Состояние для модального окна отзыва
   const [reviewBooking, setReviewBooking] = useState<Booking | null>(null);
 
-  // Состояния фильтров
   const [segment, setSegment] = useState<Segment>('upcoming');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
@@ -126,85 +124,74 @@ export const MyBookingsScreen: React.FC<Props> = ({
 
   return (
     <ScreenLayout title="Мои записи" onBack={onBack}>
-      <div>
-        <div style={{ padding: '10px 16px 0' }}>
-          <SegmentedControl size="m">
-            <SegmentedControl.Item
-              selected={segment === 'upcoming'}
-              onClick={() => { setSegment('upcoming'); setStatusFilter('all'); }}
-            >
-              Предстоящие
-            </SegmentedControl.Item>
-            <SegmentedControl.Item
-              selected={segment === 'past'}
-              onClick={() => { setSegment('past'); setStatusFilter('all'); }}
-            >
-              Прошедшие
-            </SegmentedControl.Item>
-          </SegmentedControl>
+      <div className="bookings-container">
+
+        {/* Шапка с фильтрами */}
+        <div className="bookings-header">
+          <div className="bookings-segment-wrapper">
+            <SegmentedControl size="m">
+              <SegmentedControl.Item
+                selected={segment === 'upcoming'}
+                onClick={() => { setSegment('upcoming'); setStatusFilter('all'); }}
+              >
+                Предстоящие
+              </SegmentedControl.Item>
+              <SegmentedControl.Item
+                selected={segment === 'past'}
+                onClick={() => { setSegment('past'); setStatusFilter('all'); }}
+              >
+                Прошедшие
+              </SegmentedControl.Item>
+            </SegmentedControl>
+          </div>
+
+          <div className="bookings-filters">
+              <Button
+                  size="s"
+                  mode={statusFilter === 'all' ? 'filled' : 'bezeled'}
+                  onClick={() => setStatusFilter('all')}
+                  style={{ flexShrink: 0, borderRadius: 100 }}
+              >
+                  Все
+              </Button>
+              <Button
+                  size="s"
+                  mode={statusFilter === 'confirmed' ? 'filled' : 'bezeled'}
+                  onClick={() => setStatusFilter('confirmed')}
+                  style={{ flexShrink: 0, borderRadius: 100 }}
+              >
+                  Подтверждено
+              </Button>
+              <Button
+                  size="s"
+                  mode={statusFilter === 'pending' ? 'filled' : 'bezeled'}
+                  onClick={() => setStatusFilter('pending')}
+                  style={{ flexShrink: 0, borderRadius: 100 }}
+              >
+                  Ожидание
+              </Button>
+              <Button
+                  size="s"
+                  mode={statusFilter === 'rejected' ? 'filled' : 'bezeled'}
+                  onClick={() => setStatusFilter('rejected')}
+                  style={{ flexShrink: 0, borderRadius: 100 }}
+              >
+                  Отменено
+              </Button>
+          </div>
         </div>
 
-        <div style={{
-            padding: '12px 16px',
-            display: 'flex',
-            gap: 8,
-            overflowX: 'auto',
-            whiteSpace: 'nowrap',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none',
-            WebkitOverflowScrolling: 'touch'
-        }}>
-            <Button
-                size="s"
-                mode={statusFilter === 'all' ? 'filled' : 'bezeled'}
-                onClick={() => setStatusFilter('all')}
-                style={{ flexShrink: 0 }}
-            >
-                Все
-            </Button>
-            <Button
-                size="s"
-                mode={statusFilter === 'confirmed' ? 'filled' : 'bezeled'}
-                onClick={() => setStatusFilter('confirmed')}
-                style={{ flexShrink: 0 }}
-            >
-                Подтверждено
-            </Button>
-            <Button
-                size="s"
-                mode={statusFilter === 'pending' ? 'filled' : 'bezeled'}
-                onClick={() => setStatusFilter('pending')}
-                style={{ flexShrink: 0 }}
-            >
-                Ожидание
-            </Button>
-            <Button
-                size="s"
-                mode={statusFilter === 'rejected' ? 'filled' : 'bezeled'}
-                onClick={() => setStatusFilter('rejected')}
-                style={{ flexShrink: 0 }}
-            >
-                Отменено
-            </Button>
-        </div>
-
-        <div
-          style={{
-            height: 'calc(100vh - 240px)',
-            overflowY: 'auto',
-            WebkitOverflowScrolling: 'touch',
-            paddingBottom: 20
-          }}
-        >
+        {/* Контейнер для списков и плейсхолдеров */}
+        <div className="bookings-content">
           {loading && (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
-              <Spinner size="m" />
+            <div className="bookings-loader">
+              <Spinner size="l" />
             </div>
           )}
 
           {!loading && error && (
             <Placeholder header="Ошибка" description={error}>
-                <Button size="s" onClick={load}>Повторить</Button>
+                <Button size="m" mode="filled" onClick={load}>Повторить</Button>
             </Placeholder>
           )}
 
@@ -217,15 +204,12 @@ export const MyBookingsScreen: React.FC<Props> = ({
                   : 'Записей с таким статусом нет'
               }
             >
-              <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-                <LottieIcon
-                  src={segment === 'upcoming' ? '/stickers/skeleton.json' : '/stickers/duck_out.json'}
-                  size={140}
-                />
-              </div>
-
+              <LottieIcon
+                src={segment === 'upcoming' ? '/stickers/skeleton.json' : '/stickers/duck_out.json'}
+                size={140}
+              />
               {segment === 'upcoming' && statusFilter === 'all' && onGoToServices && (
-                <Button size="l" stretched onClick={onGoToServices} style={{ marginTop: 16 }}>
+                <Button size="l" stretched onClick={onGoToServices} style={{ marginTop: 24 }}>
                   Записаться онлайн
                 </Button>
               )}
@@ -233,7 +217,7 @@ export const MyBookingsScreen: React.FC<Props> = ({
           )}
 
           {!loading && !error && displayedList.length > 0 && (
-            <List style={{ background: 'var(--tgui--secondary_bg_color)', minHeight: '100%' }}>
+            <List>
               {displayedList.map((b) => {
                 const serviceName = b.service_name || b.slot.service?.name || 'Услуга';
                 const masterName = b.master_name || b.slot.service?.master_name || 'Мастер';
@@ -242,70 +226,56 @@ export const MyBookingsScreen: React.FC<Props> = ({
                 return (
                   <Section key={b.id}>
                     <Cell
-                      before={<Icon20RecentOutline />}
+                      before={<Icon20RecentOutline className="bookings-icon-link" />}
                       description={timeStr}
                       multiline
                     >
                       {serviceName}
                     </Cell>
+
                     <Cell
-                      before={<Icon20UserOutline />}
+                      before={<Icon20UserOutline className="bookings-icon-link" />}
                     >
                       {masterName}
                     </Cell>
 
-                    <Cell>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span>Статус:</span>
-                          <StatusBadge status={b.status} />
-                        </div>
+                    <Cell after={<StatusBadge status={b.status} />}>
+                      Статус
                     </Cell>
 
                     {segment === 'upcoming' && b.status !== 'rejected' && (
-                      <Cell>
-                        <Button
-                            mode="bezeled"
-                            size="m"
-                            stretched
-                            disabled={cancellingId === b.id}
-                            onClick={() => handleCancel(b)}
-                            style={{ color: 'var(--tgui--destructive_text_color)' }}
-                        >
+                      <Cell
+                        onClick={() => { if(cancellingId !== b.id) handleCancel(b); }}
+                        className={`bookings-action-destructive ${cancellingId === b.id ? 'is-loading' : ''}`}
+                      >
+                        <div className="bookings-action-destructive-text">
                           {cancellingId === b.id ? 'Отмена...' : 'Отменить запись'}
-                        </Button>
+                        </div>
                       </Cell>
                     )}
 
                     {segment === 'past' && b.status === 'confirmed' && (
-                        <Cell>
-                          <Button
-                            mode="filled"
-                            size="m"
-                            stretched
-                            before={<Icon28FavoriteOutline />}
-                            onClick={() => setReviewBooking(b)} // <--- ОТКРЫВАЕМ МОДАЛКУ
-                          >
-                            Оценить мастера
-                          </Button>
-                        </Cell>
+                       <Cell
+                        before={<Icon28FavoriteOutline width={24} height={24} className="bookings-icon-primary" />}
+                        onClick={() => setReviewBooking(b)}
+                        className="bookings-action-primary"
+                      >
+                        Оценить мастера
+                      </Cell>
                     )}
-
                   </Section>
                 );
               })}
-              <div style={{ height: 40 }} />
             </List>
           )}
         </div>
       </div>
 
-      {/* МОДАЛКА ОТЗЫВА */}
       <RateBookingModal
          booking={reviewBooking}
          telegramId={telegramId}
          onClose={() => setReviewBooking(null)}
          onSuccess={() => {
-            // Можно перезагрузить список, но это необязательно
             setReviewBooking(null);
          }}
       />

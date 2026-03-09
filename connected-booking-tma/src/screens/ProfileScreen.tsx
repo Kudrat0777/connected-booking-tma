@@ -2,19 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   Tabbar,
   Button,
-  Avatar,
-  List,
-  Section,
-  Cell,
-  Input,
   Placeholder,
   Spinner,
-  Headline,
-  Subheadline,
-  Text,
+  Card,
 } from '@telegram-apps/telegram-ui';
 import '../css/ProfileScreen.css';
-import { ScreenLayout } from '../components/ScreenLayout';
 import { MyBookingsScreen } from './MyBookingsScreen';
 import { SettingsScreen } from './SettingsScreen';
 import {
@@ -24,7 +16,6 @@ import {
   Icon24Search,
   Icon28ChevronRightOutline,
   Icon24LocationOutline,
-  Icon28SlidersOutline
 } from '@vkontakte/icons';
 import lottie from 'lottie-web';
 
@@ -93,7 +84,6 @@ export const ProfileScreen: React.FC<Props> = ({
   useEffect(() => {
     if (currentTab === 'masters') {
       if (debounceTimeout) clearTimeout(debounceTimeout);
-
       const timeout = setTimeout(() => {
         setLoading(true);
         fetchMasters({
@@ -106,19 +96,18 @@ export const ProfileScreen: React.FC<Props> = ({
           .catch(console.error)
           .finally(() => setLoading(false));
       }, 500);
-
       setDebounceTimeout(timeout);
     }
-
     return () => { if (debounceTimeout) clearTimeout(debounceTimeout); };
   }, [currentTab, search, selectedCity, selectedCategory]);
 
   const renderMastersContent = () => (
     <div className="masters-page-root">
-      {/* Search and Filters Header */}
       <header className="masters-fixed-header">
-        <div className="location-row" onClick={() => {/* logic */}}>
-          <Icon24LocationOutline className="accent-icon" />
+        <div className="location-row">
+          <Icon24LocationOutline width={18} height={18} />
+          <span className="city-label">{selectedCity}</span>
+          <Icon28ChevronRightOutline width={16} height={16} style={{ transform: 'rotate(90deg)' }} />
           <select
             value={selectedCity}
             onChange={(e) => setSelectedCity(e.target.value)}
@@ -126,82 +115,105 @@ export const ProfileScreen: React.FC<Props> = ({
           >
             {CITIES.map(city => <option key={city} value={city}>{city}</option>)}
           </select>
-          <Icon28ChevronRightOutline className="dropdown-chevron" />
         </div>
 
-        <Input
-          placeholder="Имя специалиста или услуга"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          before={<Icon24Search className="input-icon" />}
-          className="modern-input"
-        />
+        {/* ЧИСТЫЙ КАСТОМНЫЙ ПОИСК */}
+        <div className="custom-search-wrapper">
+          <div className="custom-search-container">
+            <Icon24Search width={20} height={20} style={{ color: 'var(--tg-theme-hint-color)' }} />
+            <input
+              type="text"
+              className="custom-search-input"
+              placeholder="Поиск мастера или услуги"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </div>
 
         <div className="horizontal-chips">
           {CATEGORIES.map(cat => (
-            <button
+            <Button
               key={cat}
+              size="s"
+              mode={selectedCategory === cat ? 'filled' : 'bezeled'}
               onClick={() => setSelectedCategory(cat)}
-              className={`chip-button ${selectedCategory === cat ? 'active' : ''}`}
+              style={{ flexShrink: 0, borderRadius: 100 }}
             >
               {cat}
-            </button>
+            </Button>
           ))}
         </div>
       </header>
 
-      {/* Content Area */}
       <div className="scrollable-content">
         {loading ? (
           <div className="centered-state"><Spinner size="l" /></div>
         ) : masters.length === 0 ? (
           <Placeholder
-            header="Специалисты не найдены"
-            description="Попробуйте изменить параметры фильтра"
+            header="Никого не нашли"
+            description="Попробуйте изменить город или фильтры"
           >
             <LottieIcon src="/stickers/duck_out.json" size={140} />
           </Placeholder>
         ) : (
-          <List className="masters-list">
+          <div style={{ padding: '0 16px 16px 16px' }}>
             {masters.map((m) => (
-              <Section key={m.id} className="master-card-section">
-                <Cell
-                  onClick={() => onGoToServices?.(m.id, m.name)}
-                  before={<Avatar size={56} src={getFullImageUrl(m.avatar_url)} />}
-                  after={<Icon28ChevronRightOutline className="cell-chevron" />}
-                  subhead={m.bio || 'Мастер'}
-                  description={
-                    <div className="master-metadata">
-                      {m.rating > 0 && <span className="rating-pill">⭐ {m.rating.toFixed(1)}</span>}
-                      {m.address && <span className="address-text">📍 {m.address}</span>}
-                    </div>
-                  }
-                  multiline
-                >
-                  <Headline weight="2">{m.name}</Headline>
-                </Cell>
+              <Card
+                key={m.id}
+                type="plain"
+                style={{ marginBottom: 16, backgroundColor: 'var(--tg-theme-bg-color)' }}
+              >
+                <React.Fragment>
+                  {/* Вызываем Chip через точку, чтобы не было ошибки импорта */}
+                  {m.rating > 0 && (
+                    <Card.Chip readOnly>
+                      ⭐ {m.rating.toFixed(1)}
+                    </Card.Chip>
+                  )}
 
-                <footer className="card-footer-actions">
-                  <Button
-                    mode="bezeled"
-                    size="m"
-                    stretched
-                    onClick={(e) => { e.stopPropagation(); onOpenPortfolio?.(m.id, m.name); }}
+                  <img
+                    alt={m.name}
+                    src={getFullImageUrl(m.avatar_url)}
+                    style={{
+                      display: 'block',
+                      height: 240,
+                      objectFit: 'cover',
+                      width: '100%'
+                    }}
+                  />
+
+                  {/* Вызываем Cell через точку */}
+                  <Card.Cell
+                    readOnly
+                    subtitle={m.address ? `📍 ${m.address}` : m.bio || 'Мастер'}
                   >
-                    Портфолио
-                  </Button>
-                  <Button
-                    mode="filled"
-                    size="m"
-                    stretched
-                    onClick={(e) => { e.stopPropagation(); onGoToServices?.(m.id, m.name); }}
-                  >
-                    Записаться
-                  </Button>
-                </footer>
-              </Section>
+                    {m.name}
+                  </Card.Cell>
+
+                  {/* Кнопки вынесены вниз карточки */}
+                  <div className="card-buttons">
+                    <Button
+                      mode="bezeled"
+                      size="m"
+                      stretched
+                      onClick={() => onOpenPortfolio?.(m.id, m.name)}
+                    >
+                      Портфолио
+                    </Button>
+                    <Button
+                      mode="filled"
+                      size="m"
+                      stretched
+                      onClick={() => onGoToServices?.(m.id, m.name)}
+                    >
+                      Записаться
+                    </Button>
+                  </div>
+                </React.Fragment>
+              </Card>
             ))}
-          </List>
+          </div>
         )}
       </div>
     </div>

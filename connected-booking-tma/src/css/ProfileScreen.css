@@ -1,123 +1,130 @@
+/* Основной контейнер */
 .tma-container {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-color: var(--tgui--secondary_bg_color);
+  background-color: var(--tg-theme-secondary-bg-color);
 }
 
 .main-viewport {
   flex: 1;
-  overflow-y: auto;
-  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  overflow: hidden;
+  position: relative;
 }
 
+/* Специфика страницы мастеров */
 .masters-page-root {
   display: flex;
   flex-direction: column;
+  height: 100%;
 }
 
+/* Шапка с фильтрами */
 .masters-fixed-header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background-color: var(--tgui--bg_color);
-  padding: 12px 16px;
-  border-bottom: 0.5px solid var(--tgui--separator_color);
+  background-color: var(--tg-theme-bg-color);
+  padding-top: 12px;
+  border-bottom: 1px solid var(--tg-theme-secondary-bg-color);
+  z-index: 10;
 }
 
+/* Выбор локации */
 .location-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  padding: 0 16px;
   margin-bottom: 12px;
+  color: var(--tg-theme-link-color);
   cursor: pointer;
+  width: fit-content;
+  position: relative;
+}
+
+.city-label {
+  font-size: 15px;
+  font-weight: 500;
 }
 
 .native-city-select {
-  appearance: none;
-  border: none;
-  background: transparent;
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--tgui--text_color);
-  outline: none;
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  opacity: 0;
+  width: 100%;
+  cursor: pointer;
+}
+
+/* ---- ПОЛНОСТЬЮ ЧИСТЫЙ ПОИСК БЕЗ РАМОК ---- */
+.custom-search-wrapper {
+  padding: 0 16px;
+}
+
+.custom-search-container {
+  display: flex;
+  align-items: center;
+  background-color: var(--tg-theme-secondary-bg-color); /* Фон капсулы */
+  border-radius: 12px;
+  padding: 10px 12px;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.custom-search-input {
+  border: none !important;
+  background: transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+  color: var(--tg-theme-text-color);
+  width: 100%;
+  margin-left: 8px;
+  font-size: 16px;
+  font-family: inherit;
   padding: 0;
 }
 
-.dropdown-chevron {
-  width: 16px;
-  height: 16px;
-  transform: rotate(90deg);
-  opacity: 0.4;
+.custom-search-input::placeholder {
+  color: var(--tg-theme-hint-color);
 }
 
-.accent-icon {
-  color: var(--tgui--button_color);
-}
-
+/* ---- ФИЛЬТРЫ: ИДЕНТИЧНО MYBOOKINGS ---- */
 .horizontal-chips {
+  padding: 16px; /* Строго 16px, как в записях */
   display: flex;
+  gap: 8px;
   overflow-x: auto;
-  gap: 8px;
-  margin-top: 12px;
-  padding-bottom: 4px;
-  scrollbar-width: none;
-}
-
-.horizontal-chips::-webkit-scrollbar { display: none; }
-
-.chip-button {
-  border: none;
-  padding: 6px 14px;
-  border-radius: 100px;
-  background-color: var(--tgui--secondary_bg_color);
-  color: var(--tgui--text_color);
-  font-size: 14px;
-  font-weight: 500;
   white-space: nowrap;
-  transition: all 0.2s ease;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
 }
 
-.chip-button.active {
-  background-color: var(--tgui--button_color);
-  color: var(--tgui--button_text_color);
+.horizontal-chips::-webkit-scrollbar {
+  display: none;
 }
 
-/* Master Card Styling */
-.master-card-section {
-  margin: 12px 16px !important;
-  border-radius: 12px !important;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+/* Список мастеров */
+.scrollable-content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-top: 16px;
+  padding-bottom: calc(80px + var(--tg-content-safe-area-inset-bottom, env(safe-area-inset-bottom)));
 }
 
-.master-metadata {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.rating-pill {
-  font-size: 12px;
-  font-weight: 700;
-  color: #FF9500;
-}
-
-.address-text {
-  font-size: 11px;
-  color: var(--tgui--hint_color);
-}
-
-.card-footer-actions {
+/* ---- КНОПКИ ВНУТРИ CARD ---- */
+.card-buttons {
   display: flex;
   gap: 8px;
-  padding: 0 16px 16px;
-  background-color: var(--tgui--bg_color);
+  padding: 0 16px 16px 16px;
+}
+
+.centered-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 100px 0;
 }
 
 .system-tabbar {
-  background-color: var(--tgui--bg_color);
-  backdrop-filter: blur(20px);
-  border-top: 0.5px solid var(--tgui--separator_color);
+  background-color: var(--tg-theme-bg-color) !important;
+  border-top: 0.5px solid rgba(0, 0, 0, 0.1);
 }
