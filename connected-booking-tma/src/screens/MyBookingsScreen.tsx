@@ -1,23 +1,26 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
-  List,
-  Section,
-  Cell,
   Button,
   SegmentedControl,
   Placeholder,
-  Spinner
+  Spinner,
+  Banner,
 } from '@telegram-apps/telegram-ui';
-import { Icon20UserOutline, Icon20RecentOutline, Icon28FavoriteOutline } from '@vkontakte/icons';
+import {
+  Icon28FavoriteOutline,
+  Icon24CheckCircleOutline,
+  Icon24ClockOutline,
+  Icon24CancelOutline
+} from '@vkontakte/icons';
 import lottie from 'lottie-web';
 
 import type { Booking } from '../helpers/api';
 import { fetchMyBookings, cancelBooking } from '../helpers/api';
 import { ScreenLayout } from '../components/ScreenLayout';
-import { StatusBadge } from '../components/StatusBadge';
 import { RateBookingModal } from '../components/RateBookingModal';
 
 import '../css/MyBookings.css';
+
 const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
   const container = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -78,7 +81,7 @@ export const MyBookingsScreen: React.FC<Props> = ({
       setBookings(data);
     } catch (e) {
       console.error(e);
-      setError('Не удалось загрузить ваши записи.');
+      setError('Не удалось загрузить в��ши записи.');
     } finally {
       setLoading(false);
     }
@@ -122,11 +125,58 @@ export const MyBookingsScreen: React.FC<Props> = ({
     }
   };
 
+  // Вспомогательная функция для иконки статуса баннера
+  const getBannerIcon = (status: string, isPast: boolean) => {
+    if (isPast) {
+      return (
+        <div className="banner-status-icon past">
+          <Icon24ClockOutline />
+        </div>
+      );
+    }
+
+    switch (status) {
+      case 'confirmed':
+        return (
+          <div className="banner-status-icon confirmed">
+            <Icon24CheckCircleOutline />
+          </div>
+        );
+      case 'pending':
+        return (
+          <div className="banner-status-icon pending">
+            <Icon24ClockOutline />
+          </div>
+        );
+      case 'rejected':
+        return (
+          <div className="banner-status-icon rejected">
+            <Icon24CancelOutline />
+          </div>
+        );
+      default:
+        return (
+          <div className="banner-status-icon">
+             <Icon24ClockOutline />
+          </div>
+        );
+    }
+  };
+
+  const getStatusText = (status: string) => {
+      switch (status) {
+          case 'confirmed': return 'Подтверждено';
+          case 'pending': return 'Ожидает';
+          case 'rejected': return 'Отменено';
+          default: return 'Неизвестно';
+      }
+  };
+
   return (
     <ScreenLayout title="Мои записи" onBack={onBack}>
       <div className="bookings-container">
 
-        {/* Шапка с фильтрами */}
+        {/* --- ОРИГИНАЛЬНАЯ ШАПКА ФИЛЬТРОВ ИЗ ВАШЕГО КОДА --- */}
         <div className="bookings-header">
           <div className="bookings-segment-wrapper">
             <SegmentedControl size="m">
@@ -181,7 +231,7 @@ export const MyBookingsScreen: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Контейнер для списков и плейсхолдеров */}
+        {/* --- КОНТЕНТ --- */}
         <div className="bookings-content">
           {loading && (
             <div className="bookings-loader">
@@ -195,6 +245,7 @@ export const MyBookingsScreen: React.FC<Props> = ({
             </Placeholder>
           )}
 
+          {/* ОРИГИНАЛЬНЫЙ ПЛЕЙСХОЛДЕР ИЗ ВАШЕГО КОДА */}
           {!loading && !error && displayedList.length === 0 && (
             <Placeholder
               header={statusFilter === 'all' ? 'Список пуст' : 'Ничего не найдено'}
@@ -216,57 +267,49 @@ export const MyBookingsScreen: React.FC<Props> = ({
             </Placeholder>
           )}
 
+          {/* НОВЫЕ БАННЕРЫ ВМЕСТО КАРТОЧЕК */}
           {!loading && !error && displayedList.length > 0 && (
-            <List>
+            <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {displayedList.map((b) => {
                 const serviceName = b.service_name || b.slot.service?.name || 'Услуга';
                 const masterName = b.master_name || b.slot.service?.master_name || 'Мастер';
                 const timeStr = formatDateTime(b.slot.time);
+                const isPast = segment === 'past';
 
                 return (
-                  <Section key={b.id}>
-                    <Cell
-                      before={<Icon20RecentOutline className="bookings-icon-link" />}
-                      description={timeStr}
-                      multiline
-                    >
-                      {serviceName}
-                    </Cell>
-
-                    <Cell
-                      before={<Icon20UserOutline className="bookings-icon-link" />}
-                    >
-                      {masterName}
-                    </Cell>
-
-                    <Cell after={<StatusBadge status={b.status} />}>
-                      Статус
-                    </Cell>
-
+                  <Banner
+                    key={b.id}
+                    type="inline"
+                    before={getBannerIcon(b.status, isPast)}
+                    header={serviceName}
+                    subheader={timeStr}
+                    description={`Мастер: ${masterName} • ${getStatusText(b.status)}`}
+                  >
                     {segment === 'upcoming' && b.status !== 'rejected' && (
-                      <Cell
-                        onClick={() => { if(cancellingId !== b.id) handleCancel(b); }}
-                        className={`bookings-action-destructive ${cancellingId === b.id ? 'is-loading' : ''}`}
-                      >
-                        <div className="bookings-action-destructive-text">
-                          {cancellingId === b.id ? 'Отмена...' : 'Отменить запись'}
-                        </div>
-                      </Cell>
+                       <Button
+                         size="s"
+                         mode="bezeled"
+                         loading={cancellingId === b.id}
+                         onClick={() => handleCancel(b)}
+                       >
+                         Отменить запись
+                       </Button>
                     )}
 
                     {segment === 'past' && b.status === 'confirmed' && (
-                       <Cell
-                        before={<Icon28FavoriteOutline width={24} height={24} className="bookings-icon-primary" />}
-                        onClick={() => setReviewBooking(b)}
-                        className="bookings-action-primary"
-                      >
-                        Оценить мастера
-                      </Cell>
+                       <Button
+                         size="s"
+                         mode="bezeled"
+                         onClick={() => setReviewBooking(b)}
+                         before={<Icon28FavoriteOutline width={16} height={16} />}
+                       >
+                         Оценить мастера
+                       </Button>
                     )}
-                  </Section>
+                  </Banner>
                 );
               })}
-            </List>
+            </div>
           )}
         </div>
       </div>
