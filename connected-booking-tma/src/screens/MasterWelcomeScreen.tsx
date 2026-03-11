@@ -5,15 +5,11 @@ import React, {
   CSSProperties,
 } from 'react';
 import {
-  Placeholder,
   Button,
   Title,
   Text,
 } from '@telegram-apps/telegram-ui';
 import lottie, { AnimationItem } from 'lottie-web';
-import { useTelegramWebApp } from '../hooks/useTelegramWebApp';
-
-import '../css/WelcomeScreen.css';
 
 type Props = {
   onStart: () => void;
@@ -30,27 +26,22 @@ const SLIDES: Slide[] = [
   {
     lottieSrc: '/stickers/duck_social_out.json',
     title: 'Управление записями',
-    description:
-      'Забудьте о бумажных блокнотах. Удобный календарь, который работает 24/7, даже когда вы спите.',
+    description: 'Забудьте о бумажных блокнотах. Удобный календарь, который работает 24/7, даже когда вы спите.',
   },
   {
     lottieSrc: '/stickers/duck_wallet.json',
     title: 'Прием платежей',
-    description:
-      'Принимайте оплату картами, Telegram Stars или криптовалютой TON. Безопасно и мгновенно.',
+    description: 'Принимайте оплату картами, Telegram Stars или криптовалютой TON. Безопасно и мгновенно.',
   },
   {
     lottieSrc: '/stickers/duck_analitic.json',
     title: 'Аналитика доходов',
-    description:
-      'Следите за ростом прибыли. Мы покажем самые популярные услуги и активность клиентов.',
+    description: 'Следите за ростом прибыли. Мы покажем самые популярные услуги и активность клиентов.',
   },
   {
-    // Слайд 4: Уведомления и забота
     lottieSrc: '/stickers/duck_meteor_out.json',
     title: 'Забота о клиентах',
-    description:
-      'Мы сами напомним клиенту о визите и попросим оставить отзыв. Меньше пропусков — выше доход.',
+    description: 'Мы сами напомним клиенту о визите и попросим оставить отзыв. Меньше пропусков — выше доход.',
   },
 ];
 
@@ -61,7 +52,6 @@ export const MasterWelcomeScreen: React.FC<Props> = ({
   onStart,
   onLogin,
 }) => {
-  const webApp = useTelegramWebApp();
   const [index, setIndex] = useState(0);
   const slide = SLIDES[index];
 
@@ -72,13 +62,20 @@ export const MasterWelcomeScreen: React.FC<Props> = ({
   const [isAnimating, setIsAnimating] = useState(false);
   const autoSlideTimerRef = useRef<number | null>(null);
 
+  const tg = (window as any).Telegram?.WebApp;
+
   const triggerHaptic = () => {
-    if (webApp?.HapticFeedback) {
-      webApp.HapticFeedback.selectionChanged();
-    }
+    if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
   };
 
-  // --- LOTTIE SETUP (Исправленная версия) ---
+  useEffect(() => {
+    if (tg) {
+        tg.BackButton.hide();
+        tg.expand();
+    }
+  }, [tg]);
+
+  // --- LOTTIE SETUP ---
   useEffect(() => {
     const cleanup = () => {
       if (lottieInstanceRef.current) {
@@ -92,7 +89,6 @@ export const MasterWelcomeScreen: React.FC<Props> = ({
     if (!slide.lottieSrc || !lottieContainerRef.current) return;
 
     try {
-        // Пытаемся загрузить анимацию
         const anim = lottie.loadAnimation({
           container: lottieContainerRef.current,
           renderer: 'svg',
@@ -161,65 +157,104 @@ export const MasterWelcomeScreen: React.FC<Props> = ({
 
   const slideAreaStyle: CSSProperties = {
     transform: `translateX(${swipeDeltaX}px)`,
-    opacity: isAnimating ? 0.5 : 1,
-    transition: isAnimating ? 'transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s' : 'none',
+    opacity: isAnimating ? 0 : 1,
+    transition: isAnimating ? 'transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease' : 'none',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    userSelect: 'none',
+    WebkitUserSelect: 'none'
   };
 
   return (
-    <div className="welcome-root">
-      <Placeholder className="welcome-placeholder">
+    <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        backgroundColor: 'var(--tg-theme-bg-color)',
+        color: 'var(--tg-theme-text-color)',
+        overflow: 'hidden'
+    }}>
+      {/* СВАЙП-ЗОНА С АНИМАЦИЕЙ И ТЕКСТОМ */}
+      <div
+        style={slideAreaStyle}
+        onPointerDown={(e) => handleStart(e.clientX)}
+        onPointerMove={(e) => handleMove(e.clientX)}
+        onPointerUp={handleEnd}
+        onTouchStart={(e) => handleStart(e.touches[0].clientX)}
+        onTouchMove={(e) => handleMove(e.touches[0].clientX)}
+        onTouchEnd={handleEnd}
+      >
         <div
-          className="welcome-slide-area"
-          style={slideAreaStyle}
-          onPointerDown={(e) => handleStart(e.clientX)}
-          onPointerMove={(e) => handleMove(e.clientX)}
-          onPointerUp={handleEnd}
-          onTouchStart={(e) => handleStart(e.touches[0].clientX)}
-          onTouchMove={(e) => handleMove(e.touches[0].clientX)}
-          onTouchEnd={handleEnd}
+            ref={lottieContainerRef}
+            style={{ width: 260, height: 260, marginBottom: 24 }}
+        />
+
+        <Title level="1" weight="1" style={{ textAlign: 'center', marginBottom: 12, fontSize: 28 }}>
+            {slide.title}
+        </Title>
+
+        <Text style={{ textAlign: 'center', color: 'var(--tg-theme-hint-color)', fontSize: 16, lineHeight: '1.5', padding: '0 24px' }}>
+            {slide.description}
+        </Text>
+      </div>
+
+      {/* ПАГИНАЦИЯ (Точки) */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '32px' }}>
+        {SLIDES.map((_, i) => {
+            const isActive = i === index;
+            return (
+              <div
+                key={i}
+                onClick={() => goTo(i)}
+                style={{
+                    width: isActive ? 24 : 8,
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: isActive ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-hint-color)',
+                    opacity: isActive ? 1 : 0.3,
+                    transition: 'all 0.3s ease',
+                    cursor: 'pointer'
+                }}
+              />
+            );
+        })}
+      </div>
+
+      {/* КНОПКИ (Прижаты к низу) */}
+      <div style={{ padding: '0 20px 40px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <Button
+          size="l"
+          mode="filled"
+          stretched
+          onClick={() => {
+            triggerHaptic();
+            if (tg?.openTelegramLink) {
+              tg.openTelegramLink('https://t.me/kudratsultanbaev');
+            } else {
+              window.open('https://t.me/kudratsultanbaev', '_blank');
+            }
+          }}
         >
-          <div className="welcome-sticker-wrapper">
-            <div ref={lottieContainerRef} className="welcome-lottie" />
-          </div>
-          <div className="welcome-text-content">
-            <Title level="1" weight="1" className="welcome-title">{slide.title}</Title>
-            <Text className="welcome-description">{slide.description}</Text>
-          </div>
-        </div>
+          Стать мастером
+        </Button>
 
-        <div className="welcome-pagination">
-          {SLIDES.map((_, i) => (
-            <div
-              key={i}
-              className={`welcome-pagination-dot ${i === index ? 'welcome-pagination-dot_active' : ''}`}
-              onClick={() => goTo(i)}
-            />
-          ))}
-        </div>
-
-        <div className="welcome-actions">
+        {onLogin && (
           <Button
             size="l"
-            mode="filled"
+            mode="bezeled"
             stretched
             onClick={() => {
-              if (webApp) {
-                webApp.openTelegramLink('https://t.me/kudratsultanbaev');
-              } else {
-                window.open('https://t.me/kudratsultanbaev', '_blank');
-              }
+                triggerHaptic();
+                onLogin();
             }}
           >
-            Стать мастером
+            У меня есть аккаунт
           </Button>
-
-          {onLogin && (
-            <Button size="l" mode="bezeled" stretched onClick={onLogin}>
-              У меня есть аккаунт
-            </Button>
-          )}
-        </div>
-      </Placeholder>
+        )}
+      </div>
     </div>
   );
 };
