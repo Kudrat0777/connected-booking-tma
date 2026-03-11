@@ -25,48 +25,29 @@ import { PortfolioViewerScreen } from './screens/PortfolioViewerScreen';
 import { MasterPublicProfileScreen } from './screens/MasterPublicProfileScreen';
 
 import type { Service, Slot, Booking } from './helpers/api';
-import { checkClientProfile } from './helpers/api';
+import { checkClientProfile, registerClient } from './helpers/api';
 import { getUserFromQuery, getStartParam } from './helpers/telegramQueryUser';
 
 const originalFetch = window.fetch;
 window.fetch = async function () {
     let [resource, config] = arguments;
-    if (!config) {
-        config = {};
-    }
-    if (!config.headers) {
-        config.headers = {};
-    }
+    if (!config) config = {};
+    if (!config.headers) config.headers = {};
     config.headers['ngrok-skip-browser-warning'] = 'true';
     config.headers['bypass-tunnel-reminder'] = 'true';
     config.headers['Accept'] = 'application/json';
-
     return await originalFetch(resource, config);
 };
 
 const API_BASE = 'https://vdw9a2moqg9j.share.zrok.io/api';
 
 type Screen =
-  | 'welcome'
-  | 'services'
-  | 'slots'
-  | 'bookingConfirm'
-  | 'bookingDone'
-  | 'profile'
-  | 'settings'
-  | 'leave_review'
-  | 'client_reviews_list'
-  | 'master_welcome'
-  | 'master_login'
-  | 'master_dashboard'
-  | 'master_schedule'
-  | 'master_edit_profile'
-  | 'master_analytics'
-  | 'master_reviews'
-  | 'master_create_service'
-  | 'client_portfolio'
-  | 'client_registration'
-  | 'client_master_profile';
+  | 'welcome' | 'services' | 'slots' | 'bookingConfirm' | 'bookingDone'
+  | 'profile' | 'settings' | 'leave_review' | 'client_reviews_list'
+  | 'master_welcome' | 'master_login' | 'master_dashboard'
+  | 'master_schedule' | 'master_edit_profile' | 'master_analytics'
+  | 'master_reviews' | 'master_create_service' | 'client_portfolio'
+  | 'client_registration' | 'client_master_profile';
 
 type MainTab = 'bookings' | 'masters' | 'settings';
 
@@ -81,7 +62,6 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (!tg) return;
-
     const applyTheme = () => {
       const isDark = tg.colorScheme === 'dark';
       setAppearance(isDark ? 'dark' : 'light');
@@ -156,16 +136,13 @@ const App: React.FC = () => {
       } catch (e) { console.error(e); }
   };
 
-  // --- ЛОГИКА ИНИЦИАЛИЗАЦИИ ---
   useEffect(() => {
     const initApp = async () => {
        setIsAppLoading(true);
 
-       // 1. ПРОВЕРЯЕМ СЕССИИ
        const isMasterLoggedIn = localStorage.getItem('is_master_logged_in') === 'true';
        const isClientLoggedIn = localStorage.getItem('is_client_logged_in') === 'true';
 
-       // 2. ВХОД МАСТЕРА
        if (isMasterLoggedIn) {
            setScreen('master_dashboard');
            setIsAppLoading(false);
@@ -173,14 +150,11 @@ const App: React.FC = () => {
            return;
        }
 
-       // 3. ПРОВЕРКА DEEP LINK (Переход клиента к конкретному мастеру)
        const startParam = getStartParam();
        if (startParam && startParam.startsWith('master_')) {
           const idStr = startParam.replace('master_', '');
           const mId = parseInt(idStr);
-
           if (!isNaN(mId)) {
-             // Отправляем клиента на красивый профиль мастера!
              setSelectedMasterId(mId);
              setScreen('client_master_profile');
              setIsAppLoading(false);
@@ -188,28 +162,23 @@ const App: React.FC = () => {
           }
        }
 
-       // 4. ВХОД КЛИЕНТА (Если он уже входил, пропускаем Welcome screen, но проверяем базу)
        if (isClientLoggedIn) {
-           const uid = user?.id || (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id;
+           const uid = user?.id;
            if (uid) {
-               // Открываем профиль сразу, чтобы не было задержек интерфейса
                setMainTab('bookings');
                setScreen('profile');
                setIsAppLoading(false);
 
-               // В фоне проверяем, жив ли еще профиль в базе
                checkClientProfile(uid).then((profile) => {
                    if (!profile) {
-                       // Если профиля в базе нет (удалили), стираем сессию и кидаем на регистрацию
                        localStorage.removeItem('is_client_logged_in');
-                       setScreen('client_registration');
+                       setScreen('welcome');
                    }
                });
                return;
            }
        }
 
-       // 5. ЕСЛИ НИЧЕГО ИЗ ВЫШЕПЕРЕЧИСЛЕННОГО - ПОКАЗЫВАЕМ СТАРТОВЫЙ ЭКРАН
        const params = new URLSearchParams(window.location.search);
        if (params.get('role') === 'master') {
          setScreen('master_welcome');
@@ -220,24 +189,12 @@ const App: React.FC = () => {
     };
 
     setTimeout(initApp, 100);
-  }, []);
+  }, [user?.id]);
 
-  const handleServiceSelected = (service: Service) => {
-    setSelectedService(service);
-    setScreen('slots');
-  };
+  const handleServiceSelected = (service: Service) => { setSelectedService(service); setScreen('slots'); };
+  const handleSlotSelected = (slot: Slot) => { setSelectedSlot(slot); setScreen('bookingConfirm'); };
+  const handleBookingSuccess = (booking: Booking) => { setCreatedBooking(booking); setScreen('bookingDone'); };
 
-  const handleSlotSelected = (slot: Slot) => {
-    setSelectedSlot(slot);
-    setScreen('bookingConfirm');
-  };
-
-  const handleBookingSuccess = (booking: Booking) => {
-    setCreatedBooking(booking);
-    setScreen('bookingDone');
-  };
-
-  // Выход мастера
   const handleMasterLogout = () => {
     localStorage.removeItem('is_master_logged_in');
     setCurrentMaster(null);
@@ -246,7 +203,6 @@ const App: React.FC = () => {
     setScreen('master_welcome');
   };
 
-  // Выход клиента
   const handleClientLogout = () => {
     localStorage.removeItem('is_client_logged_in');
     setScreen('welcome');
@@ -258,8 +214,6 @@ const App: React.FC = () => {
     setCreatedBooking(null);
     setSelectedMasterName(null);
     setSelectedMasterId(null);
-
-    // Если клиент авторизован, кидаем в профиль, иначе на главную
     if (localStorage.getItem('is_client_logged_in') === 'true') {
         setScreen('profile');
     } else {
@@ -267,27 +221,45 @@ const App: React.FC = () => {
     }
   };
 
-  const handleClientLogin = async () => {
-    if (!user?.id) {
-      alert("Не удалось определить ваш Telegram ID.");
+  // --- УМНЫЙ БЕСШОВНЫЙ ЛОГИН / АВТО-РЕГИСТРАЦИЯ ---
+  const handleClientLogin = async (sourceUser?: any) => {
+    const tgInstance = (window as any).Telegram?.WebApp;
+    const currentUser = sourceUser || user || tgInstance?.initDataUnsafe?.user;
+
+    // ЗАЩИТА: Если мы не смогли получить ID пользователя
+    if (!currentUser?.id) {
+      if (tgInstance?.showAlert) {
+          tgInstance.showAlert("⚠️ Ошибка: Приложение открыто как обычная ссылка. Пожалуйста, настройте кнопку в боте как Web App (web_app), чтобы войти.");
+      } else {
+          alert("⚠️ Ошибка: Откройте приложение через специальную кнопку меню в боте Telegram.");
+      }
       return;
     }
 
     setIsAppLoading(true);
     try {
-      const profile = await checkClientProfile(user.id);
+      // 1. Проверяем, есть ли такой клиент в базе
+      const profile = await checkClientProfile(currentUser.id);
 
-      if (profile) {
-        // СОХРАНЯЕМ СЕССИЮ КЛИЕНТА
-        localStorage.setItem('is_client_logged_in', 'true');
-        setMainTab('bookings');
-        setScreen('profile');
-      } else {
-        setScreen('client_registration');
+      if (!profile) {
+        // 2. Если нет — моментально регистрируем (телефон пока пустой)
+        await registerClient({
+          telegram_id: currentUser.id,
+          first_name: currentUser.first_name || 'Клиент',
+          last_name: currentUser.last_name || '',
+          username: currentUser.username || '',
+        });
       }
+
+      // 3. Авторизуем и пускаем в приложение
+      localStorage.setItem('is_client_logged_in', 'true');
+
+      setMainTab('bookings');
+      setScreen('profile');
+
     } catch (e) {
-      console.error(e);
-      setScreen('client_registration');
+      console.error("Login/Registration error:", e);
+      alert("Произошла ошибка при соединении с сервером.");
     } finally {
       setIsAppLoading(false);
     }
@@ -311,15 +283,17 @@ const App: React.FC = () => {
 
       {/* CLIENT SCREENS */}
       {screen === 'welcome' && (
-        <WelcomeScreen onContinue={handleClientLogin} />
+        <WelcomeScreen
+           onContinue={(tgUser) => handleClientLogin(tgUser)}
+        />
       )}
 
+      {/* Экран регистрации остался только как fallback (резервный) */}
       {screen === 'client_registration' && user && (
         <ClientRegistrationScreen
           telegramId={user.id}
           onBack={() => setScreen('welcome')}
           onComplete={() => {
-            // СОХРАНЯЕМ СЕССИЮ ПОСЛЕ УСПЕШНОЙ РЕГИСТРАЦИИ
             localStorage.setItem('is_client_logged_in', 'true');
             setMainTab('bookings');
             setScreen('profile');
@@ -330,7 +304,6 @@ const App: React.FC = () => {
       {screen === 'services' && (
         <ServicesScreen
           onBack={() => {
-            // Умная кнопка назад: если залогинен, возвращаем в профиль
             if (localStorage.getItem('is_client_logged_in') === 'true') setScreen('profile');
             else setScreen('welcome');
           }}
@@ -379,9 +352,10 @@ const App: React.FC = () => {
           initialTab={mainTab}
           onBack={() => setScreen('welcome')}
           onLogout={handleClientLogout}
-          onGoToServices={(masterName) => {
+          onGoToServices={(masterId, masterName) => {
+            setSelectedMasterId(masterId);
             setSelectedMasterName(masterName || null);
-            setScreen('services'); // <-- Вот из-за этого он переходит к услугам!
+            setScreen('services');
           }}
           onReview={(booking) => {
               const masterId = booking.slot.service.master;
@@ -428,7 +402,6 @@ const App: React.FC = () => {
         <MasterDashboardScreen
           telegramId={user.id}
           onSwitchToClient={() => {
-              // Если мастер переключается в режим клиента:
               if (localStorage.getItem('is_client_logged_in') === 'true') setScreen('profile');
               else setScreen('welcome');
           }}
