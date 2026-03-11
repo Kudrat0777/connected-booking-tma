@@ -4,8 +4,11 @@ import {
   Placeholder,
   Spinner,
   Card,
+  List,
+  Section,
+  Select,
+  Input
 } from '@telegram-apps/telegram-ui';
-
 import '../css/ProfileScreen.css';
 import { MyBookingsScreen } from './MyBookingsScreen';
 import { SettingsScreen } from './SettingsScreen';
@@ -13,9 +16,7 @@ import {
   Icon28CalendarOutline,
   Icon28UserStarBadgeOutline,
   Icon28SettingsOutline,
-  Icon24Search,
-  Icon24LocationOutline,
-  Icon28ChevronRightOutline
+  Icon24Search
 } from '@vkontakte/icons';
 import lottie from 'lottie-web';
 
@@ -47,8 +48,11 @@ type Props = {
   initialTab?: MainTab;
   onBack: () => void;
   onLogout?: () => void;
-  onGoToServices?: (masterId: number, masterName: string) => void;
+  // ИЗМЕНЕНО: теперь мы открываем профиль
+  onOpenMasterProfile?: (masterId: number, masterName: string) => void;
   onReview?: (booking: Booking) => void;
+  onOpenMasterReviews?: (masterId: number) => void;
+  onOpenPortfolio?: (masterId: number, masterName: string) => void;
 };
 
 const tabs: { id: MainTab; text: string; Icon: React.ComponentType<any> }[] = [
@@ -64,7 +68,7 @@ export const ProfileScreen: React.FC<Props> = ({
   initialTab = 'bookings',
   onBack,
   onLogout,
-  onGoToServices,
+  onOpenMasterProfile, // ИЗМЕНЕНО
   onReview,
 }) => {
   const [currentTab, setCurrentTab] = useState<MainTab>(initialTab);
@@ -98,8 +102,10 @@ export const ProfileScreen: React.FC<Props> = ({
   const groupedMasters = useMemo(() => {
     const groups: Record<string, MasterPublicProfile[]> = {};
     masters.forEach(m => {
-        const cat = (m as any).specialization || 'Рекомендуемые';
-        if (!groups[cat]) groups[cat] = [];
+        const cat = (m as any).specialization || 'Рекомендации';
+        if (!groups[cat]) {
+            groups[cat] = [];
+        }
         groups[cat].push(m);
     });
     return groups;
@@ -107,38 +113,27 @@ export const ProfileScreen: React.FC<Props> = ({
 
   const renderMastersContent = () => (
     <div className="masters-page-root">
+      <div className="masters-header">
+        <List style={{ margin: 0 }}>
+          <Section style={{ margin: 0 }}>
+            <Select
+              header="Город"
+              value={selectedCity}
+              onChange={(e) => setSelectedCity(e.target.value)}
+            >
+              {CITIES.map(city => <option key={city} value={city}>{city}</option>)}
+            </Select>
 
-      <header className="masters-fixed-header">
-        {/* КАСТОМНЫЙ ПРОЗРАЧНЫЙ ПОИСК */}
-        <div className="custom-search-container">
-            <Icon24Search width={20} height={20} style={{ color: 'var(--tg-theme-hint-color)' }} />
-            <input
-              type="text"
-              className="custom-search-input"
-              placeholder="Поиск мастера или услуги..."
+            <Input
+              header="Поиск"
+              placeholder="Кого ищем?"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              before={<Icon24Search style={{ color: 'var(--tg-theme-hint-color)' }} />}
             />
-        </div>
-
-        {/* НАТИВНАЯ КНОПКА ВЫБОРА ГОРОДА */}
-        <div className="city-selector">
-          <div className="city-selector-content">
-             <Icon24LocationOutline style={{ color: 'var(--tg-theme-hint-color)' }} />
-             <span className="city-selector-label">{selectedCity}</span>
-          </div>
-          <Icon28ChevronRightOutline width={20} height={20} style={{ transform: 'rotate(90deg)', color: 'var(--tg-theme-hint-color)' }} />
-
-          {/* Невидимый нативный селект */}
-          <select
-            value={selectedCity}
-            onChange={(e) => setSelectedCity(e.target.value)}
-            className="native-city-select"
-          >
-            {CITIES.map(city => <option key={city} value={city}>{city}</option>)}
-          </select>
-        </div>
-      </header>
+          </Section>
+        </List>
+      </div>
 
       <div className="scrollable-content">
         {loading ? (
@@ -158,23 +153,13 @@ export const ProfileScreen: React.FC<Props> = ({
 
                    <div className="category-scroll">
                       {catMasters.map(m => (
+                         // ИЗМЕНЕНО: Клик ведет в профиль
                          <Card
                            key={m.id}
-                           onClick={() => onGoToServices?.(m.id, m.name)}
-                           style={{
-                             width: 140,
-                             flexShrink: 0,
-                             cursor: 'pointer',
-                             border: '1px solid var(--tg-theme-secondary-bg-color)'
-                           }}
+                           onClick={() => onOpenMasterProfile?.(m.id, m.name)}
+                           style={{ width: 140, flexShrink: 0, overflow: 'hidden', cursor: 'pointer' }}
                          >
                             <React.Fragment>
-                              {m.rating > 0 && (
-                                <Card.Chip readOnly>
-                                  ⭐ {m.rating.toFixed(1)}
-                                </Card.Chip>
-                              )}
-
                               <img
                                 alt={m.name}
                                 src={getFullImageUrl(m.avatar_url)}
@@ -185,7 +170,6 @@ export const ProfileScreen: React.FC<Props> = ({
                                   width: '100%'
                                 }}
                               />
-
                               <Card.Cell
                                 readOnly
                                 subtitle={m.bio || 'Специалист'}

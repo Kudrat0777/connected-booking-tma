@@ -1,50 +1,20 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { List, Section, Cell, Text, Avatar } from '@telegram-apps/telegram-ui';
 import {
-  List,
-  Section,
-  Cell,
-  Button,
-  Input,
-  Text,
-  Avatar
-} from '@telegram-apps/telegram-ui';
-import {
-  Icon28CalendarOutline,
-  Icon28ServicesOutline,
-  Icon28UserOutline,
-  Icon28CoinsOutline
+    Icon28CalendarOutline,
+    Icon28UserOutline,
+    Icon28MoneyCircleOutline,
+    Icon28ClockOutline
 } from '@vkontakte/icons';
-
-import type { Service, Slot, Booking } from '../helpers/api';
-import { createBooking } from '../helpers/api';
-import { ScreenLayout } from '../components/ScreenLayout';
-
-type TelegramUser = {
-  id: number;
-  username?: string;
-  photo_url?: string;
-  first_name?: string;
-  last_name?: string;
-};
+import { createBooking, Booking, Service, Slot } from '../helpers/api';
 
 type Props = {
   service: Service;
   slot: Slot;
   onBack: () => void;
   onSuccess: (booking: Booking) => void;
-  user: TelegramUser | null;
+  user: any;
 };
-
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  // Format: "25 October, 14:30"
-  return d.toLocaleString('ru-RU', {
-    day: 'numeric',
-    month: 'long',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 export const BookingConfirmScreen: React.FC<Props> = ({
   service,
@@ -53,121 +23,145 @@ export const BookingConfirmScreen: React.FC<Props> = ({
   onSuccess,
   user,
 }) => {
-  const defaultName =
-    user?.first_name ||
-    user?.username ||
-    [user?.first_name, user?.last_name].filter(Boolean).join(' ') ||
-    '';
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [name, setName] = useState(defaultName);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Форматируем дату для красивого отображения
+  const slotDate = new Date(slot.time);
+  const formattedDate = slotDate.toLocaleDateString('ru-RU', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+  const formattedTime = slotDate.toLocaleTimeString('ru-RU', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
-  const handleSubmit = async () => {
-    if (!name.trim()) {
-      setError('Пожалуйста, укажи своё имя.');
-      return;
-    }
+  useEffect(() => {
+    const tg = (window as any).Telegram?.WebApp;
+    if (!tg) return;
 
-    try {
-      setSubmitting(true);
-      setError(null);
+    // 1. ВКЛЮЧАЕМ НАТИВНУЮ КНОПКУ "НАЗАД" В ШАПКЕ TELEGRAM
+    tg.BackButton.show();
+    tg.BackButton.onClick(onBack);
 
-      const booking = await createBooking({
-        name: name.trim(),
-        slot_id: slot.id,
-        telegram_id: user?.id ?? null,
-        username: user?.username ?? null,
-        photo_url: user?.photo_url ?? null,
-      });
+    // 2. НАСТРАИВАЕМ ГЛАВНУЮ КНОПКУ TELEGRAM (MainButton)
+    const priceText = service.price ? `${service.price.toLocaleString('ru-RU')} UZS` : 'Бесплатно';
+    tg.MainButton.setText(`Подтвердить • ${priceText}`);
+    tg.MainButton.color = tg.themeParams?.button_color || '#3390ec';
+    tg.MainButton.textColor = tg.themeParams?.button_text_color || '#ffffff';
+    tg.MainButton.show();
 
-      onSuccess(booking);
-    } catch (err) {
-      console.error(err);
-      setError('Не удалось создать бронь. Попробуйте позже.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+    // Функция, которая сработает при нажатии на MainButton
+    const handleConfirm = async () => {
+      if (isSubmitting) return; // Защита от двойного клика
+
+      setIsSubmitting(true);
+      tg.MainButton.showProgress(); // Включаем крутилку загрузки прямо на кнопке Telegram
+      tg.MainButton.disable();
+
+      try {
+        const booking = await createBooking({
+          name: service.name,
+          slot_id: slot.id,
+          telegram_id: user?.id,
+          username: user?.username,
+          photo_url: user?.photo_url,
+        });
+
+        // Вибрация успеха!
+        if (tg.HapticFeedback) {
+            tg.HapticFeedback.notificationOccurred('success');
+        }
+
+        onSuccess(booking);
+      } catch (e: any) {
+        console.error(e);
+        // Вибрация ошибки!
+        if (tg.HapticFeedback) {
+            tg.HapticFeedback.notificationOccurred('error');
+        }
+
+        // НАТИВНОЕ ВСПЛЫВАЮЩЕЕ ОКНО (Alert) вместо браузерного
+        if (tg.showAlert) {
+            tg.showAlert('К сожалению, это время уже заняли. Пожалуйста, выберите другое.');
+        } else {
+            alert('Ошибка при создании брони.');
+        }
+      } finally {
+        tg.MainButton.hideProgress(); // Выключаем лоадер
+        tg.MainButton.enable();
+        setIsSubmitting(false);
+      }
+    };
+
+    tg.MainButton.onClick(handleConfirm);
+
+    // ОЧИСТКА: прячем кнопки, когда уходим с этого экрана
+    return () => {
+      tg.BackButton.offClick(onBack);
+      tg.BackButton.hide();
+
+      tg.MainButton.offClick(handleConfirm);
+      tg.MainButton.hide();
+    };
+  }, [service, slot, onBack, onSuccess, user, isSubmitting]);
 
   return (
-    <ScreenLayout title="Подтверждение" onBack={onBack}>
-      <List style={{ background: 'var(--tgui--secondary_bg_color)', minHeight: '100%' }}>
+    <div style={{
+        paddingBottom: 40,
+        backgroundColor: 'var(--tg-theme-secondary-bg-color)',
+        minHeight: '100vh'
+    }}>
 
-        {/* Booking Details Section */}
-        <Section header="Детали записи">
-          <Cell
-            before={<Icon28ServicesOutline />}
-            multiline
-            description={service.duration ? `Длительность: ${service.duration} мин` : undefined}
-          >
-            {service.name}
-          </Cell>
-
-          {service.master_name && (
-            <Cell before={<Icon28UserOutline />}>
-              {service.master_name}
-            </Cell>
-          )}
-
-          <Cell before={<Icon28CalendarOutline />}>
-            {formatTime(slot.time)}
-          </Cell>
-
-          {service.price != null && (
-             <Cell
-               before={<Icon28CoinsOutline />}
-               after={
-                 <Text weight="2" style={{ color: 'var(--tgui--link_color)' }}>
-                   {service.price} ₽
-                 </Text>
-               }
-             >
-               Стоимость
-             </Cell>
-          )}
-        </Section>
-
-        {/* User Info Form Section */}
-        <Section
-           header="Ваши данные"
-           footer={error ? <span style={{ color: 'var(--tgui--destructive_text_color)' }}>{error}</span> : "Мы используем это имя для записи."}
-        >
-          <Input
-            header="Имя"
-            placeholder="Как к вам обращаться?"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            status={error ? 'error' : 'default'}
+      <div style={{ padding: '32px 20px 20px', textAlign: 'center' }}>
+          <Avatar
+             size={80}
+             src={user?.photo_url}
+             fallbackIcon={<Icon28UserOutline width={40} height={40}/>}
+             style={{ margin: '0 auto 16px' }}
           />
+          <Text weight="1" style={{ fontSize: 24, display: 'block', marginBottom: 8 }}>
+              Проверьте данные
+          </Text>
+          <Text style={{ color: 'var(--tg-theme-hint-color)' }}>
+              Вы почти записаны! Проверьте детали бронирования ниже.
+          </Text>
+      </div>
 
-          {user?.username && (
-            <Cell
-               before={user.photo_url ? <Avatar src={user.photo_url} size={28} /> : undefined}
-               description="Telegram аккаунт привязан"
-               interactive={false}
-            >
-              @{user.username}
-            </Cell>
-          )}
-        </Section>
+      {/* Красивый список деталей в стиле Telegram */}
+      <List>
+        <Section header="ДЕТАЛИ ЗАПИСИ">
+          <Cell
+             before={<Icon28CalendarOutline style={{ color: 'var(--tg-theme-link-color)' }}/>}
+             subtitle="Дата и время"
+          >
+             {formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1)} в {formattedTime}
+          </Cell>
 
-        {/* Action Button Section */}
-        <Section>
-          <Cell>
-            <Button
-              size="l"
-              mode="filled" // Primary action
-              stretched
-              loading={submitting}
-              onClick={handleSubmit}
-            >
-              Подтвердить запись
-            </Button>
+          <Cell
+             before={<Icon28UserOutline style={{ color: 'var(--tg-theme-link-color)' }}/>}
+             subtitle="Мастер"
+          >
+             {service.master_name || 'Специалист'}
+          </Cell>
+
+          <Cell
+             before={<Icon28ClockOutline style={{ color: 'var(--tg-theme-link-color)' }}/>}
+             subtitle="Услуга"
+          >
+             {service.name} {service.duration ? `(${service.duration} мин)` : ''}
+          </Cell>
+
+          <Cell
+             before={<Icon28MoneyCircleOutline style={{ color: 'var(--tg-theme-link-color)' }}/>}
+             subtitle="Стоимость"
+          >
+             {service.price ? `${service.price.toLocaleString('ru-RU')} UZS` : 'Не указана'}
           </Cell>
         </Section>
-
       </List>
-    </ScreenLayout>
+
+    </div>
   );
 };

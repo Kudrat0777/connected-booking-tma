@@ -352,10 +352,10 @@ const App: React.FC = () => {
           initialTab={mainTab}
           onBack={() => setScreen('welcome')}
           onLogout={handleClientLogout}
-          onGoToServices={(masterId, masterName) => {
+          onOpenMasterProfile={(masterId, masterName) => {
             setSelectedMasterId(masterId);
             setSelectedMasterName(masterName || null);
-            setScreen('services');
+            setScreen('client_master_profile');
           }}
           onReview={(booking) => {
               const masterId = booking.slot.service.master;
