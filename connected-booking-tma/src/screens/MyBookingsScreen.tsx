@@ -18,22 +18,18 @@ import type { Booking } from '../helpers/api';
 import { fetchMyBookings, cancelBooking } from '../helpers/api';
 import { RateBookingModal } from '../components/RateBookingModal';
 
-import '../css/MyBookings.css';
-
 const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
   const container = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!container.current) return;
-    try {
-      const anim = lottie.loadAnimation({
-        container: container.current,
-        renderer: 'svg',
-        loop: true,
-        autoplay: true,
-        path: src,
-      });
-      return () => anim.destroy();
-    } catch (e) { console.error(e); }
+    const anim = lottie.loadAnimation({
+      container: container.current,
+      renderer: 'svg',
+      loop: true,
+      autoplay: true,
+      path: src,
+    });
+    return () => anim.destroy();
   }, [src]);
   return <div ref={container} style={{ width: size, height: size, margin: '0 auto 16px' }} />;
 };
@@ -127,114 +123,96 @@ export const MyBookingsScreen: React.FC<Props> = ({
   };
 
   const getBannerIcon = (status: string, isPast: boolean) => {
-    if (isPast) {
-      return (
-        <div className="banner-status-icon past">
-          <Icon24ClockOutline />
-        </div>
-      );
-    }
+    if (isPast) return <Icon24ClockOutline style={{ color: 'var(--tg-theme-hint-color)' }} />;
 
     switch (status) {
       case 'confirmed':
-        return (
-          <div className="banner-status-icon confirmed">
-            <Icon24CheckCircleOutline />
-          </div>
-        );
+        return <Icon24CheckCircleOutline style={{ color: '#34c759' }} />;
       case 'pending':
-        return (
-          <div className="banner-status-icon pending">
-            <Icon24ClockOutline />
-          </div>
-        );
+        return <Icon24ClockOutline style={{ color: '#ff9500' }} />;
       case 'rejected':
-        return (
-          <div className="banner-status-icon rejected">
-            <Icon24CancelOutline />
-          </div>
-        );
+        return <Icon24CancelOutline style={{ color: '#ff3b30' }} />;
       default:
-        return (
-          <div className="banner-status-icon">
-             <Icon24ClockOutline />
-          </div>
-        );
+        return <Icon24ClockOutline style={{ color: 'var(--tg-theme-hint-color)' }} />;
     }
   };
 
   const getStatusText = (status: string) => {
       switch (status) {
           case 'confirmed': return 'Подтверждено';
-          case 'pending': return 'Ожидает';
+          case 'pending': return 'Ожидание';
           case 'rejected': return 'Отменено';
           default: return 'Неизвестно';
       }
   };
 
+  const triggerHaptic = () => {
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
+  };
+
   return (
     <>
-      <div className="bookings-container">
+      <div style={{
+          minHeight: '100%',
+          backgroundColor: 'var(--tg-theme-bg-color)',
+          display: 'flex',
+          flexDirection: 'column'
+      }}>
 
-        {/* Шапка с фильтрами */}
-        <div className="bookings-header">
-          <div className="bookings-segment-wrapper">
-            <SegmentedControl size="m">
-              <SegmentedControl.Item
-                selected={segment === 'upcoming'}
-                onClick={() => { setSegment('upcoming'); setStatusFilter('all'); }}
-              >
-                Предстоящие
-              </SegmentedControl.Item>
-              <SegmentedControl.Item
-                selected={segment === 'past'}
-                onClick={() => { setSegment('past'); setStatusFilter('all'); }}
-              >
-                Прошедшие
-              </SegmentedControl.Item>
-            </SegmentedControl>
-          </div>
+        {/* ШАПК�� С ФИЛЬТРАМИ (Убрали borderBottom!) */}
+        <div style={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 10,
+            backgroundColor: 'var(--tg-theme-bg-color)',
+            padding: '16px 16px 8px'
+            // Граница удалена, теперь фон абсолютно сплошной
+        }}>
+          <SegmentedControl size="m">
+            <SegmentedControl.Item
+              selected={segment === 'upcoming'}
+              onClick={() => { triggerHaptic(); setSegment('upcoming'); setStatusFilter('all'); }}
+            >
+              Предстоящие
+            </SegmentedControl.Item>
+            <SegmentedControl.Item
+              selected={segment === 'past'}
+              onClick={() => { triggerHaptic(); setSegment('past'); setStatusFilter('all'); }}
+            >
+              Прошедшие
+            </SegmentedControl.Item>
+          </SegmentedControl>
 
-          <div className="bookings-filters">
-              <Button
-                  size="s"
-                  mode={statusFilter === 'all' ? 'filled' : 'bezeled'}
-                  onClick={() => setStatusFilter('all')}
-                  style={{ flexShrink: 0, borderRadius: 100 }}
-              >
+          <div style={{
+              display: 'flex',
+              gap: '8px',
+              marginTop: '16px',
+              overflowX: 'auto',
+              paddingBottom: '8px',
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none'
+          }}>
+              <Button size="s" mode={statusFilter === 'all' ? 'filled' : 'bezeled'} onClick={() => { triggerHaptic(); setStatusFilter('all'); }} style={{ flexShrink: 0, borderRadius: 100 }}>
                   Все
               </Button>
-              <Button
-                  size="s"
-                  mode={statusFilter === 'confirmed' ? 'filled' : 'bezeled'}
-                  onClick={() => setStatusFilter('confirmed')}
-                  style={{ flexShrink: 0, borderRadius: 100 }}
-              >
+              <Button size="s" mode={statusFilter === 'confirmed' ? 'filled' : 'bezeled'} onClick={() => { triggerHaptic(); setStatusFilter('confirmed'); }} style={{ flexShrink: 0, borderRadius: 100 }}>
                   Подтверждено
               </Button>
-              <Button
-                  size="s"
-                  mode={statusFilter === 'pending' ? 'filled' : 'bezeled'}
-                  onClick={() => setStatusFilter('pending')}
-                  style={{ flexShrink: 0, borderRadius: 100 }}
-              >
+              <Button size="s" mode={statusFilter === 'pending' ? 'filled' : 'bezeled'} onClick={() => { triggerHaptic(); setStatusFilter('pending'); }} style={{ flexShrink: 0, borderRadius: 100 }}>
                   Ожидание
               </Button>
-              <Button
-                  size="s"
-                  mode={statusFilter === 'rejected' ? 'filled' : 'bezeled'}
-                  onClick={() => setStatusFilter('rejected')}
-                  style={{ flexShrink: 0, borderRadius: 100 }}
-              >
+              <Button size="s" mode={statusFilter === 'rejected' ? 'filled' : 'bezeled'} onClick={() => { triggerHaptic(); setStatusFilter('rejected'); }} style={{ flexShrink: 0, borderRadius: 100 }}>
                   Отменено
               </Button>
           </div>
         </div>
 
-        {/* Контейнер для списков и плейсхолдеров */}
-        <div className="bookings-content">
+        {/* СПИСОК ЗАПИСЕЙ */}
+        <div style={{ padding: '16px 16px 100px', flex: 1 }}>
+
           {loading && (
-            <div className="bookings-loader">
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '40px' }}>
               <Spinner size="l" />
             </div>
           )}
@@ -246,28 +224,25 @@ export const MyBookingsScreen: React.FC<Props> = ({
           )}
 
           {!loading && !error && displayedList.length === 0 && (
-            <Placeholder
-              header={statusFilter === 'all' ? 'Список пуст' : 'Ничего не найдено'}
-              description={
-                statusFilter === 'all'
-                  ? (segment === 'upcoming' ? 'Нет предстоящих записей' : 'История записей пуста')
-                  : 'Записей с таким статусом нет'
-              }
-            >
-              <LottieIcon
-                src={segment === 'upcoming' ? '/stickers/skeleton.json' : '/stickers/duck_out.json'}
-                size={140}
-              />
-              {segment === 'upcoming' && statusFilter === 'all' && onGoToServices && (
-                <Button size="l" stretched onClick={onGoToServices} style={{ marginTop: 24 }}>
-                  Записаться онлайн
-                </Button>
-              )}
-            </Placeholder>
+            <div style={{ marginTop: '20px' }}>
+              <Placeholder
+                header={statusFilter === 'all' ? 'Список пуст' : 'Ничего не найдено'}
+                description={
+                  statusFilter === 'all'
+                    ? (segment === 'upcoming' ? 'У вас пока нет предстоящих записей' : 'История записей пуста')
+                    : 'Записей с таким статусом нет'
+                }
+              >
+                <LottieIcon
+                  src={segment === 'upcoming' ? '/stickers/skeleton.json' : '/stickers/duck_out.json'}
+                  size={140}
+                />
+              </Placeholder>
+            </div>
           )}
 
           {!loading && !error && displayedList.length > 0 && (
-            <div className="bookings-banner-list">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {displayedList.map((b) => {
                 const serviceName = b.service_name || b.slot.service?.name || 'Услуга';
                 const masterName = b.master_name || b.slot.service?.master_name || 'Мастер';
@@ -278,10 +253,14 @@ export const MyBookingsScreen: React.FC<Props> = ({
                   <Banner
                     key={b.id}
                     type="inline"
-                    before={getBannerIcon(b.status, isPast)}
+                    before={<div style={{ padding: '8px' }}>{getBannerIcon(b.status, isPast)}</div>}
                     header={serviceName}
                     subheader={timeStr}
                     description={`Мастер: ${masterName} • ${getStatusText(b.status)}`}
+                    style={{
+                      backgroundColor: 'var(--tg-theme-secondary-bg-color)',
+                      borderRadius: '12px'
+                    }}
                   >
                     {segment === 'upcoming' && b.status !== 'rejected' && (
                        <Button
