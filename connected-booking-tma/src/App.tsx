@@ -316,7 +316,11 @@ const App: React.FC = () => {
       {screen === 'slots' && selectedService && (
         <SlotsScreen
           service={selectedService}
-          onBack={() => setScreen('services')}
+          onBack={() => {
+              // Умная кнопка назад: если мы пришли из визитки мастера, возвращаем в нее
+              if (selectedMasterId) setScreen('client_master_profile');
+              else setScreen('services');
+          }}
           onSlotSelected={handleSlotSelected}
         />
       )}
@@ -458,8 +462,14 @@ const App: React.FC = () => {
             else setScreen('welcome');
           }}
           onBook={(name) => {
+            // Клик по главной кнопке внизу экрана (открывает общий список)
             setSelectedMasterName(name);
             setScreen('services');
+          }}
+          onServiceClick={(service) => {
+            // Клик по конкретной услуге (СРАЗУ ПЕРЕХОДИМ К ВЫБОРУ ВРЕМЕНИ!)
+            setSelectedService(service);
+            setScreen('slots');
           }}
         />
       )}

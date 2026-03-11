@@ -11,10 +11,10 @@ import {
   Icon28FavoriteOutline,
   Icon28WorkOutline,
   Icon24LocationOutline,
-  Icon28PhoneOutline
+  Icon28PhoneOutline,
+  Icon28ChevronRightOutline
 } from '@vkontakte/icons';
 
-// ДОБАВЛЕН ИМПОРТ fetchServices
 import { fetchMasterById, fetchPortfolio, fetchServices, getFullImageUrl } from '../helpers/api';
 import type { MasterPublicProfile, PortfolioItem, Service } from '../helpers/api';
 
@@ -22,15 +22,16 @@ type Props = {
   masterId: number;
   onBack: () => void;
   onBook: (masterName: string) => void;
+  // НОВОЕ СОБЫТИЕ: клик по конкретной услуге
+  onServiceClick?: (service: Service) => void;
 };
 
-export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, onBook }) => {
+export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, onBook, onServiceClick }) => {
   const [master, setMaster] = useState<MasterPublicProfile | null>(null);
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
-  const [services, setServices] = useState<Service[]>([]); // Состояние для услуг
+  const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // ЗАГРУЖАЕМ ВСЕ ДАННЫЕ ОДНОВРЕМЕННО (Профиль, Портфолио, Услуги)
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -48,16 +49,13 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
     loadData();
   }, [masterId]);
 
-  // НАСТРОЙКА НАТИВНЫХ КНОПОК TELEGRAM
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
     if (!tg || loading || !master) return;
 
-    // Включаем стрелочку "Назад"
     tg.BackButton.show();
     tg.BackButton.onClick(onBack);
 
-    // Включаем Главную Кнопку "Онлайн-запись"
     tg.MainButton.setText('ОНЛАЙН-ЗАПИСЬ');
     tg.MainButton.color = tg.themeParams?.button_color || '#3390ec';
     tg.MainButton.textColor = tg.themeParams?.button_text_color || '#ffffff';
@@ -69,7 +67,6 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
     };
     tg.MainButton.onClick(handleBook);
 
-    // Очистка при закрытии экрана
     return () => {
       tg.BackButton.offClick(onBack);
       tg.BackButton.hide();
@@ -91,7 +88,6 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
   return (
     <div style={{ paddingBottom: 40, background: 'var(--tgui--secondary_bg_color)', minHeight: '100vh' }}>
 
-      {/* ШАПКА ВИЗИТКИ */}
       <div style={{ background: 'var(--tgui--bg_color)', padding: '32px 16px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', borderBottomLeftRadius: 24, borderBottomRightRadius: 24, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
         <Avatar size={100} src={getFullImageUrl(master.avatar_url)} style={{ marginBottom: 16, border: '3px solid var(--tgui--button_color)' }} />
         <Title level="1" weight="2" style={{ marginBottom: 4 }}>{master.name}</Title>
@@ -111,7 +107,6 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
         </div>
       </div>
 
-      {/* КОНТАКТЫ И АДРЕС */}
       {(master.phone || master.address) && (
           <div style={{ margin: '16px 0' }}>
              <Section header="Контакты">
@@ -142,18 +137,27 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
           </div>
       )}
 
-      {/* СПИСОК УСЛУГ (Добавлено!) */}
+      {/* --- ИСПРАВЛЕНО: Теперь услуги кликабельны --- */}
       {services.length > 0 && (
          <div style={{ margin: '16px 0' }}>
             <Section header="Услуги прайс-лист">
                {services.map(s => (
                   <Cell
                      key={s.id}
+                     onClick={() => {
+                        const tg = (window as any).Telegram?.WebApp;
+                        if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
+                        onServiceClick?.(s);
+                     }}
                      subtitle={s.description ? `${s.duration} мин • ${s.description}` : `${s.duration} мин`}
                      after={
-                       <span style={{ fontWeight: 600, color: 'var(--tgui--text_color)' }}>
-                         {s.price ? `${s.price.toLocaleString('ru-RU')} сум` : ''}
-                       </span>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                         <span style={{ fontWeight: 600, color: 'var(--tgui--text_color)' }}>
+                           {s.price ? `${s.price.toLocaleString('ru-RU')} сум` : ''}
+                         </span>
+                         {/* Добавлена стрелочка, чтобы было понятно, что можно нажать */}
+                         <Icon28ChevronRightOutline width={20} height={20} style={{ color: 'var(--tgui--hint_color)' }} />
+                       </div>
                      }
                   >
                      {s.name}
@@ -163,7 +167,6 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
          </div>
       )}
 
-      {/* ОБО МНЕ */}
       {master.bio && (
           <div style={{ margin: '16px 0', padding: 16, background: 'var(--tgui--bg_color)' }}>
               <Title level="3" style={{ marginBottom: 8 }}>Обо мне</Title>
@@ -171,7 +174,6 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
           </div>
       )}
 
-      {/* ПОРТФОЛИО */}
       {portfolio.length > 0 && (
           <div style={{ margin: '16px 0', padding: 16, background: 'var(--tgui--bg_color)' }}>
               <Title level="3" style={{ marginBottom: 12 }}>Мои работы</Title>
