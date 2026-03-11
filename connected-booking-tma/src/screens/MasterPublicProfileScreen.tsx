@@ -5,7 +5,8 @@ import {
   Title,
   Text,
   Section,
-  Cell
+  Cell,
+  List
 } from '@telegram-apps/telegram-ui';
 import {
   Icon28FavoriteOutline,
@@ -17,12 +18,13 @@ import {
 
 import { fetchMasterById, fetchPortfolio, fetchServices, getFullImageUrl } from '../helpers/api';
 import type { MasterPublicProfile, PortfolioItem, Service } from '../helpers/api';
+// ИМПОРТИРУЕМ НАШУ НОВУЮ МОДАЛКУ
+import { ReviewsListScreen } from './ReviewsListScreen';
 
 type Props = {
   masterId: number;
   onBack: () => void;
   onBook: (masterName: string) => void;
-  // НОВОЕ СОБЫТИЕ: клик по конкретной услуге
   onServiceClick?: (service: Service) => void;
 };
 
@@ -31,6 +33,9 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // СОСТОЯНИЕ ДЛЯ МОДАЛКИ ОТЗЫВОВ
+  const [isReviewsModalOpen, setIsReviewsModalOpen] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -53,31 +58,49 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
     const tg = (window as any).Telegram?.WebApp;
     if (!tg || loading || !master) return;
 
-    tg.BackButton.show();
-    tg.BackButton.onClick(onBack);
-
-    tg.MainButton.setText('ОНЛАЙН-ЗАПИСЬ');
-    tg.MainButton.color = tg.themeParams?.button_color || '#3390ec';
-    tg.MainButton.textColor = tg.themeParams?.button_text_color || '#ffffff';
-    tg.MainButton.show();
+    const handleBack = () => {
+      // Если модалка открыта, кнопка "Назад" в Telegram должна закрывать её, а не уходить с профиля
+      if (isReviewsModalOpen) {
+          setIsReviewsModalOpen(false);
+      } else {
+          onBack();
+      }
+    };
 
     const handleBook = () => {
       if (tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
       onBook(master.name);
     };
-    tg.MainButton.onClick(handleBook);
+
+    tg.BackButton.onClick(handleBack);
+    tg.BackButton.show();
+
+    // Прячем MainButton, если открыта модалка, чтобы она не висела поверх
+    if (isReviewsModalOpen) {
+        tg.MainButton.hide();
+    } else {
+        tg.MainButton.setParams({
+            text: 'ОНЛАЙН-ЗАПИСЬ',
+            color: tg.themeParams?.button_color || '#3390ec',
+            text_color: tg.themeParams?.button_text_color || '#ffffff',
+            is_active: true,
+            is_visible: true
+        });
+        tg.MainButton.onClick(handleBook);
+        tg.MainButton.show();
+    }
 
     return () => {
-      tg.BackButton.offClick(onBack);
+      tg.BackButton.offClick(handleBack);
       tg.BackButton.hide();
       tg.MainButton.offClick(handleBook);
       tg.MainButton.hide();
     };
-  }, [loading, master, onBack, onBook]);
+  }, [loading, master, onBack, onBook, isReviewsModalOpen]);
 
   if (loading || !master) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--tgui--secondary_bg_color)' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--tg-theme-secondary-bg-color)' }}>
         <Spinner size="l" />
       </div>
     );
@@ -85,35 +108,74 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
 
   const isAddressLink = master.address && master.address.includes('http');
 
+  const triggerHaptic = () => {
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
+  };
+
   return (
-    <div style={{ paddingBottom: 40, background: 'var(--tgui--secondary_bg_color)', minHeight: '100vh' }}>
-
-      <div style={{ background: 'var(--tgui--bg_color)', padding: '32px 16px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', borderBottomLeftRadius: 24, borderBottomRightRadius: 24, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-        <Avatar size={100} src={getFullImageUrl(master.avatar_url)} style={{ marginBottom: 16, border: '3px solid var(--tgui--button_color)' }} />
+    <div style={{
+        paddingBottom: 40,
+        backgroundColor: 'var(--tg-theme-secondary-bg-color)',
+        minHeight: '100vh'
+    }}>
+      <div style={{
+          backgroundColor: 'var(--tg-theme-bg-color)',
+          padding: '32px 16px 24px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          borderBottom: '1px solid var(--tg-theme-secondary-bg-color)'
+      }}>
+        <Avatar
+            size={100}
+            src={getFullImageUrl(master.avatar_url)}
+            style={{ marginBottom: 16 }}
+        />
         <Title level="1" weight="2" style={{ marginBottom: 4 }}>{master.name}</Title>
-        <Text style={{ color: 'var(--tgui--hint_color)', fontSize: 15 }}>{master.city || 'Специалист'}</Text>
+        <Text style={{ color: 'var(--tg-theme-hint-color)', fontSize: 15 }}>{master.city || 'Специалист'}</Text>
 
-        <div style={{ display: 'flex', justifyContent: 'space-around', width: '100%', marginTop: 24, padding: '16px 0', background: 'var(--tgui--secondary_bg_color)', borderRadius: 16 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{
+            display: 'flex',
+            justifyContent: 'space-around',
+            width: '100%',
+            marginTop: 24,
+            padding: '16px 0',
+            backgroundColor: 'var(--tg-theme-secondary-bg-color)',
+            borderRadius: 16
+        }}>
+          {/* ОТКРЫТИЕ МОДАЛКИ ПРИ КЛИКЕ */}
+          <div
+              onClick={() => {
+                  triggerHaptic();
+                  setIsReviewsModalOpen(true);
+              }}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}
+          >
               <Icon28FavoriteOutline style={{ color: '#FFB703', marginBottom: 4 }} width={24} height={24} />
-              <span style={{ fontWeight: 'bold', fontSize: 16 }}>{master.rating > 0 ? master.rating.toFixed(1) : '5.0'}</span>
-              <span style={{ fontSize: 12, color: 'var(--tgui--hint_color)' }}>{master.reviews_count} отзывов</span>
+              <span style={{ fontWeight: 'bold', fontSize: 16, color: 'var(--tg-theme-text-color)' }}>
+                  {master.rating > 0 ? master.rating.toFixed(1) : '5.0'}
+              </span>
+              <span style={{ fontSize: 13, color: 'var(--tg-theme-link-color)', marginTop: '2px', fontWeight: 500 }}>
+                  {master.reviews_count} отзывов ›
+              </span>
           </div>
+
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <Icon28WorkOutline style={{ color: 'var(--tgui--button_color)', marginBottom: 4 }} width={24} height={24} />
-              <span style={{ fontWeight: 'bold', fontSize: 16 }}>Профи</span>
-              <span style={{ fontSize: 12, color: 'var(--tgui--hint_color)' }}>Опыт</span>
+              <Icon28WorkOutline style={{ color: 'var(--tg-theme-button-color)', marginBottom: 4 }} width={24} height={24} />
+              <span style={{ fontWeight: 'bold', fontSize: 16, color: 'var(--tg-theme-text-color)' }}>Профи</span>
+              <span style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)', marginTop: '2px' }}>Опыт</span>
           </div>
         </div>
       </div>
 
-      {(master.phone || master.address) && (
-          <div style={{ margin: '16px 0' }}>
+      <List style={{ marginTop: 16, marginBottom: 16 }}>
+        {(master.phone || master.address) && (
              <Section header="Контакты">
                 {master.phone && (
                     <Cell
-                       before={<Icon28PhoneOutline style={{ color: 'var(--tgui--button_color)' }} />}
-                       onClick={() => window.location.href=`tel:${master.phone}`}
+                       before={<Icon28PhoneOutline style={{ color: 'var(--tg-theme-button-color)' }} />}
+                       onClick={() => { triggerHaptic(); window.location.href=`tel:${master.phone}`; }}
                        description="Нажмите, чтобы позвонить"
                     >
                        {master.phone}
@@ -122,41 +184,36 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
                 {master.address && (
                     isAddressLink ? (
                        <Cell
-                          before={<Icon24LocationOutline style={{ color: 'var(--tgui--button_color)' }} />}
-                          onClick={() => window.open(master.address, '_blank')}
+                          before={<Icon24LocationOutline style={{ color: 'var(--tg-theme-button-color)' }} />}
+                          onClick={() => { triggerHaptic(); window.open(master.address, '_blank'); }}
                        >
-                          <span style={{ color: 'var(--tgui--link_color)' }}>Открыть на карте</span>
+                          <span style={{ color: 'var(--tg-theme-link-color)' }}>Открыть на карте</span>
                        </Cell>
                     ) : (
-                       <Cell before={<Icon24LocationOutline style={{ color: 'var(--tgui--hint_color)' }} />} multiline>
+                       <Cell before={<Icon24LocationOutline style={{ color: 'var(--tg-theme-hint-color)' }} />} multiline>
                           {master.address}
                        </Cell>
                     )
                 )}
              </Section>
-          </div>
-      )}
+        )}
 
-      {/* --- ИСПРАВЛЕНО: Теперь услуги кликабельны --- */}
-      {services.length > 0 && (
-         <div style={{ margin: '16px 0' }}>
-            <Section header="Услуги прайс-лист">
+        {services.length > 0 && (
+            <Section header="Услуги и цены">
                {services.map(s => (
                   <Cell
                      key={s.id}
                      onClick={() => {
-                        const tg = (window as any).Telegram?.WebApp;
-                        if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
+                        triggerHaptic();
                         onServiceClick?.(s);
                      }}
                      subtitle={s.description ? `${s.duration} мин • ${s.description}` : `${s.duration} мин`}
                      after={
                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                         <span style={{ fontWeight: 600, color: 'var(--tgui--text_color)' }}>
+                         <span style={{ fontWeight: 600, color: 'var(--tg-theme-text-color)' }}>
                            {s.price ? `${s.price.toLocaleString('ru-RU')} сум` : ''}
                          </span>
-                         {/* Добавлена стрелочка, чтобы было понятно, что можно нажать */}
-                         <Icon28ChevronRightOutline width={20} height={20} style={{ color: 'var(--tgui--hint_color)' }} />
+                         <Icon28ChevronRightOutline width={20} height={20} style={{ color: 'var(--tg-theme-hint-color)' }} />
                        </div>
                      }
                   >
@@ -164,28 +221,35 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
                   </Cell>
                ))}
             </Section>
-         </div>
-      )}
+        )}
 
-      {master.bio && (
-          <div style={{ margin: '16px 0', padding: 16, background: 'var(--tgui--bg_color)' }}>
-              <Title level="3" style={{ marginBottom: 8 }}>Обо мне</Title>
-              <Text style={{ lineHeight: '1.5', color: 'var(--tgui--text_color)' }}>{master.bio}</Text>
-          </div>
-      )}
+        {master.bio && (
+            <Section header="Обо мне">
+                <Cell multiline>
+                    <Text style={{ lineHeight: '1.5', color: 'var(--tg-theme-text-color)' }}>{master.bio}</Text>
+                </Cell>
+            </Section>
+        )}
 
-      {portfolio.length > 0 && (
-          <div style={{ margin: '16px 0', padding: 16, background: 'var(--tgui--bg_color)' }}>
-              <Title level="3" style={{ marginBottom: 12 }}>Мои работы</Title>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                  {portfolio.slice(0, 6).map(item => (
-                      <div key={item.id} style={{ position: 'relative', aspectRatio: '1/1', borderRadius: 12, overflow: 'hidden', backgroundColor: '#e0e0e0' }}>
-                          <img src={getFullImageUrl(item.image_url)} alt="work" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      </div>
-                  ))}
-              </div>
-          </div>
-      )}
+        {portfolio.length > 0 && (
+            <Section header="Мои работы">
+                <div style={{ padding: '0 16px 16px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                    {portfolio.slice(0, 6).map(item => (
+                        <div key={item.id} style={{ position: 'relative', aspectRatio: '1/1', borderRadius: 8, overflow: 'hidden', backgroundColor: 'var(--tg-theme-secondary-bg-color)' }}>
+                            <img src={getFullImageUrl(item.image_url)} alt="work" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </div>
+                    ))}
+                </div>
+            </Section>
+        )}
+      </List>
+
+      <ReviewsListScreen
+          masterId={master.id}
+          isOpen={isReviewsModalOpen}
+          onClose={() => setIsReviewsModalOpen(false)}
+      />
+
     </div>
   );
 };

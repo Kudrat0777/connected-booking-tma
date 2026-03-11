@@ -462,14 +462,16 @@ const App: React.FC = () => {
             else setScreen('welcome');
           }}
           onBook={(name) => {
-            // Клик по главной кнопке внизу экрана (открывает общий список)
             setSelectedMasterName(name);
             setScreen('services');
           }}
           onServiceClick={(service) => {
-            // Клик по конкретной услуге (СРАЗУ ПЕРЕХОДИМ К ВЫБОРУ ВРЕМЕНИ!)
             setSelectedService(service);
             setScreen('slots');
+          }}
+          onOpenReviews={(id) => {
+            setSelectedMasterId(id);
+            setScreen('reviews');
           }}
         />
       )}
