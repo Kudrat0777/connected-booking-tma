@@ -6,7 +6,7 @@ import { WelcomeScreen } from './screens/WelcomeScreen';
 import { ServicesScreen } from './screens/ServicesScreen';
 import { SlotsScreen } from './screens/SlotsScreen';
 import { BookingConfirmScreen } from './screens/BookingConfirmScreen';
-import { BookingSuccessScreen } from './screens/BookingSuccessScreen'; // НОВЫЙ ЭКРАН УСПЕХА
+import { BookingSuccessScreen } from './screens/BookingSuccessScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { LeaveReviewScreen } from './screens/LeaveReviewScreen';
@@ -141,16 +141,40 @@ const App: React.FC = () => {
     const initApp = async () => {
        setIsAppLoading(true);
 
-       const isMasterLoggedIn = localStorage.getItem('is_master_logged_in') === 'true';
-       const isClientLoggedIn = localStorage.getItem('is_client_logged_in') === 'true';
+       const params = new URLSearchParams(window.location.search);
+       const urlRole = params.get('role'); // Проверяем URL параметр ?role=master
 
-       if (isMasterLoggedIn) {
-           setScreen('master_dashboard');
+       const isClientLoggedIn = localStorage.getItem('is_client_logged_in') === 'true';
+       const isMasterLoggedIn = localStorage.getItem('is_master_logged_in') === 'true';
+
+       const uid = user?.id || (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id;
+
+       // 1. 🔥 ЖЕСТКАЯ ПРОВЕРКА НА МАСТЕРА ЧЕРЕЗ URL ПАРАМЕТР
+       if (urlRole === 'master') {
+           if (uid) {
+               try {
+                   // Проверяем, существует ли мастер в БД
+                   const res = await fetch(`${API_BASE}/masters/me/?telegram_id=${uid}`);
+                   if (res.ok) {
+                       const data = await res.json();
+                       setCurrentMaster(data);
+                       localStorage.setItem('is_master_logged_in', 'true');
+                       setScreen('master_dashboard');
+                   } else {
+                       // Е��ли нет в БД, показываем экран входа/регистрации мастера
+                       setScreen('master_welcome');
+                   }
+               } catch (e) {
+                   setScreen('master_welcome');
+               }
+           } else {
+               setScreen('master_welcome');
+           }
            setIsAppLoading(false);
-           loadCurrentMaster();
            return;
        }
 
+       // 2. ДИПЛИНК НА ПРОФИЛЬ МАСТЕРА (Для клиентов, открывших ссылку t.me/bot?start=master_1)
        const startParam = getStartParam();
        if (startParam && startParam.startsWith('master_')) {
           const idStr = startParam.replace('master_', '');
@@ -163,32 +187,28 @@ const App: React.FC = () => {
           }
        }
 
-       if (isClientLoggedIn) {
-           const uid = user?.id;
-           if (uid) {
-               setMainTab('bookings');
-               setScreen('profile');
-               setIsAppLoading(false);
+       // 3. ЛОГИКА ДЛЯ КЛИЕНТСКОГО БОТА (Если URL без role=master)
+       if (isClientLoggedIn && uid) {
+           setMainTab('bookings');
+           setScreen('profile');
+           setIsAppLoading(false);
 
-               checkClientProfile(uid).then((profile) => {
-                   if (!profile) {
-                       localStorage.removeItem('is_client_logged_in');
-                       setScreen('welcome');
-                   }
-               });
-               return;
-           }
+           // В фоне проверяем профиль, чтобы не тормозить запуск
+           checkClientProfile(uid).then((profile) => {
+               if (!profile) {
+                   localStorage.removeItem('is_client_logged_in');
+                   setScreen('welcome');
+               }
+           });
+           return;
        }
 
-       const params = new URLSearchParams(window.location.search);
-       if (params.get('role') === 'master') {
-         setScreen('master_welcome');
-       } else {
-         setScreen('welcome');
-       }
+       // 4. ЕСЛИ ВООБЩЕ НИЧЕГО НЕТ - кидаем клиента на Welcome
+       setScreen('welcome');
        setIsAppLoading(false);
     };
 
+    // Небольшая задержка для того, чтобы Telegram API успело прогрузить initDataUnsafe
     setTimeout(initApp, 100);
   }, [user?.id]);
 
@@ -231,7 +251,7 @@ const App: React.FC = () => {
       if (tgInstance?.showAlert) {
           tgInstance.showAlert("⚠️ Ошибка: Приложение открыто как обычная ссылка. Пожалуйста, настройте кнопку в боте как Web App.");
       } else {
-          alert("⚠️ Ошибка: Откройте приложение через специальную кнопку меню в боте Telegram.");
+          alert("⚠️ Ош��бка: Откройте приложение через специальную кнопку меню в боте Telegram.");
       }
       return;
     }
@@ -326,7 +346,6 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* НОВЫЙ ЭКРАН УСПЕШНОГО БРОНИРОВАНИЯ */}
       {screen === 'bookingDone' && createdBooking && (
         <BookingSuccessScreen
            booking={createdBooking}
@@ -390,7 +409,10 @@ const App: React.FC = () => {
         <MasterLoginScreen
           telegramId={user.id}
           onBack={() => setScreen('master_welcome')}
-          onComplete={() => setScreen('master_dashboard')}
+          onComplete={() => {
+              loadCurrentMaster();
+              setScreen('master_dashboard');
+          }}
         />
       )}
 
