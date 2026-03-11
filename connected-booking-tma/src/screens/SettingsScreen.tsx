@@ -9,7 +9,6 @@ import {
 } from '@telegram-apps/telegram-ui';
 import { Icon28PhoneOutline, Icon28UserCircleOutline } from '@vkontakte/icons';
 import { updateUserProfile, fetchUserProfile, deleteAccount } from '../helpers/api';
-import '../css/SettingsScreen.css';
 
 type Props = {
   telegramId: number;
@@ -21,22 +20,30 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
+  const [userPhoto, setUserPhoto] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Загружаем данные при открытии
+  // Загружаем данные
   useEffect(() => {
     const loadData = async () => {
         setLoading(true);
+        const tg = (window as any).Telegram?.WebApp;
+        const tgUser = tg?.initDataUnsafe?.user;
+
+        // Берем фото прямо из Telegram (оно всегда свежее)
+        if (tgUser?.photo_url) {
+            setUserPhoto(tgUser.photo_url);
+        }
+
         try {
             const user = await fetchUserProfile(telegramId);
             if (user) {
-                setFirstName(user.first_name || '');
-                setLastName(user.last_name || '');
+                setFirstName(user.first_name || tgUser?.first_name || '');
+                setLastName(user.last_name || tgUser?.last_name || '');
                 setPhone(user.phone || '');
             }
         } catch (e) {
-            const tgUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
             if (tgUser) {
                 setFirstName(tgUser.first_name || '');
                 setLastName(tgUser.last_name || '');
@@ -51,13 +58,14 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
   const handleSave = async () => {
     if (saving) return;
     setSaving(true);
+    const tg = (window as any).Telegram?.WebApp;
     try {
       await updateUserProfile(telegramId, {
         first_name: firstName,
         last_name: lastName,
         phone: phone
       });
-      const tg = (window as any).Telegram?.WebApp;
+      if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
       if (tg?.showAlert) {
           tg.showAlert('Профиль успешно обновлен!');
       } else {
@@ -65,13 +73,13 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
       }
     } catch (e) {
       console.error(e);
+      if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
       alert('Ошибка при сохранении. Попробуйте позже.');
     } finally {
       setSaving(false);
     }
   };
 
-  // Запрос телефона у Telegram
   const requestPhone = () => {
      const tg = (window as any).Telegram?.WebApp;
      if (tg && tg.requestContact) {
@@ -80,10 +88,12 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
                  let p = result.response.contact.phone_number;
                  if (!p.startsWith('+')) p = '+' + p;
                  setPhone(p);
+                 if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
              } else if (ok && result?.contact?.phone_number) {
                  let p = result.contact.phone_number;
                  if (!p.startsWith('+')) p = '+' + p;
                  setPhone(p);
+                 if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
              } else {
                  if (tg.showAlert) tg.showAlert('Не удалось получить номер.');
              }
@@ -93,9 +103,10 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
      }
   };
 
-  // Логика удаления аккаунта
   const handleDeleteAccountClick = () => {
     const tg = (window as any).Telegram?.WebApp;
+    if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
+
     const confirmMessage = 'Вы уверены, что хотите навсегда удалить свой аккаунт? Ваши записи и данные будут стерты.';
 
      const executeDeletion = async () => {
@@ -113,28 +124,47 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
 
     if (tg?.showConfirm) {
       tg.showConfirm(confirmMessage, (isConfirmed: boolean) => {
-        if (isConfirmed) {
-          executeDeletion();
-        }
+        if (isConfirmed) executeDeletion();
       });
     } else {
       const isConfirmed = window.confirm(confirmMessage);
-      if (isConfirmed) {
-        executeDeletion();
-      }
+      if (isConfirmed) executeDeletion();
     }
   };
 
   return (
-    <div className="settings-root">
+    <div style={{
+      // Используем secondary_bg_color, так как это стандарт для экранов с настройками в iOS/Telegram,
+      // на котором белые блоки Section смотрятся контрастно.
+      backgroundColor: 'var(--tg-theme-secondary-bg-color)',
+      minHeight: '100%',
+      paddingBottom: 100 // Отступ для нижнего таббара
+    }}>
       {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '100px 0' }}>
               <Spinner size="l" />
           </div>
       ) : (
           <>
-            <div className="settings-avatar-container">
-               <Avatar size={96} src={undefined} fallbackIcon={<Icon28UserCircleOutline width={48} height={48} />} />
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                padding: '32px 0 16px'
+            }}>
+               <Avatar
+                  size={96}
+                  src={userPhoto} // 👈 ТЕПЕРЬ ТУТ ФОТО ИЗ TELEGRAM
+                  fallbackIcon={<Icon28UserCircleOutline width={48} height={48} />}
+               />
+               <div style={{
+                   marginTop: 12,
+                   fontSize: 20,
+                   fontWeight: 600,
+                   color: 'var(--tg-theme-text-color)'
+               }}>
+                   {firstName} {lastName}
+               </div>
             </div>
 
             <List>
@@ -153,7 +183,6 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
                 />
               </Section>
 
-              {/* Секция с контактами и ячейкой действия */}
               <Section
                 header="Контакты"
                 footer="Номер телефона нужен, чтобы мастера могли связаться с вами для подтверждения записи."
@@ -165,30 +194,37 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
                    onChange={(e) => setPhone(e.target.value)}
                  />
 
-                 {/* Кликабельная ячейка вместо кнопки */}
                  <Cell
                    before={<Icon28PhoneOutline style={{ color: 'var(--tg-theme-button-color)' }} />}
                    onClick={requestPhone}
                  >
-                   <span className="cell-action-left" style={{ color: 'var(--tg-theme-button-color)' }}>
+                   <span style={{ color: 'var(--tg-theme-button-color)', fontWeight: 500 }}>
                      Заполнить из Telegram
                    </span>
                  </Cell>
               </Section>
 
-              {/* Ячейка сохранения */}
               <Section>
                  <Cell onClick={handleSave}>
-                    <div className="cell-action-center" style={{ color: 'var(--tg-theme-button-color)' }}>
-                      {saving ? 'Со��ранение...' : 'Сохранить изменения'}
+                    <div style={{
+                        color: 'var(--tg-theme-button-color)',
+                        textAlign: 'center',
+                        fontWeight: 500,
+                        width: '100%'
+                    }}>
+                      {saving ? 'Сохранение...' : 'Сохранить изменения'}
                     </div>
                  </Cell>
               </Section>
 
-              {/* Опасная зона */}
               <Section footer="Удаление аккаунта сотрет ваш профиль и историю записей из базы данных.">
                   <Cell onClick={handleDeleteAccountClick}>
-                      <div className="cell-action-center" style={{ color: 'var(--tg-theme-destructive-text-color)' }}>
+                      <div style={{
+                          color: 'var(--tg-theme-destructive-text-color)',
+                          textAlign: 'center',
+                          fontWeight: 500,
+                          width: '100%'
+                      }}>
                          Удалить аккаунт
                       </div>
                   </Cell>
