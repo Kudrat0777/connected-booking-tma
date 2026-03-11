@@ -66,7 +66,7 @@ export const BookingConfirmScreen: React.FC<Props> = ({
       } catch (e: any) {
         console.error(e);
         if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-        if (tg.showAlert) tg.showAlert('Время уже занято. Выберите другое.');
+        if (tg.showAlert) tg.showAlert('К сожалению, это время уже заняли. Пожалуйста, выберите другое.');
         else alert('Ошибка при создании брони.');
 
         isSubmittingRef.current = false;
@@ -75,11 +75,9 @@ export const BookingConfirmScreen: React.FC<Props> = ({
       }
     };
 
-    // Подключаем кнопки
     tg.BackButton.onClick(handleBackClick);
     tg.BackButton.show();
 
-    // Берем цвет из темы Telegram для идеального совпадения
     const btnColor = tg.themeParams?.button_color || '#3390ec';
     const textColor = tg.themeParams?.button_text_color || '#ffffff';
 
@@ -93,7 +91,6 @@ export const BookingConfirmScreen: React.FC<Props> = ({
     tg.MainButton.onClick(handleMainClick);
     tg.MainButton.show();
 
-    // Очистка при уходе с экрана
     return () => {
       tg.BackButton.offClick(handleBackClick);
       tg.BackButton.hide();
@@ -108,34 +105,59 @@ export const BookingConfirmScreen: React.FC<Props> = ({
         backgroundColor: 'var(--tg-theme-secondary-bg-color)',
         minHeight: '100vh'
     }}>
-      <div style={{ padding: '32px 20px 20px', textAlign: 'center' }}>
+      {/* ШАПКА С АВАТАРКОЙ */}
+      <div style={{ padding: '40px 20px 24px', textAlign: 'center' }}>
           <Avatar
-             size={80}
+             size={88}
              src={user?.photo_url}
-             fallbackIcon={<Icon28UserOutline width={40} height={40}/>}
-             style={{ margin: '0 auto 16px' }}
+             fallbackIcon={<Icon28UserOutline width={44} height={44}/>}
+             style={{
+                 margin: '0 auto 16px',
+                 border: '3px solid var(--tg-theme-bg-color)', // Красивая обводка в цвет карточек
+                 boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+             }}
           />
-          <Text weight="1" style={{ fontSize: 24, display: 'block', marginBottom: 8 }}>
+          <Text weight="1" style={{ fontSize: 24, display: 'block', marginBottom: 8, color: 'var(--tg-theme-text-color)' }}>
               Проверьте данные
           </Text>
-          <Text style={{ color: 'var(--tg-theme-hint-color)' }}>
+          <Text style={{ color: 'var(--tg-theme-hint-color)', fontSize: 15 }}>
               Вы почти записаны! Проверьте детали бронирования ниже.
           </Text>
       </div>
 
-      <List>
+      {/* СПИСОК ДЕТАЛЕЙ */}
+      <List style={{ padding: '0 16px' }}>
         <Section header="ДЕТАЛИ ЗАПИСИ">
-          <Cell before={<Icon28CalendarOutline style={{ color: 'var(--tg-theme-link-color)' }}/>} subtitle="Дата и время">
-             {formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1)} в {formattedTime}
+          <Cell
+             before={<Icon28CalendarOutline style={{ color: 'var(--tg-theme-button-color)' }}/>}
+             subtitle="Дата и время"
+          >
+             <span style={{ fontWeight: 500 }}>
+                 {formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1)} в {formattedTime}
+             </span>
           </Cell>
-          <Cell before={<Icon28UserOutline style={{ color: 'var(--tg-theme-link-color)' }}/>} subtitle="Мастер">
-             {service.master_name || 'Специалист'}
+
+          <Cell
+             before={<Icon28UserOutline style={{ color: 'var(--tg-theme-button-color)' }}/>}
+             subtitle="Мастер"
+          >
+             <span style={{ fontWeight: 500 }}>{service.master_name || 'Специалист'}</span>
           </Cell>
-          <Cell before={<Icon28ClockOutline style={{ color: 'var(--tg-theme-link-color)' }}/>} subtitle="Услуга">
-             {service.name} {service.duration ? `(${service.duration} мин)` : ''}
+
+          <Cell
+             before={<Icon28ClockOutline style={{ color: 'var(--tg-theme-button-color)' }}/>}
+             subtitle="Услуга"
+          >
+             <span style={{ fontWeight: 500 }}>
+                 {service.name} {service.duration ? `(${service.duration} мин)` : ''}
+             </span>
           </Cell>
-          <Cell before={<Icon28MoneyCircleOutline style={{ color: 'var(--tg-theme-link-color)' }}/>} subtitle="Стоимость">
-             {priceText}
+
+          <Cell
+             before={<Icon28MoneyCircleOutline style={{ color: 'var(--tg-theme-button-color)' }}/>}
+             subtitle="Стоимость"
+          >
+             <span style={{ fontWeight: 600, color: 'var(--tg-theme-text-color)' }}>{priceText}</span>
           </Cell>
         </Section>
       </List>
