@@ -1,15 +1,32 @@
-/*
-  Most styles are now handled by @telegram-apps/telegram-ui components.
-  We ensure the background matches the secondary background color of the theme.
-*/
-
-.ss-container {
-  /* Optional override if you wrap the List in this class */
-  background-color: var(--tgui--secondary_bg_color);
+/* Корневой контейнер для настроек */
+.settings-root {
+  display: flex;
+  flex-direction: column;
   height: 100%;
+  background-color: var(--tg-theme-secondary-bg-color); /* Серый фон для контраста секций */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Учитываем Таббар внизу */
+  padding-bottom: calc(90px + var(--tg-content-safe-area-inset-bottom, env(safe-area-inset-bottom)));
 }
 
-/* Ensure list takes full height if needed */
-.tgui-List {
-  min-height: 100vh;
+/* Контейнер для аватарки */
+.settings-avatar-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 32px 0 24px 0;
+}
+
+/* Центрируем текст в интерактивных ячейках-кнопках */
+.cell-action-center {
+  width: 100%;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.cell-action-left {
+  font-size: 16px;
+  font-weight: 500;
 }

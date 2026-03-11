@@ -3,19 +3,18 @@ import {
   List,
   Section,
   Input,
-  Button,
   Cell,
   Avatar,
   Spinner
 } from '@telegram-apps/telegram-ui';
-import { ScreenLayout } from '../components/ScreenLayout';
 import { Icon28PhoneOutline, Icon28UserCircleOutline } from '@vkontakte/icons';
 import { updateUserProfile, fetchUserProfile, deleteAccount } from '../helpers/api';
+import '../css/SettingsScreen.css';
 
 type Props = {
   telegramId: number;
   onBack: () => void;
-  onLogout: () => void; // Мы оставим название пропса onLogout, но по факту он будет вызываться после удаления аккаунта
+  onLogout: () => void;
 };
 
 export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }) => {
@@ -25,7 +24,7 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // 1. Загружаем данные при открытии
+  // Загружаем данные при открытии
   useEffect(() => {
     const loadData = async () => {
         setLoading(true);
@@ -50,6 +49,7 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
   }, [telegramId]);
 
   const handleSave = async () => {
+    if (saving) return;
     setSaving(true);
     try {
       await updateUserProfile(telegramId, {
@@ -57,16 +57,21 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
         last_name: lastName,
         phone: phone
       });
-      alert('✅ Профиль успешно обновлен!');
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg?.showAlert) {
+          tg.showAlert('Профиль успешно обновлен!');
+      } else {
+          alert('Профиль успешно обновлен!');
+      }
     } catch (e) {
       console.error(e);
-      alert('❌ Ошибка при сохранении. Попробуйте позже.');
+      alert('Ошибка при сохранении. Попробуйте позже.');
     } finally {
       setSaving(false);
     }
   };
 
-  // 3. Запрос телефона у Telegram
+  // Запрос телефона у Telegram
   const requestPhone = () => {
      const tg = (window as any).Telegram?.WebApp;
      if (tg && tg.requestContact) {
@@ -80,7 +85,7 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
                  if (!p.startsWith('+')) p = '+' + p;
                  setPhone(p);
              } else {
-                 alert('Не удалось получить номер или вы отменили действие.');
+                 if (tg.showAlert) tg.showAlert('Не удалось получить номер.');
              }
          });
      } else {
@@ -88,10 +93,10 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
      }
   };
 
-  // 4. Логика УДАЛЕНИЯ аккаунта
+  // Логика удаления аккаунта
   const handleDeleteAccountClick = () => {
     const tg = (window as any).Telegram?.WebApp;
-    const confirmMessage = 'Вы уверены, что хотите навсегда удалить свой аккаунт? Ваши данные будут стерты.';
+    const confirmMessage = 'Вы уверены, что хотите навсегда удалить свой аккаунт? Ваши записи и данные будут стерты.';
 
      const executeDeletion = async () => {
       setLoading(true);
@@ -121,90 +126,76 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
   };
 
   return (
-    <ScreenLayout title="Настройки" onBack={onBack}>
-       <div style={{
-           height: 'calc(100vh - 120px)',
-           overflowY: 'auto',
-           WebkitOverflowScrolling: 'touch',
-           paddingBottom: 40
-       }}>
-          <div style={{ padding: 20, display: 'flex', justifyContent: 'center' }}>
-             <Avatar size={96} src={undefined} fallbackIcon={<Icon28UserCircleOutline />} />
+    <div className="settings-root">
+      {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '100px 0' }}>
+              <Spinner size="l" />
           </div>
+      ) : (
+          <>
+            <div className="settings-avatar-container">
+               <Avatar size={96} src={undefined} fallbackIcon={<Icon28UserCircleOutline width={48} height={48} />} />
+            </div>
 
-          {loading ? (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: 20 }}>
-                  <Spinner size="m" />
-              </div>
-          ) : (
-              <List>
-                <Section header="Личные данные">
-                  <Input
-                    header="Имя"
-                    placeholder="Ваше имя"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                  />
-                  <Input
-                    header="Фамилия"
-                    placeholder="Ваше фамилия"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                  />
-                </Section>
+            <List>
+              <Section header="Личные данные">
+                <Input
+                  header="Имя"
+                  placeholder="Ваше имя"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                />
+                <Input
+                  header="Фамилия"
+                  placeholder="Ваша фамилия"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                />
+              </Section>
 
-                <Section header="Контакты">
-                   <Input
-                     header="Телефон"
-                     placeholder="+7 999 000-00-00"
-                     value={phone}
-                     onChange={(e) => setPhone(e.target.value)}
-                   />
-                   <Cell>
-                     <Button
-                        mode="bezeled"
-                        before={<Icon28PhoneOutline />}
-                        stretched
-                        onClick={requestPhone}
-                     >
-                        Взять из Telegram
-                     </Button>
-                   </Cell>
-                   <div style={{ padding: '0 16px 16px', fontSize: 12, color: 'var(--tgui--hint_color)' }}>
-                      Номер телефона нужен, чтобы мастера могли связаться с вами для подтверждения записи.
-                   </div>
-                </Section>
+              {/* Секция с контактами и ячейкой действия */}
+              <Section
+                header="Контакты"
+                footer="Номер телефона нужен, чтобы мастера могли связаться с вами для подтверждения записи."
+              >
+                 <Input
+                   header="Телефон"
+                   placeholder="+7 999 000-00-00"
+                   value={phone}
+                   onChange={(e) => setPhone(e.target.value)}
+                 />
 
-                <Section>
-                   <Cell>
-                     <Button
-                        mode="filled"
-                        size="l"
-                        stretched
-                        loading={saving}
-                        onClick={handleSave}
-                     >
-                        Сохранить изменения
-                     </Button>
-                   </Cell>
-                </Section>
+                 {/* Кликабельная ячейка вместо кнопки */}
+                 <Cell
+                   before={<Icon28PhoneOutline style={{ color: 'var(--tg-theme-button-color)' }} />}
+                   onClick={requestPhone}
+                 >
+                   <span className="cell-action-left" style={{ color: 'var(--tg-theme-button-color)' }}>
+                     Заполнить из Telegram
+                   </span>
+                 </Cell>
+              </Section>
 
-                <Section footer="Удаление аккаунта сотрет ваш профиль из базы данных.">
-                    <Cell>
-                        <Button
-                          mode="bezeled"
-                          size="m"
-                          stretched
-                          onClick={handleDeleteAccountClick}
-                          style={{color: 'var(--tgui--destructive_text_color)', borderColor: 'var(--tgui--destructive_text_color)'}}
-                        >
-                            Удалить аккаунт
-                        </Button>
-                    </Cell>
-                </Section>
-              </List>
-          )}
-      </div>
-    </ScreenLayout>
+              {/* Ячейка сохранения */}
+              <Section>
+                 <Cell onClick={handleSave}>
+                    <div className="cell-action-center" style={{ color: 'var(--tg-theme-button-color)' }}>
+                      {saving ? 'Со��ранение...' : 'Сохранить изменения'}
+                    </div>
+                 </Cell>
+              </Section>
+
+              {/* Опасная зона */}
+              <Section footer="Удаление аккаунта сотрет ваш профиль и историю записей из базы данных.">
+                  <Cell onClick={handleDeleteAccountClick}>
+                      <div className="cell-action-center" style={{ color: 'var(--tg-theme-destructive-text-color)' }}>
+                         Удалить аккаунт
+                      </div>
+                  </Cell>
+              </Section>
+            </List>
+          </>
+      )}
+    </div>
   );
 };
