@@ -6,6 +6,7 @@ import { WelcomeScreen } from './screens/WelcomeScreen';
 import { ServicesScreen } from './screens/ServicesScreen';
 import { SlotsScreen } from './screens/SlotsScreen';
 import { BookingConfirmScreen } from './screens/BookingConfirmScreen';
+import { BookingSuccessScreen } from './screens/BookingSuccessScreen'; // НОВЫЙ ЭКРАН УСПЕХА
 import { ProfileScreen } from './screens/ProfileScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { LeaveReviewScreen } from './screens/LeaveReviewScreen';
@@ -215,21 +216,20 @@ const App: React.FC = () => {
     setSelectedMasterName(null);
     setSelectedMasterId(null);
     if (localStorage.getItem('is_client_logged_in') === 'true') {
+        setMainTab('bookings');
         setScreen('profile');
     } else {
         setScreen('welcome');
     }
   };
 
-  // --- УМНЫЙ БЕСШОВНЫЙ ЛОГИН / АВТО-РЕГИСТРАЦИЯ ---
   const handleClientLogin = async (sourceUser?: any) => {
     const tgInstance = (window as any).Telegram?.WebApp;
     const currentUser = sourceUser || user || tgInstance?.initDataUnsafe?.user;
 
-    // ЗАЩИТА: Если мы не смогли получить ID пользователя
     if (!currentUser?.id) {
       if (tgInstance?.showAlert) {
-          tgInstance.showAlert("⚠️ Ошибка: Приложение открыто как обычная ссылка. Пожалуйста, настройте кнопку в боте как Web App (web_app), чтобы войти.");
+          tgInstance.showAlert("⚠️ Ошибка: Приложение открыто как обычная ссылка. Пожалуйста, настройте кнопку в боте как Web App.");
       } else {
           alert("⚠️ Ошибка: Откройте приложение через специальную кнопку меню в боте Telegram.");
       }
@@ -238,11 +238,9 @@ const App: React.FC = () => {
 
     setIsAppLoading(true);
     try {
-      // 1. Проверяем, есть ли такой клиент в базе
       const profile = await checkClientProfile(currentUser.id);
 
       if (!profile) {
-        // 2. Если нет — моментально регистрируем (телефон пока пустой)
         await registerClient({
           telegram_id: currentUser.id,
           first_name: currentUser.first_name || 'Клиент',
@@ -251,9 +249,7 @@ const App: React.FC = () => {
         });
       }
 
-      // 3. Авторизуем и пускаем в приложение
       localStorage.setItem('is_client_logged_in', 'true');
-
       setMainTab('bookings');
       setScreen('profile');
 
@@ -281,14 +277,10 @@ const App: React.FC = () => {
   return (
     <AppRoot appearance={appearance} platform={isIos ? 'ios' : 'base'}>
 
-      {/* CLIENT SCREENS */}
       {screen === 'welcome' && (
-        <WelcomeScreen
-           onContinue={(tgUser) => handleClientLogin(tgUser)}
-        />
+        <WelcomeScreen onContinue={(tgUser) => handleClientLogin(tgUser)} />
       )}
 
-      {/* Экран регистрации остался только как fallback (резервный) */}
       {screen === 'client_registration' && user && (
         <ClientRegistrationScreen
           telegramId={user.id}
@@ -317,7 +309,6 @@ const App: React.FC = () => {
         <SlotsScreen
           service={selectedService}
           onBack={() => {
-              // Умная кнопка назад: если мы пришли из визитки мастера, возвращаем в нее
               if (selectedMasterId) setScreen('client_master_profile');
               else setScreen('services');
           }}
@@ -335,15 +326,16 @@ const App: React.FC = () => {
         />
       )}
 
+      {/* НОВЫЙ ЭКРАН УСПЕШНОГО БРОНИРОВАНИЯ */}
       {screen === 'bookingDone' && createdBooking && (
-        <div style={{ padding: 20, minHeight: '100vh', background: 'var(--tgui--bg_color)' }}>
-          <h2 style={{ color: 'var(--tgui--text_color)' }}>Бронь создана!</h2>
-          <button onClick={resetToStart} style={{ marginTop: 16, padding: '10px 20px' }}>На главный экран</button>
-        </div>
+        <BookingSuccessScreen
+           booking={createdBooking}
+           onGoHome={resetToStart}
+        />
       )}
 
       {screen === 'client_reviews_list' && reviewsMasterId && (
-        <ReviewsListScreen masterId={reviewsMasterId} onBack={() => setScreen('profile')} />
+        <ReviewsListScreen masterId={reviewsMasterId} isOpen={true} onClose={() => setScreen('profile')} />
       )}
 
       {screen === 'client_portfolio' && portfolioMaster && (
@@ -454,6 +446,7 @@ const App: React.FC = () => {
           onSuccess={() => setScreen('master_dashboard')}
         />
       )}
+
       {screen === 'client_master_profile' && selectedMasterId && (
         <MasterPublicProfileScreen
           masterId={selectedMasterId}
@@ -468,10 +461,6 @@ const App: React.FC = () => {
           onServiceClick={(service) => {
             setSelectedService(service);
             setScreen('slots');
-          }}
-          onOpenReviews={(id) => {
-            setSelectedMasterId(id);
-            setScreen('reviews');
           }}
         />
       )}
