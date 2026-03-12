@@ -1,21 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   List,
   Input,
   Textarea,
-  Button,
   Section,
   Avatar,
   Spinner,
-  Select
+  Select,
+  Text
 } from '@telegram-apps/telegram-ui';
 import {
   Icon28AddCircleOutline,
   Icon28DeleteOutline,
   Icon28UserCircleOutline
 } from '@vkontakte/icons';
-
-import { ScreenLayout } from '../components/ScreenLayout';
 
 import {
   updateMasterProfile,
@@ -32,8 +30,9 @@ const CITIES = ['Ургенч', 'Ташкент', 'Самарканд', 'Бух�
 // =========================================================
 // УМНЫЕ КОМПОНЕНТЫ ДЛЯ КАРТИНОК
 // =========================================================
-const SafeAvatar: React.FC<{ path: string, onChange: (e: any) => void }> = ({ path, onChange }) => {
+const SafeAvatar: React.FC<{ path: string, onChange: (e: any) => void, loading?: boolean }> = ({ path, onChange, loading }) => {
     const [src, setSrc] = useState<string | undefined>(undefined);
+
     useEffect(() => {
         if (!path) return;
         const url = getFullImageUrl(path);
@@ -42,16 +41,27 @@ const SafeAvatar: React.FC<{ path: string, onChange: (e: any) => void }> = ({ pa
     }, [path]);
 
     return (
-      <label style={{ position: 'relative', cursor: 'pointer' }}>
-          <Avatar size={96} src={src || undefined} fallbackIcon={<Icon28UserCircleOutline />} />
-          <div style={{
-              position: 'absolute', bottom: 0, right: 0, background: 'var(--tgui--button_color)',
-              border: '4px solid var(--tgui--secondary_bg_color)', borderRadius: '50%', width: 32, height: 32,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-          }}>
-              <span style={{ color: 'var(--tgui--button_text_color)', fontSize: 24, lineHeight: '24px', marginTop: -2 }}>+</span>
-          </div>
-          <input type="file" hidden accept="image/*" onChange={onChange} />
+      <label style={{ position: 'relative', cursor: 'pointer', display: 'block' }}>
+          <Avatar
+             size={100}
+             src={src || undefined}
+             fallbackIcon={<Icon28UserCircleOutline width={50} height={50} style={{ color: 'var(--tg-theme-hint-color)' }} />}
+             style={{ border: '4px solid var(--tg-theme-bg-color)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
+          />
+          {loading ? (
+             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                 <Spinner size="m" />
+             </div>
+          ) : (
+             <div style={{
+                 position: 'absolute', bottom: 0, right: 0, backgroundColor: 'var(--tg-theme-button-color)',
+                 border: '4px solid var(--tg-theme-bg-color)', borderRadius: '50%', width: 34, height: 34,
+                 display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+             }}>
+                 <span style={{ color: 'var(--tg-theme-button-text-color)', fontSize: 24, lineHeight: '24px', marginTop: -2 }}>+</span>
+             </div>
+          )}
+          <input type="file" hidden accept="image/*" onChange={onChange} disabled={loading} />
       </label>
     );
 };
@@ -73,8 +83,8 @@ const SafePortfolioImage: React.FC<{ path: string }> = ({ path }) => {
             .catch(e => setErr(e.message));
     }, [path]);
 
-    if (err) return <div style={{ width: '100%', height: '100%', background: '#ffebee' }} />;
-    if (!src) return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--tgui--secondary_bg_color)' }}><Spinner size="s" /></div>;
+    if (err) return <div style={{ width: '100%', height: '100%', backgroundColor: 'rgba(255, 59, 48, 0.1)' }} />;
+    if (!src) return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--tg-theme-secondary-bg-color)' }}><Spinner size="s" /></div>;
     return <img src={src} alt="work" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
 };
 
@@ -100,14 +110,83 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
   const [address, setAddress] = useState(initialData?.address || '');
   const [avatarUrl, setAvatarUrl] = useState(initialData?.avatarUrl || '');
   const [loading, setLoading] = useState(false);
+  const [avatarLoading, setAvatarLoading] = useState(false);
 
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [loadingPortfolio, setLoadingPortfolio] = useState(false);
+
+  // Используем Ref для актуальных данных формы, чтобы нативная кнопка всегда видела свежие значения
+  const formRef = useRef({ name, bio, phone, city, address });
+  useEffect(() => {
+      formRef.current = { name, bio, phone, city, address };
+  }, [name, bio, phone, city, address]);
+
+  // НАСТРОЙКА НАТИВНЫХ КНОПОК
+  useEffect(() => {
+      const tg = (window as any).Telegram?.WebApp;
+      if (!tg) return;
+
+      tg.BackButton.onClick(onBack);
+      tg.BackButton.show();
+
+      const handleMainClick = async () => {
+          if (loading || avatarLoading || loadingPortfolio) return;
+
+          const currentForm = formRef.current;
+          if (!currentForm.name.trim()) {
+              if (tg.showAlert) tg.showAlert('Пожалуйста, укажите ваше имя.');
+              if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+              return;
+          }
+
+          setLoading(true);
+          tg.MainButton.showProgress();
+          tg.MainButton.disable();
+
+          try {
+              await updateMasterProfile(telegramId, currentForm);
+              if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+              onSaved();
+          } catch (e) {
+              if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+              alert('Ошибка при сохранении профиля');
+          } finally {
+              setLoading(false);
+              tg.MainButton.hideProgress();
+              tg.MainButton.enable();
+          }
+      };
+
+      tg.MainButton.setParams({
+          text: 'СОХРАНИТЬ',
+          color: tg.themeParams?.button_color || '#3390ec',
+          text_color: tg.themeParams?.button_text_color || '#ffffff',
+          is_active: true,
+          is_visible: true
+      });
+      tg.MainButton.onClick(handleMainClick);
+
+      return () => {
+          tg.BackButton.offClick(onBack);
+          tg.BackButton.hide();
+          tg.MainButton.offClick(handleMainClick);
+          tg.MainButton.hide();
+      };
+  }, [onBack, onSaved, loading, avatarLoading, loadingPortfolio, telegramId]);
 
   useEffect(() => {
       loadPortfolio();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const triggerHaptic = (type: 'light' | 'selection' | 'warning' = 'selection') => {
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg?.HapticFeedback) {
+          if (type === 'warning') tg.HapticFeedback.notificationOccurred('warning');
+          else if (type === 'light') tg.HapticFeedback.impactOccurred('light');
+          else tg.HapticFeedback.selectionChanged();
+      }
+  };
 
   const loadPortfolio = async () => {
       setLoadingPortfolio(true);
@@ -118,31 +197,21 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
       finally { setLoadingPortfolio(false); }
   };
 
-  const handleSave = async () => {
-    setLoading(true);
-    try {
-      await updateMasterProfile(telegramId, { name, bio, phone, city, address });
-      onSaved();
-    } catch (e) {
-      alert('Ошибка сохранения');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setLoading(true);
+      triggerHaptic('light');
+      setAvatarLoading(true);
       try {
         const res = await uploadMasterAvatar(telegramId, e.target.files[0]);
         setAvatarUrl(res.avatar_url);
       } catch (err) { alert('Ошибка загрузки аватара'); }
-      finally { setLoading(false); }
+      finally { setAvatarLoading(false); }
     }
   };
 
   const handlePortfolioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files[0]) {
+          triggerHaptic('light');
           setLoadingPortfolio(true);
           try {
               await uploadPortfolioPhoto(telegramId, e.target.files[0]);
@@ -153,7 +222,8 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
   };
 
   const handleDeletePhoto = async (id: number) => {
-      if(!window.confirm('Удалить фото?')) return;
+      triggerHaptic('warning');
+      if(!window.confirm('Удалить это фото из портфолио?')) return;
       try {
           await deletePortfolioPhoto(id);
           setPortfolio(prev => prev.filter(p => p.id !== id));
@@ -161,25 +231,47 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
   };
 
   return (
-    <ScreenLayout title="Редактировать профиль" onBack={onBack}>
-      <List style={{ background: 'var(--tgui--secondary_bg_color)', minHeight: '100vh', paddingBottom: 60 }}>
+    <div style={{ backgroundColor: 'var(--tg-theme-secondary-bg-color)', minHeight: '100vh', paddingBottom: 80 }}>
 
-        {/* --- АВАТАР --- */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 16px 24px' }}>
-          <SafeAvatar path={avatarUrl} onChange={handleAvatarChange} />
-          <div style={{ marginTop: 12, color: 'var(--tgui--hint_color)', fontSize: 14 }}>Нажмите на фото, чтобы изменить</div>
-        </div>
+      {/* --- АВАТАР --- */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 16px 24px', backgroundColor: 'var(--tg-theme-bg-color)', borderBottom: '1px solid var(--tg-theme-secondary-bg-color)' }}>
+        <SafeAvatar path={avatarUrl} onChange={handleAvatarChange} loading={avatarLoading} />
+        <Text style={{ marginTop: 16, color: 'var(--tg-theme-hint-color)', fontSize: 14 }}>
+            Нажмите на фото, чтобы изменить
+        </Text>
+      </div>
+
+      <List style={{ padding: '0 16px', marginTop: 16 }}>
 
         {/* --- ЛИЧНЫЕ ДАННЫЕ --- */}
         <Section header="Личные данные">
-          <Input header="Имя" placeholder="Как вас зовут?" value={name} onChange={(e) => setName(e.target.value)} />
-          <Textarea header="О себе" placeholder="Расскажите о своем опыте..." value={bio} onChange={(e) => setBio(e.target.value)} />
+          <Input
+             header="Имя"
+             placeholder="Как вас зовут?"
+             value={name}
+             onChange={(e) => setName(e.target.value)}
+             onFocus={() => triggerHaptic('selection')}
+          />
+          <Textarea
+             header="О себе"
+             placeholder="Расскажите о своем опыте..."
+             value={bio}
+             onChange={(e) => setBio(e.target.value)}
+             onFocus={() => triggerHaptic('selection')}
+          />
         </Section>
 
         {/* --- ЛОКАЦИЯ И КОНТАКТЫ --- */}
-        <Section header="Локация и контакты" footer="Укажите номер телефона и точный адрес или вставьте ссылку на Яндекс/Google карты">
-          <Input header="Телефон" placeholder="+998 90 000 00 00" value={phone} onChange={(e) => setPhone(e.target.value)} />
-          <Select header="Город" value={city} onChange={(e) => setCity(e.target.value)}>
+        <Section header="Локация и контакты" footer="Укажите номер телефона и точный адрес или вставьте ссылку на Яндекс/Google Карты.">
+          <Input
+             header="Телефон"
+             placeholder="+998 90 000 00 00"
+             type="tel"
+             value={phone}
+             onChange={(e) => setPhone(e.target.value)}
+             onFocus={() => triggerHaptic('selection')}
+          />
+          <Select header="Город" value={city} onChange={(e) => { triggerHaptic('selection'); setCity(e.target.value); }}>
              {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
           </Select>
           <Textarea
@@ -187,45 +279,50 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
              placeholder="Ул. Амира Темура 10, либо ссылка https://yandex.ru/maps/..."
              value={address}
              onChange={(e) => setAddress(e.target.value)}
+             onFocus={() => triggerHaptic('selection')}
           />
         </Section>
 
         {/* --- ПОРТФОЛИО --- */}
-        <Section header="Мое портфолио" footer="Загрузите фото ваших лучших работ.">
-            <div style={{ padding: '16px', background: 'var(--tgui--bg_color)' }}>
+        <Section header="Мое портфолио" footer="Загрузите фото ваших лучших работ (до 10 шт).">
+            <div style={{ padding: '16px', backgroundColor: 'var(--tg-theme-bg-color)' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
                     {portfolio.map(item => (
-                        <div key={item.id} style={{ position: 'relative', aspectRatio: '1/1', borderRadius: 12, overflow: 'hidden' }}>
+                        <div key={item.id} style={{ position: 'relative', aspectRatio: '1/1', borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
                             <SafePortfolioImage path={item.image_url} />
                             <div
                                 onClick={() => handleDeletePhoto(item.id)}
                                 style={{
-                                    position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.5)',
+                                    position: 'absolute', top: 6, right: 6, backgroundColor: 'rgba(255, 59, 48, 0.9)',
                                     borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center',
-                                    justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)'
+                                    justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                                 }}
                             >
-                                <Icon28DeleteOutline width={20} height={20} style={{ color: '#fff' }} />
+                                <Icon28DeleteOutline width={18} height={18} style={{ color: '#fff' }} />
                             </div>
                         </div>
                     ))}
+
+                    {/* КНОПКА ДОБАВЛЕНИЯ ФОТО */}
                     <label style={{
-                        backgroundColor: 'var(--tgui--secondary_bg_color)', borderRadius: 12, display: 'flex', flexDirection: 'column',
-                        alignItems: 'center', justifyContent: 'center', cursor: 'pointer', aspectRatio: '1/1'
+                        backgroundColor: 'var(--tg-theme-secondary-bg-color)', borderRadius: 12, display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', justifyContent: 'center', cursor: 'pointer', aspectRatio: '1/1',
+                        border: '2px dashed rgba(0,0,0,0.1)', transition: 'background-color 0.2s ease'
                     }}>
                         {loadingPortfolio ? <Spinner size="m" /> : (
-                            <><Icon28AddCircleOutline width={32} height={32} style={{ color: 'var(--tgui--hint_color)' }} /><span style={{ fontSize: 13, color: 'var(--tgui--hint_color)' }}>Добавить</span></>
+                            <>
+                               <Icon28AddCircleOutline width={32} height={32} style={{ color: 'var(--tg-theme-hint-color)', marginBottom: 4 }} />
+                               <span style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)', fontWeight: 500 }}>Добавить</span>
+                            </>
                         )}
-                        <input type="file" hidden accept="image/*" onChange={handlePortfolioUpload} />
+                        <input type="file" hidden accept="image/*" onChange={handlePortfolioUpload} disabled={loadingPortfolio} />
                     </label>
                 </div>
             </div>
         </Section>
 
-        <div style={{ padding: '24px 16px' }}>
-           <Button size="l" mode="filled" stretched loading={loading} onClick={handleSave}>Сохранить изменения</Button>
-        </div>
       </List>
-    </ScreenLayout>
+    </div>
   );
 };
