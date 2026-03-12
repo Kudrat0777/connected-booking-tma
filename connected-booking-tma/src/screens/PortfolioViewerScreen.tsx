@@ -7,7 +7,6 @@ import {
 import { Icon28PictureStackOutline } from '@vkontakte/icons';
 import { ScreenLayout } from '../components/ScreenLayout';
 import { fetchPortfolio, PortfolioItem, getFullImageUrl } from '../helpers/api';
-import '../css/PortfolioViewer.css';
 
 type Props = {
   masterId: number;

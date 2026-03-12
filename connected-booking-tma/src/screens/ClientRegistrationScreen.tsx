@@ -8,7 +8,6 @@ import {
 } from '@telegram-apps/telegram-ui';
 import { Icon28PhoneOutline } from '@vkontakte/icons';
 import { registerClient } from '../helpers/api';
-import '../css/ClientRegistrationScreen.css';
 
 type Props = {
   telegramId: number;
