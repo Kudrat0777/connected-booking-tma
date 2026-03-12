@@ -23,7 +23,6 @@ import {
   Icon28EditOutline,
   Icon28StatisticsOutline,
   Icon28FavoriteOutline,
-  Icon28DeleteOutline,
   Icon28PhoneOutline,
   Icon28UserOutline,
   Icon28DoorArrowLeftOutline
@@ -42,6 +41,9 @@ import {
 } from '../helpers/api';
 
 import type { Booking, Service, Slot } from '../helpers/api';
+
+// ИМПОРТИРУЕМ НОВЫЙ КОМПОНЕНТ УСЛУГ
+import { MasterServicesTab } from '../components/MasterServicesTab';
 
 const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
   const container = useRef<HTMLDivElement>(null);
@@ -271,10 +273,10 @@ export const MasterDashboardScreen: React.FC<Props> = ({
     }, {});
 
     return (
-      <div style={{ backgroundColor: 'var(--tg-theme-bg-color)', minHeight: '100%', paddingBottom: 100 }}>
+      <div style={{ minHeight: '100%', paddingBottom: 100 }}>
 
-        {/* Фильтры: Убрали borderBottom, чтобы не было черной полосы */}
-        <div style={{ padding: '12px 16px', position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--tg-theme-bg-color)' }}>
+        {/* Фильтры */}
+        <div style={{ padding: '12px 16px', position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--tg-theme-secondary-bg-color)' }}>
           <SegmentedControl>
             <SegmentedControl.Item selected={filter === 'today'} onClick={() => { triggerHaptic(); setFilter('today'); }}>Сегодня</SegmentedControl.Item>
             <SegmentedControl.Item selected={filter === 'tomorrow'} onClick={() => { triggerHaptic(); setFilter('tomorrow'); }}>Завтра</SegmentedControl.Item>
@@ -313,13 +315,14 @@ export const MasterDashboardScreen: React.FC<Props> = ({
 
                                 <div style={{
                                     flex: 1,
-                                    backgroundColor: 'var(--tg-theme-secondary-bg-color)',
+                                    backgroundColor: 'var(--tg-theme-bg-color)',
                                     borderLeft: isPending ? '4px solid #FF9500' : '4px solid #34C759',
                                     borderRadius: '0 16px 16px 0',
                                     padding: '16px',
                                     display: 'flex',
                                     flexDirection: 'column',
-                                    gap: 12
+                                    gap: 12,
+                                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
                                 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                         <Avatar size={48} src={b.photo_url || undefined} fallbackIcon={<Icon28UserCircleOutline />} />
@@ -337,12 +340,12 @@ export const MasterDashboardScreen: React.FC<Props> = ({
                                     {(b.client_phone || b.username) && (
                                         <div style={{ display: 'flex', gap: 8 }}>
                                             {b.client_phone && (
-                                                <a href={`tel:${b.client_phone}`} style={{ flex: 1, textDecoration: 'none', backgroundColor: 'var(--tg-theme-bg-color)', padding: '8px', borderRadius: 10, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--tg-theme-text-color)', fontWeight: 500 }}>
+                                                <a href={`tel:${b.client_phone}`} style={{ flex: 1, textDecoration: 'none', backgroundColor: 'var(--tg-theme-secondary-bg-color)', padding: '8px', borderRadius: 10, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--tg-theme-text-color)', fontWeight: 500 }}>
                                                     <Icon28PhoneOutline width={20} height={20} style={{color: 'var(--tg-theme-button-color)'}}/> Звонок
                                                 </a>
                                             )}
                                             {b.username && (
-                                                <a href={`https://t.me/${b.username.replace('@', '')}`} target="_blank" rel="noreferrer" style={{ flex: 1, textDecoration: 'none', backgroundColor: 'var(--tg-theme-bg-color)', padding: '8px', borderRadius: 10, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--tg-theme-text-color)', fontWeight: 500 }}>
+                                                <a href={`https://t.me/${b.username.replace('@', '')}`} target="_blank" rel="noreferrer" style={{ flex: 1, textDecoration: 'none', backgroundColor: 'var(--tg-theme-secondary-bg-color)', padding: '8px', borderRadius: 10, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--tg-theme-text-color)', fontWeight: 500 }}>
                                                     Telegram
                                                 </a>
                                             )}
@@ -397,83 +400,9 @@ export const MasterDashboardScreen: React.FC<Props> = ({
     );
   };
 
-  // --- Вкладка УСЛУГИ ---
-  const renderServices = () => (
-    <div style={{ backgroundColor: 'var(--tg-theme-secondary-bg-color)', minHeight: '100%', paddingBottom: 100 }}>
-      <div style={{
-          padding: '24px 16px 16px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          position: 'sticky',
-          top: 0,
-          backgroundColor: 'var(--tg-theme-secondary-bg-color)',
-          zIndex: 10,
-      }}>
-        <Title level="1" weight="2" style={{ margin: 0 }}>Мои услуги</Title>
-        <Button size="s" mode="filled" onClick={() => { triggerHaptic(); onAddService(); }} style={{ borderRadius: 100 }}>
-          + Добавить
-        </Button>
-      </div>
-
-      {loadingServices && <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><Spinner size="m"/></div>}
-
-      {!loadingServices && services.length === 0 && (
-         <div style={{ marginTop: 20 }}>
-             <Placeholder header="Нет услуг" description="Добавьте услуги, чтобы клиенты могли записываться.">
-                <LottieIcon src="/stickers/duck_out.json" size={140} />
-             </Placeholder>
-         </div>
-      )}
-
-      {!loadingServices && services.length > 0 && (
-        <div style={{ padding: '0 16px 16px' }}>
-          {services.map((s) => (
-             <div
-                key={s.id}
-                style={{
-                   backgroundColor: 'var(--tg-theme-bg-color)',
-                   borderRadius: 16,
-                   padding: '16px',
-                   marginBottom: 12,
-                   boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                   position: 'relative'
-                }}
-             >
-                <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--tg-theme-text-color)', marginBottom: 6, paddingRight: 40 }}>
-                   {s.name}
-                </div>
-                {s.description && (
-                   <div style={{ fontSize: 14, color: 'var(--tg-theme-hint-color)', marginBottom: 12, lineHeight: '1.4' }}>
-                      {s.description}
-                   </div>
-                )}
-                <div style={{ display: 'flex', gap: 8 }}>
-                   <div style={{ backgroundColor: 'var(--tg-theme-secondary-bg-color)', padding: '6px 10px', borderRadius: 8, fontSize: 13, fontWeight: 600, color: 'var(--tg-theme-text-color)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      🕒 {s.duration} мин
-                   </div>
-                   <div style={{ backgroundColor: 'rgba(52, 199, 89, 0.1)', color: '#34C759', padding: '6px 10px', borderRadius: 8, fontSize: 13, fontWeight: 700 }}>
-                      {s.price?.toLocaleString()} UZS
-                   </div>
-                </div>
-                <div
-                   onClick={(e) => { e.stopPropagation(); handleDeleteService(s.id); }}
-                   style={{
-                      position: 'absolute', top: 12, right: 12, width: 32, height: 32, borderRadius: '50%', backgroundColor: 'rgba(255, 59, 48, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
-                   }}
-                >
-                   <Icon28DeleteOutline width={20} height={20} style={{ color: '#FF3B30' }} />
-                </div>
-             </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-
   // --- Вкладка ПРОФИЛЬ ---
   const renderProfile = () => (
-     <div style={{ backgroundColor: 'var(--tg-theme-secondary-bg-color)', minHeight: '100%', paddingBottom: 100 }}>
+     <div style={{ minHeight: '100%', paddingBottom: 100 }}>
         <div style={{ padding: '32px 20px 16px' }}>
             <Title level="1" weight="2" style={{ marginBottom: 8, color: 'var(--tg-theme-text-color)' }}>Мой кабинет</Title>
             <Text style={{ color: 'var(--tg-theme-hint-color)', fontSize: 15 }}>
@@ -539,10 +468,27 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   );
 
   return (
-    <div style={{ position: 'relative', height: '100vh', overflow: 'hidden', backgroundColor: 'var(--tg-theme-bg-color)' }}>
+    <div style={{
+        position: 'relative',
+        height: '100vh',
+        overflow: 'hidden',
+        // 🚀 ГЛАВНЫЙ ФОН ДАШБОРДА СТАЛ ВТОРИЧНЫМ (СЕРЫМ), ЧТОБЫ СПИСКИ И КАРТОЧКИ ВЫГЛЯДЕЛИ ИДЕАЛЬНО
+        backgroundColor: 'var(--tg-theme-secondary-bg-color)'
+    }}>
       <main style={{ height: '100%', overflowY: 'auto' }}>
         {activeTab === 'bookings' && renderBookings()}
-        {activeTab === 'services' && renderServices()}
+
+        {/* ИСПОЛЬЗУЕМ НАШ НОВЫЙ КОМПОНЕНТ */}
+        {activeTab === 'services' && (
+            <MasterServicesTab
+                services={services}
+                loading={loadingServices}
+                onAddService={onAddService}
+                onDeleteService={handleDeleteService}
+                triggerHaptic={triggerHaptic}
+            />
+        )}
+
         {activeTab === 'profile' && renderProfile()}
       </main>
 
@@ -560,8 +506,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
 
       {/* МОДАЛЬНОЕ ОКНО СОЗДАНИЯ ЗАПИСИ */}
       <Modal header={<Modal.Header>Новая запись</Modal.Header>} open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        {/* Добавлен скролл (maxHeight, overflowY) и увеличен paddingBottom */}
-        <div style={{ padding: '0 16px 80px', display: 'flex', flexDirection: 'column', gap: 16, maxHeight: '85vh', overflowY: 'auto' }}>
+        <div style={{ padding: '0 16px 150px', display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', maxHeight: '85vh' }}>
           <Input header="Имя клиента" placeholder="Например, Анна" value={newClientName} onChange={(e) => setNewClientName(e.target.value)} />
           <Input header="Телефон клиента" placeholder="+998 90 000 00 00" type="tel" value={newClientPhone} onChange={(e) => setNewClientPhone(e.target.value)} />
 
@@ -593,7 +538,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
 
       {/* МОДАЛЬНОЕ ОКНО "ПОДЕЛИТЬСЯ ССЫЛКОЙ" */}
       <Modal header={<Modal.Header>Успешно!</Modal.Header>} open={isShareModalOpen} onOpenChange={setIsShareModalOpen}>
-        <div style={{ padding: '0 16px 60px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', maxHeight: '85vh', overflowY: 'auto' }}>
+        <div style={{ padding: '0 16px 80px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', overflowY: 'auto', maxHeight: '85vh' }}>
           <div style={{ width: 80, height: 80, backgroundColor: 'var(--tg-theme-secondary-bg-color)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
             <Icon28UserCircleOutline width={48} height={48} style={{ color: 'var(--tg-theme-button-color)' }} />
           </div>
