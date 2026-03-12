@@ -2,8 +2,7 @@ import React, {
   useEffect,
   useRef,
   useState,
-  PointerEvent as ReactPointerEvent,
-  TouchEvent as ReactTouchEvent,
+  CSSProperties,
 } from 'react';
 import { Button, Title, Text } from '@telegram-apps/telegram-ui';
 import lottie, { AnimationItem } from 'lottie-web';
@@ -42,7 +41,7 @@ const SLIDES: Slide[] = [
 ];
 
 const SWIPE_THRESHOLD = 40;
-const AUTO_SLIDE_INTERVAL = 4000;
+const AUTO_SLIDE_INTERVAL = 5000;
 
 export const WelcomeScreen: React.FC<Props> = ({ onContinue }) => {
   const [index, setIndex] = useState(0);
@@ -57,128 +56,187 @@ export const WelcomeScreen: React.FC<Props> = ({ onContinue }) => {
 
   const autoSlideTimerRef = useRef<number | null>(null);
 
-  const triggerHaptic = () => {
-    const tg = (window as any).Telegram?.WebApp;
-    if (tg?.HapticFeedback) {
-      tg.HapticFeedback.selectionChanged();
+  const tg = (window as any).Telegram?.WebApp;
+
+  // Прячем кнопку назад, если она вдруг осталась от прошлых экранов
+  useEffect(() => {
+    if (tg) {
+        tg.BackButton.hide();
+        tg.expand();
     }
+  }, [tg]);
+
+  const triggerHaptic = () => {
+    if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
   };
 
+  // --- LOTTIE SETUP ---
   useEffect(() => {
-    if (lottieInstanceRef.current) {
-      lottieInstanceRef.current.destroy();
-      lottieInstanceRef.current = null;
-    }
+    const cleanup = () => {
+      if (lottieInstanceRef.current) {
+        lottieInstanceRef.current.destroy();
+        lottieInstanceRef.current = null;
+      }
+    };
+
+    cleanup();
+
     if (!slide.lottieSrc || !lottieContainerRef.current) return;
 
-    const anim = lottie.loadAnimation({
-      container: lottieContainerRef.current,
-      renderer: 'svg',
-      loop: true,
-      autoplay: true,
-      path: slide.lottieSrc,
-    });
+    try {
+        const anim = lottie.loadAnimation({
+          container: lottieContainerRef.current,
+          renderer: 'svg',
+          loop: true,
+          autoplay: true,
+          path: slide.lottieSrc,
+        });
+        lottieInstanceRef.current = anim;
+    } catch(e) {
+      console.error("Lottie load error:", e);
+    }
 
-    lottieInstanceRef.current = anim;
-    return () => anim.destroy();
+    return cleanup;
   }, [slide.lottieSrc]);
 
+  // --- SLIDER LOGIC ---
   const changeSlide = (newIndex: number) => {
     setIndex(newIndex);
     triggerHaptic();
   };
-
   const nextSlide = () => changeSlide((index + 1) % SLIDES.length);
   const prevSlide = () => changeSlide(index === 0 ? SLIDES.length - 1 : index - 1);
+  const goTo = (i: number) => { if (i !== index) changeSlide(i); };
 
-  const resetAutoSlideTimer = () => {
-    if (autoSlideTimerRef.current != null) clearInterval(autoSlideTimerRef.current);
-    autoSlideTimerRef.current = window.setInterval(() => {
-      setIndex((prev) => (prev + 1) % SLIDES.length);
-    }, AUTO_SLIDE_INTERVAL);
+  useEffect(() => {
+    const resetTimer = () => {
+      if (autoSlideTimerRef.current) clearInterval(autoSlideTimerRef.current);
+      autoSlideTimerRef.current = window.setInterval(() => {
+        setIndex((prev) => (prev + 1) % SLIDES.length);
+      }, AUTO_SLIDE_INTERVAL);
+    };
+    resetTimer();
+    return () => { if (autoSlideTimerRef.current) clearInterval(autoSlideTimerRef.current); };
+  }, [index]);
+
+  // --- SWIPE HANDLERS ---
+  const handleStart = (x: number) => {
+    if (isAnimating) return;
+    swipeStartXRef.current = x;
+    setSwipeDeltaX(0);
   };
-
-  useEffect(() => { resetAutoSlideTimer(); return () => { if (autoSlideTimerRef.current != null) clearInterval(autoSlideTimerRef.current); }; }, []);
-  useEffect(() => { resetAutoSlideTimer(); }, [index]);
-
-  const handleStart = (x: number) => { if (isAnimating) return; swipeStartXRef.current = x; setSwipeDeltaX(0); };
-  const handleMove = (x: number) => { if (swipeStartXRef.current == null || isAnimating) return; setSwipeDeltaX(x - swipeStartXRef.current); };
-  const handleEnd = () => {
+  const handleMove = (x: number) => {
     if (swipeStartXRef.current == null || isAnimating) return;
+    setSwipeDeltaX(x - swipeStartXRef.current);
+  };
+  const handleEnd = () => {
+    if (swipeStartXRef.current == null) return;
     const dx = swipeDeltaX;
     swipeStartXRef.current = null;
+    if (isAnimating) return;
+
     if (dx > SWIPE_THRESHOLD) {
-      setIsAnimating(true); setSwipeDeltaX(window.innerWidth);
-      setTimeout(() => { setSwipeDeltaX(0); prevSlide(); setIsAnimating(false); }, 250);
+      setIsAnimating(true);
+      setSwipeDeltaX(100);
+      setTimeout(() => { setSwipeDeltaX(0); prevSlide(); setIsAnimating(false); }, 200);
     } else if (dx < -SWIPE_THRESHOLD) {
-      setIsAnimating(true); setSwipeDeltaX(-window.innerWidth);
-      setTimeout(() => { setSwipeDeltaX(0); nextSlide(); setIsAnimating(false); }, 250);
+      setIsAnimating(true);
+      setSwipeDeltaX(-100);
+      setTimeout(() => { setSwipeDeltaX(0); nextSlide(); setIsAnimating(false); }, 200);
     } else {
-      setIsAnimating(true); setSwipeDeltaX(0); setTimeout(() => setIsAnimating(false), 200);
+      setIsAnimating(true);
+      setSwipeDeltaX(0);
+      setTimeout(() => setIsAnimating(false), 200);
     }
   };
 
   const handleLoginClick = () => {
     triggerHaptic();
-    const tg = (window as any).Telegram?.WebApp;
     const tgUser = tg?.initDataUnsafe?.user;
     onContinue(tgUser);
   };
 
+  const slideAreaStyle: CSSProperties = {
+    transform: `translateX(${swipeDeltaX}px)`,
+    opacity: isAnimating ? 0 : 1,
+    transition: isAnimating ? 'transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease' : 'none',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    userSelect: 'none',
+    WebkitUserSelect: 'none'
+  };
+
   return (
-    <div
-      className="welcome-root"
-      style={{
-        height: 'var(--tg-viewport-height, 100vh)',
+    <div style={{
         display: 'flex',
         flexDirection: 'column',
+        height: '100vh',
+        backgroundColor: 'var(--tg-theme-bg-color)',
+        color: 'var(--tg-theme-text-color)',
         overflow: 'hidden'
-      }}
-    >
+    }}>
+
+      {/* СВАЙП-ЗОНА С АНИМАЦИЕЙ И ТЕКСТОМ */}
       <div
-        className={`welcome-slide-area ${isAnimating ? 'animating' : ''}`}
-        style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          transform: `translateX(${swipeDeltaX}px)`
-        }}
-        onPointerDown={(e: ReactPointerEvent) => handleStart(e.clientX)}
-        onPointerMove={(e: ReactPointerEvent) => handleMove(e.clientX)}
+        style={slideAreaStyle}
+        onPointerDown={(e) => handleStart(e.clientX)}
+        onPointerMove={(e) => handleMove(e.clientX)}
         onPointerUp={handleEnd}
-        onPointerCancel={handleEnd}
-        onTouchStart={(e: ReactTouchEvent) => handleStart(e.touches[0].clientX)}
-        onTouchMove={(e: ReactTouchEvent) => handleMove(e.touches[0].clientX)}
+        onTouchStart={(e) => handleStart(e.touches[0].clientX)}
+        onTouchMove={(e) => handleMove(e.touches[0].clientX)}
         onTouchEnd={handleEnd}
       >
         <div
-          className="welcome-lottie-container"
-          ref={lottieContainerRef}
-          style={{ height: '250px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            ref={lottieContainerRef}
+            style={{ width: 260, height: 260, marginBottom: 24 }}
         />
-        <Title weight="1" className="welcome-title" style={{ marginTop: '20px' }}>{slide.title}</Title>
-        <Text className="welcome-description" style={{ marginTop: '12px' }}>{slide.description}</Text>
+
+        <Title level="1" weight="1" style={{ textAlign: 'center', marginBottom: 12, fontSize: 26, padding: '0 16px' }}>
+            {slide.title}
+        </Title>
+
+        <Text style={{ textAlign: 'center', color: 'var(--tg-theme-hint-color)', fontSize: 16, lineHeight: '1.5', padding: '0 24px' }}>
+            {slide.description}
+        </Text>
       </div>
 
-      <div className="welcome-pagination" style={{ padding: '10px 0', flexShrink: 0 }}>
-        {SLIDES.map((_, i) => (
-          <div key={i} className={`welcome-dot ${i === index ? 'active' : ''}`} onClick={() => { if (i !== index) changeSlide(i); }} />
-        ))}
+      {/* ПАГИНАЦИЯ (Точки) */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '32px' }}>
+        {SLIDES.map((_, i) => {
+            const isActive = i === index;
+            return (
+              <div
+                key={i}
+                onClick={() => goTo(i)}
+                style={{
+                    width: isActive ? 24 : 8,
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: isActive ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-hint-color)',
+                    opacity: isActive ? 1 : 0.3,
+                    transition: 'all 0.3s ease',
+                    cursor: 'pointer'
+                }}
+              />
+            );
+        })}
       </div>
 
-      <div
-        className="welcome-actions"
-        style={{
-          padding: '16px',
-          paddingBottom: 'calc(24px + env(safe-area-inset-bottom))',
-          flexShrink: 0
-        }}
-      >
-        <Button size="l" mode="filled" stretched onClick={handleLoginClick}>
+      {/* КНОПКА (Прижата к низу) */}
+      <div style={{ padding: '0 20px 40px' }}>
+        <Button
+            size="l"
+            mode="filled"
+            stretched
+            onClick={handleLoginClick}
+        >
           Начать работу
         </Button>
       </div>
+
     </div>
   );
 };
