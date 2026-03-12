@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Tabbar,
-  Cell,
   Button,
   Placeholder,
   Spinner,
@@ -12,20 +11,13 @@ import {
   Input,
   Select,
   Text,
-  List,
-  Section
 } from '@telegram-apps/telegram-ui';
 
 import {
   Icon28CalendarOutline,
   Icon28ServicesOutline,
   Icon28UserCircleOutline,
-  Icon28EditOutline,
-  Icon28StatisticsOutline,
-  Icon28FavoriteOutline,
   Icon28PhoneOutline,
-  Icon28UserOutline,
-  Icon28DoorArrowLeftOutline
 } from '@vkontakte/icons';
 import lottie from 'lottie-web';
 
@@ -42,7 +34,9 @@ import {
 
 import type { Booking, Service, Slot } from '../helpers/api';
 
+// ИМПОРТИРУЕМ НАШИ ВЫДЕЛЕННЫЕ ТАБЫ И МОДАЛКИ
 import { MasterServicesTab } from '../components/MasterServicesTab';
+import { MasterProfileTab } from '../components/MasterProfileTab';
 import { MasterCreateServiceScreen } from './MasterCreateServiceScreen';
 
 const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
@@ -70,7 +64,7 @@ type Props = {
   onEditProfile: () => void;
   onOpenAnalytics: () => void;
   onOpenReviews: () => void;
-  onAddService?: () => void; // Оставили для совместимости с App.tsx, но использовать будем локальную модалку
+  onAddService?: () => void;
   onLogout?: () => void;
 };
 
@@ -266,7 +260,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
     setIsShareModalOpen(false);
   };
 
-  // --- Вкладка ЗАПИСИ ---
+  // --- Вкладка ЗАПИСИ (Осталась здесь, так как содержит много логики бронирований) ---
   const renderBookings = () => {
     const grouped = bookings.reduce((acc: any, b) => {
         const d = new Date(b.slot.time);
@@ -277,10 +271,10 @@ export const MasterDashboardScreen: React.FC<Props> = ({
     }, {});
 
     return (
-      <div style={{ minHeight: '100%', paddingBottom: 100 }}>
+      <div style={{ backgroundColor: 'var(--tg-theme-bg-color)', minHeight: '100%', paddingBottom: 100 }}>
 
-        {/* Фильтры: без черной полосы */}
-        <div style={{ padding: '12px 16px', position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--tg-theme-secondary-bg-color)' }}>
+        {/* Фильтры */}
+        <div style={{ padding: '12px 16px', position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--tg-theme-bg-color)' }}>
           <SegmentedControl>
             <SegmentedControl.Item selected={filter === 'today'} onClick={() => { triggerHaptic(); setFilter('today'); }}>Сегодня</SegmentedControl.Item>
             <SegmentedControl.Item selected={filter === 'tomorrow'} onClick={() => { triggerHaptic(); setFilter('tomorrow'); }}>Завтра</SegmentedControl.Item>
@@ -319,14 +313,13 @@ export const MasterDashboardScreen: React.FC<Props> = ({
 
                                 <div style={{
                                     flex: 1,
-                                    backgroundColor: 'var(--tg-theme-bg-color)',
+                                    backgroundColor: 'var(--tg-theme-secondary-bg-color)',
                                     borderLeft: isPending ? '4px solid #FF9500' : '4px solid #34C759',
                                     borderRadius: '0 16px 16px 0',
                                     padding: '16px',
                                     display: 'flex',
                                     flexDirection: 'column',
                                     gap: 12,
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
                                 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                         <Avatar size={48} src={b.photo_url || undefined} fallbackIcon={<Icon28UserCircleOutline />} />
@@ -344,12 +337,12 @@ export const MasterDashboardScreen: React.FC<Props> = ({
                                     {(b.client_phone || b.username) && (
                                         <div style={{ display: 'flex', gap: 8 }}>
                                             {b.client_phone && (
-                                                <a href={`tel:${b.client_phone}`} style={{ flex: 1, textDecoration: 'none', backgroundColor: 'var(--tg-theme-secondary-bg-color)', padding: '8px', borderRadius: 10, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--tg-theme-text-color)', fontWeight: 500 }}>
+                                                <a href={`tel:${b.client_phone}`} style={{ flex: 1, textDecoration: 'none', backgroundColor: 'var(--tg-theme-bg-color)', padding: '8px', borderRadius: 10, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--tg-theme-text-color)', fontWeight: 500 }}>
                                                     <Icon28PhoneOutline width={20} height={20} style={{color: 'var(--tg-theme-button-color)'}}/> Звонок
                                                 </a>
                                             )}
                                             {b.username && (
-                                                <a href={`https://t.me/${b.username.replace('@', '')}`} target="_blank" rel="noreferrer" style={{ flex: 1, textDecoration: 'none', backgroundColor: 'var(--tg-theme-secondary-bg-color)', padding: '8px', borderRadius: 10, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--tg-theme-text-color)', fontWeight: 500 }}>
+                                                <a href={`https://t.me/${b.username.replace('@', '')}`} target="_blank" rel="noreferrer" style={{ flex: 1, textDecoration: 'none', backgroundColor: 'var(--tg-theme-bg-color)', padding: '8px', borderRadius: 10, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--tg-theme-text-color)', fontWeight: 500 }}>
                                                     Telegram
                                                 </a>
                                             )}
@@ -404,84 +397,17 @@ export const MasterDashboardScreen: React.FC<Props> = ({
     );
   };
 
-  // --- Вкладка ПРОФИЛЬ ---
-  const renderProfile = () => (
-     <div style={{ minHeight: '100%', paddingBottom: 100 }}>
-        <div style={{ padding: '32px 20px 16px' }}>
-            <Title level="1" weight="2" style={{ marginBottom: 8, color: 'var(--tg-theme-text-color)' }}>Мой кабинет</Title>
-            <Text style={{ color: 'var(--tg-theme-hint-color)', fontSize: 15 }}>
-                Управляйте своим профилем, расписанием и настройками.
-            </Text>
-        </div>
-
-        <List>
-            <Section>
-                <Cell
-                    before={<div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28EditOutline width={24} height={24} style={{ color: '#007AFF'}} /></div>}
-                    onClick={() => { triggerHaptic(); onEditProfile(); }}
-                    description="Имя, фото, контакты, портфолио"
-                >
-                    Редактировать профиль
-                </Cell>
-                <Cell
-                    before={<div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(255, 149, 0, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28CalendarOutline width={24} height={24} style={{ color: '#FF9500'}} /></div>}
-                    onClick={() => { triggerHaptic(); onOpenSchedule(); }}
-                    description="Генерация свободных слотов"
-                >
-                    Управление расписанием
-                </Cell>
-            </Section>
-
-            <Section>
-                <Cell
-                    before={<div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(52, 199, 89, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28StatisticsOutline width={24} height={24} style={{ color: '#34C759'}} /></div>}
-                    onClick={() => { triggerHaptic(); onOpenAnalytics(); }}
-                >
-                    Статистика
-                </Cell>
-                <Cell
-                    before={<div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(255, 45, 85, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28FavoriteOutline width={24} height={24} style={{ color: '#FF2D55'}} /></div>}
-                    onClick={() => { triggerHaptic(); onOpenReviews(); }}
-                >
-                    Мои отзывы
-                </Cell>
-            </Section>
-
-            <Section header="Система">
-                <Cell
-                    before={<Icon28UserOutline style={{ color: 'var(--tg-theme-button-color)' }}/>}
-                    onClick={() => { triggerHaptic(); onSwitchToClient(); }}
-                >
-                    Вернуться в режим клиента
-                </Cell>
-                <Cell
-                    before={<Icon28DoorArrowLeftOutline style={{ color: 'var(--tg-theme-destructive-text-color)' }}/>}
-                    onClick={handleLogoutClick}
-                >
-                    <span style={{ color: 'var(--tg-theme-destructive-text-color)' }}>Выйти из аккаунта</span>
-                </Cell>
-            </Section>
-
-            <div style={{ marginTop: 24, marginBottom: 24, display: 'flex', justifyContent: 'center' }}>
-                <Button mode="plain" size="s" onClick={handleDeleteAccount} style={{ color: 'var(--tg-theme-hint-color)' }}>
-                    Навсегда удалить аккаунт
-                </Button>
-            </div>
-        </List>
-     </div>
-  );
-
   return (
     <div style={{
         position: 'relative',
         height: '100vh',
         overflow: 'hidden',
-        backgroundColor: 'var(--tg-theme-secondary-bg-color)' // Общий серый фон для всего дашборда
+        backgroundColor: 'var(--tg-theme-secondary-bg-color)'
     }}>
       <main style={{ height: '100%', overflowY: 'auto' }}>
         {activeTab === 'bookings' && renderBookings()}
 
-        {/* ИСПОЛЬЗУЕМ ВЫДЕЛЕННЫЙ КОМПОНЕНТ ДЛЯ УСЛУГ */}
+        {/* ВНЕШНИЙ КОМПОНЕНТ УСЛУГ */}
         {activeTab === 'services' && (
             <MasterServicesTab
                 services={services}
@@ -492,7 +418,19 @@ export const MasterDashboardScreen: React.FC<Props> = ({
             />
         )}
 
-        {activeTab === 'profile' && renderProfile()}
+        {/* ВНЕШНИЙ КОМПОНЕНТ ПРОФИЛЯ */}
+        {activeTab === 'profile' && (
+            <MasterProfileTab
+                onEditProfile={onEditProfile}
+                onOpenSchedule={onOpenSchedule}
+                onOpenAnalytics={onOpenAnalytics}
+                onOpenReviews={onOpenReviews}
+                onSwitchToClient={onSwitchToClient}
+                onLogoutClick={handleLogoutClick}
+                onDeleteAccount={handleDeleteAccount}
+                triggerHaptic={triggerHaptic}
+            />
+        )}
       </main>
 
       <Tabbar style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 100 }}>
