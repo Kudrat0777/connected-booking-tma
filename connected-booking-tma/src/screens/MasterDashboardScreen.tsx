@@ -69,7 +69,7 @@ type Props = {
 };
 
 type Tab = 'bookings' | 'services' | 'profile';
-type BookingFilter = 'today' | 'tomorrow' | 'week';
+type BookingFilter = 'today' | 'tomorrow' | 'week' | 'all';
 
 export const MasterDashboardScreen: React.FC<Props> = ({
   telegramId,
@@ -274,11 +274,20 @@ export const MasterDashboardScreen: React.FC<Props> = ({
       <div style={{ backgroundColor: 'var(--tg-theme-bg-color)', minHeight: '100%', paddingBottom: 100 }}>
 
         {/* Фильтры */}
-        <div style={{ padding: '12px 16px', position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--tg-theme-bg-color)' }}>
+        <div style={{ padding: '12px 16px', position: 'sticky', top: 0, zIndex: 10, background: 'var(--tgui--bg_color)', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
           <SegmentedControl>
-            <SegmentedControl.Item selected={filter === 'today'} onClick={() => { triggerHaptic(); setFilter('today'); }}>Сегодня</SegmentedControl.Item>
-            <SegmentedControl.Item selected={filter === 'tomorrow'} onClick={() => { triggerHaptic(); setFilter('tomorrow'); }}>Завтра</SegmentedControl.Item>
-            <SegmentedControl.Item selected={filter === 'week'} onClick={() => { triggerHaptic(); setFilter('week'); }}>Неделя</SegmentedControl.Item>
+            <SegmentedControl.Item selected={filter === 'today'} onClick={() => setFilter('today')}>
+              Сегодня
+            </SegmentedControl.Item>
+            <SegmentedControl.Item selected={filter === 'tomorrow'} onClick={() => setFilter('tomorrow')}>
+              Завтра
+            </SegmentedControl.Item>
+            <SegmentedControl.Item selected={filter === 'week'} onClick={() => setFilter('week')}>
+              Неделя
+            </SegmentedControl.Item>
+            <SegmentedControl.Item selected={filter === 'all'} onClick={() => setFilter('all')}>
+              Все
+            </SegmentedControl.Item>
           </SegmentedControl>
         </div>
 
