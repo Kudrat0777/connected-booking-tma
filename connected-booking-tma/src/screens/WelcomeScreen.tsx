@@ -7,7 +7,6 @@ import React, {
 } from 'react';
 import { Button, Title, Text } from '@telegram-apps/telegram-ui';
 import lottie, { AnimationItem } from 'lottie-web';
-import '../css/WelcomeScreen.css';
 
 type Props = {
   onContinue: (user?: any) => void;

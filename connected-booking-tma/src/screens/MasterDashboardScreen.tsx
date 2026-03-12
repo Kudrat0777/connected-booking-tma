@@ -11,6 +11,9 @@ import {
   Modal,
   Input,
   Select,
+  Text,
+  List,
+  Section
 } from '@telegram-apps/telegram-ui';
 
 import {
@@ -21,7 +24,9 @@ import {
   Icon28StatisticsOutline,
   Icon28FavoriteOutline,
   Icon28DeleteOutline,
-  Icon28PhoneOutline
+  Icon28PhoneOutline,
+  Icon28UserOutline,
+  Icon28DoorArrowLeftOutline
 } from '@vkontakte/icons';
 import lottie from 'lottie-web';
 
@@ -37,8 +42,6 @@ import {
 } from '../helpers/api';
 
 import type { Booking, Service, Slot } from '../helpers/api';
-
-import '../css/MasterDashboardScreen.css';
 
 const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
   const container = useRef<HTMLDivElement>(null);
@@ -102,16 +105,34 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [newClientDetails, setNewClientDetails] = useState({ name: '', phone: '' });
 
+  const tg = (window as any).Telegram?.WebApp;
+
+  const triggerHaptic = (type: 'light' | 'selection' | 'success' | 'warning' = 'selection') => {
+    if (tg?.HapticFeedback) {
+        if (type === 'success' || type === 'warning') {
+            tg.HapticFeedback.notificationOccurred(type);
+        } else if (type === 'light') {
+            tg.HapticFeedback.impactOccurred('light');
+        } else {
+            tg.HapticFeedback.selectionChanged();
+        }
+    }
+  };
+
+  useEffect(() => {
+    if (tg) {
+        tg.BackButton.hide();
+        tg.expand();
+    }
+  }, [tg, activeTab]);
+
   const loadBookings = async () => {
     setLoadingBookings(true);
     try {
       const data = await fetchMasterBookings(telegramId, filter);
       setBookings(data.items);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoadingBookings(false);
-    }
+    } catch (e) { console.error(e); }
+    finally { setLoadingBookings(false); }
   };
 
   const loadServices = async () => {
@@ -119,11 +140,8 @@ export const MasterDashboardScreen: React.FC<Props> = ({
     try {
       const data = await fetchMyServices(telegramId);
       setServices(data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoadingServices(false);
-    }
+    } catch (e) { console.error(e); }
+    finally { setLoadingServices(false); }
   };
 
   useEffect(() => {
@@ -148,13 +166,17 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   }, [selectedNewServiceId]);
 
   const handleConfirm = async (id: number) => {
+    triggerHaptic('light');
     try {
       await confirmBooking(id);
+      triggerHaptic('success');
       loadBookings();
     } catch (e) { alert('Ошибка при подтверждении'); }
   };
 
   const handleReject = async (id: number) => {
+    triggerHaptic('warning');
+    if (!window.confirm('Отклонить эту запись?')) return;
     try {
       await rejectBooking(id);
       loadBookings();
@@ -162,6 +184,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   };
 
   const handleDeleteService = async (id: number) => {
+    triggerHaptic('warning');
     if (!window.confirm('Удалить эту услугу?')) return;
     try {
       await deleteService(id);
@@ -172,6 +195,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   const handleLogout = () => { window.location.href = '/'; };
 
   const handleDeleteAccount = async () => {
+    triggerHaptic('warning');
     const confirmText = prompt("Чтобы удалить аккаунт и все данные навсегда, введите слово DELETE");
     if (confirmText === 'DELETE') {
         try {
@@ -183,6 +207,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   };
 
   const handleLogoutClick = () => {
+    triggerHaptic('warning');
     const isConfirmed = window.confirm('Вы точно хотите выйти из аккаунта мастера?');
     if (isConfirmed && onLogout) onLogout();
   };
@@ -207,13 +232,17 @@ export const MasterDashboardScreen: React.FC<Props> = ({
       const response = await createManualBooking(Number(selectedNewSlotId), newClientName, newClientPhone);
       handleCloseCreateModal();
       loadBookings();
+      triggerHaptic('success');
+
       if (response.is_new_client) {
         setNewClientDetails({ name: newClientName, phone: newClientPhone });
         setIsShareModalOpen(true);
       } else {
-        alert('Запись успешно создана! Клиенту отправлено уведомление.');
+        if (tg?.showAlert) tg.showAlert('Запись успешно создана! Клиенту отправлено уведомление.');
+        else alert('Запись успешно создана!');
       }
     } catch (e: any) {
+      triggerHaptic('warning');
       alert(e.message || 'Ошибка при создании записи');
     } finally {
       setIsCreatingManual(false);
@@ -221,10 +250,8 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   };
 
   const handleShareLink = () => {
-    const tg = (window as any).Telegram?.WebApp;
-    // ЗАМЕНИТЕ НА ИМЯ ВАШЕГО БОТА (ЕСЛИ ЕСТЬ MINI APP)
     const botUrl = `https://t.me/cbtestconnected_bot?start=master_${telegramId}`;
-    const text = `Здравствуйте, ${newClientDetails.name}! Я записал(а) вас на процедуру.\n\nПожалуйста, перейдите по ссылке ниже в мой профиль, чтобы посмотреть детали записи и в будущем записываться самостоятельно:\n\n${botUrl}`;
+    const text = `Здравствуйте, ${newClientDetails.name}! Я записал(а) вас на процедуру.\n\nПожалуйста, перейдите по ссылке ниже в мой профиль, чтобы посмотреть детали записи и в будущем записываться самостоятельно:`;
     const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(botUrl)}&text=${encodeURIComponent(text)}`;
 
     if (tg?.openTelegramLink) tg.openTelegramLink(shareUrl);
@@ -233,9 +260,8 @@ export const MasterDashboardScreen: React.FC<Props> = ({
     setIsShareModalOpen(false);
   };
 
-  // --- НОВЫЙ ДИЗАЙН КАЛЕНДАРЯ (TIMELINE) ---
+  // --- Вкладка ЗАПИСИ ---
   const renderBookings = () => {
-    // Группируем записи по датам
     const grouped = bookings.reduce((acc: any, b) => {
         const d = new Date(b.slot.time);
         const dateKey = d.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -245,107 +271,93 @@ export const MasterDashboardScreen: React.FC<Props> = ({
     }, {});
 
     return (
-      <div className="master-dashboard-bookings-container">
+      <div style={{ backgroundColor: 'var(--tg-theme-bg-color)', minHeight: '100%', paddingBottom: 100 }}>
 
-        {/* Sticky шапка фильтров */}
-        <div style={{ padding: '12px 16px', position: 'sticky', top: 0, zIndex: 10, background: 'var(--tgui--bg_color)', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+        {/* Фильтры: Убрали borderBottom, чтобы не было черной полосы */}
+        <div style={{ padding: '12px 16px', position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--tg-theme-bg-color)' }}>
           <SegmentedControl>
-            <SegmentedControl.Item selected={filter === 'today'} onClick={() => setFilter('today')}>
-              Сегодня
-            </SegmentedControl.Item>
-            <SegmentedControl.Item selected={filter === 'tomorrow'} onClick={() => setFilter('tomorrow')}>
-              Завтра
-            </SegmentedControl.Item>
-            <SegmentedControl.Item selected={filter === 'week'} onClick={() => setFilter('week')}>
-              Неделя
-            </SegmentedControl.Item>
+            <SegmentedControl.Item selected={filter === 'today'} onClick={() => { triggerHaptic(); setFilter('today'); }}>Сегодня</SegmentedControl.Item>
+            <SegmentedControl.Item selected={filter === 'tomorrow'} onClick={() => { triggerHaptic(); setFilter('tomorrow'); }}>Завтра</SegmentedControl.Item>
+            <SegmentedControl.Item selected={filter === 'week'} onClick={() => { triggerHaptic(); setFilter('week'); }}>Неделя</SegmentedControl.Item>
           </SegmentedControl>
         </div>
 
         {loadingBookings && <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><Spinner size="m"/></div>}
 
         {!loadingBookings && bookings.length === 0 && (
-          <Placeholder header="Нет записей" description="На этот период записей пока нет. Отдыхайте!">
-             <LottieIcon src="/stickers/duck_out.json" size={140} />
-          </Placeholder>
+          <div style={{ marginTop: 20 }}>
+            <Placeholder header="Нет записей" description="На этот период записей пока нет. Отдыхайте!">
+               <LottieIcon src="/stickers/duck_out.json" size={140} />
+            </Placeholder>
+          </div>
         )}
 
         {!loadingBookings && bookings.length > 0 && (
            <div style={{ padding: '0 16px 20px' }}>
               {Object.keys(grouped).map(dateKey => (
                  <div key={dateKey}>
-                    {/* Заголовок даты */}
-                    <div style={{ fontWeight: 600, fontSize: 16, margin: '24px 0 16px', color: 'var(--tgui--hint_color)', textTransform: 'capitalize' }}>
+                    <div style={{ fontWeight: 600, fontSize: 15, margin: '24px 0 12px', color: 'var(--tg-theme-hint-color)', textTransform: 'capitalize' }}>
                        {dateKey}
                     </div>
 
-                    {/* Таймлайн за день */}
                     {grouped[dateKey].map((b: Booking) => {
                         const timeStr = new Date(b.slot.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                         const isPending = b.status === 'pending';
                         const isConfirmed = b.status === 'confirmed';
 
                         return (
-                            <div key={b.id} style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
-                                {/* Время слева */}
-                                <div style={{ width: 44, flexShrink: 0, paddingTop: 14, textAlign: 'right', fontWeight: 700, fontSize: 16, color: 'var(--tgui--text_color)' }}>
+                            <div key={b.id} style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+                                <div style={{ width: 44, flexShrink: 0, paddingTop: 14, textAlign: 'right', fontWeight: 700, fontSize: 16, color: 'var(--tg-theme-text-color)' }}>
                                     {timeStr}
                                 </div>
 
-                                {/* Карточка записи справа */}
                                 <div style={{
                                     flex: 1,
-                                    background: 'var(--tgui--secondary_bg_color)',
-                                    // Цветная полоса слева: оранжевая для новых, зеленая для подтвержденных
-                                    borderLeft: isPending ? '4px solid #FF9F0A' : '4px solid #34C759',
+                                    backgroundColor: 'var(--tg-theme-secondary-bg-color)',
+                                    borderLeft: isPending ? '4px solid #FF9500' : '4px solid #34C759',
                                     borderRadius: '0 16px 16px 0',
                                     padding: '16px',
                                     display: 'flex',
                                     flexDirection: 'column',
-                                    gap: 14,
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                                    gap: 12
                                 }}>
-
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                         <Avatar size={48} src={b.photo_url || undefined} fallbackIcon={<Icon28UserCircleOutline />} />
                                         <div style={{ flex: 1 }}>
-                                            <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 2, color: 'var(--tgui--text_color)' }}>
+                                            <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 2, color: 'var(--tg-theme-text-color)' }}>
                                                 {b.client_name || b.name || 'Клиент'}
                                             </div>
-                                            <div style={{ fontSize: 13, color: 'var(--tgui--hint_color)', lineHeight: '1.2' }}>
+                                            <div style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)' }}>
                                                 {b.service_name}
                                             </div>
                                         </div>
-                                        {isPending && <span style={{ fontSize: 12, color: '#FF9F0A', fontWeight: 600, background: 'rgba(255, 159, 10, 0.1)', padding: '4px 8px', borderRadius: 6 }}>Новая</span>}
+                                        {isPending && <span style={{ fontSize: 11, color: '#FF9500', fontWeight: 600, backgroundColor: 'rgba(255, 149, 0, 0.1)', padding: '4px 8px', borderRadius: 6 }}>НОВАЯ</span>}
                                     </div>
 
-                                    {/* Блок контактов */}
                                     {(b.client_phone || b.username) && (
                                         <div style={{ display: 'flex', gap: 8 }}>
                                             {b.client_phone && (
-                                                <a href={`tel:${b.client_phone}`} style={{ flex: 1, textDecoration: 'none', background: 'var(--tgui--bg_color)', padding: '8px', borderRadius: 10, fontSize: 14, color: 'var(--tgui--text_color)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontWeight: 500 }}>
-                                                    <Icon28PhoneOutline width={20} height={20} style={{color: 'var(--tgui--button_color)'}}/> Звонок
+                                                <a href={`tel:${b.client_phone}`} style={{ flex: 1, textDecoration: 'none', backgroundColor: 'var(--tg-theme-bg-color)', padding: '8px', borderRadius: 10, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--tg-theme-text-color)', fontWeight: 500 }}>
+                                                    <Icon28PhoneOutline width={20} height={20} style={{color: 'var(--tg-theme-button-color)'}}/> Звонок
                                                 </a>
                                             )}
                                             {b.username && (
-                                                <a href={`https://t.me/${b.username.replace('@', '')}`} target="_blank" rel="noreferrer" style={{ flex: 1, textDecoration: 'none', background: 'var(--tgui--bg_color)', padding: '8px', borderRadius: 10, fontSize: 14, color: '#007AFF', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontWeight: 500 }}>
+                                                <a href={`https://t.me/${b.username.replace('@', '')}`} target="_blank" rel="noreferrer" style={{ flex: 1, textDecoration: 'none', backgroundColor: 'var(--tg-theme-bg-color)', padding: '8px', borderRadius: 10, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--tg-theme-text-color)', fontWeight: 500 }}>
                                                     Telegram
                                                 </a>
                                             )}
                                         </div>
                                     )}
 
-                                    {/* Кнопки действий */}
                                     {isPending && (
-                                        <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
+                                        <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                                             <Button size="s" mode="filled" stretched onClick={() => handleConfirm(b.id)}>Принять</Button>
-                                            <Button size="s" mode="bezeled" stretched style={{ color: 'var(--tgui--destructive_text_color)' }} onClick={() => { if(window.confirm('Отклонить заявку?')) handleReject(b.id); }}>Отклонить</Button>
+                                            <Button size="s" mode="bezeled" stretched style={{ color: 'var(--tg-theme-destructive-text-color)' }} onClick={() => handleReject(b.id)}>Отклонить</Button>
                                         </div>
                                     )}
-
                                     {isConfirmed && new Date(b.slot.time) > new Date() && (
-                                        <div style={{ marginTop: 2 }}>
-                                            <Button size="s" mode="bezeled" stretched style={{ color: 'var(--tgui--destructive_text_color)', background: 'rgba(255,59,48,0.08)' }} onClick={() => { if(window.confirm('Отменить визит? Слоты освободятся, клиенту придет уведомление.')) handleReject(b.id); }}>
+                                        <div style={{ marginTop: 4 }}>
+                                            <Button size="s" mode="bezeled" stretched style={{ color: 'var(--tg-theme-destructive-text-color)', backgroundColor: 'rgba(255,59,48,0.08)' }} onClick={() => handleReject(b.id)}>
                                                 Отменить визит
                                             </Button>
                                         </div>
@@ -359,52 +371,47 @@ export const MasterDashboardScreen: React.FC<Props> = ({
            </div>
         )}
 
-        {/* ПЛАВАЮЩАЯ КНОПКА (FAB) ДЛЯ ДОБАВЛЕНИЯ ЗАПИСИ */}
+        {/* ПЛАВАЮЩАЯ КНОПКА (FAB) */}
         <div
-          onClick={() => setIsCreateModalOpen(true)}
+          onClick={() => { triggerHaptic(); setIsCreateModalOpen(true); }}
           style={{
             position: 'fixed',
-            bottom: 120,
+            bottom: 90,
             right: 20,
-            width: 60,
-            height: 60,
-            borderRadius: 30,
-            backgroundColor: 'var(--tgui--button_color)',
-            color: 'var(--tgui--button_text_color)',
+            width: 56,
+            height: 56,
+            borderRadius: 28,
+            backgroundColor: 'var(--tg-theme-button-color)',
+            color: 'var(--tg-theme-button-text-color)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 6px 16px rgba(0,0,0,0.25)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
             cursor: 'pointer',
             zIndex: 100,
-            transition: 'transform 0.15s ease',
           }}
-          onPointerDown={(e) => e.currentTarget.style.transform = 'scale(0.92)'}
-          onPointerUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-          onPointerLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
         >
-          <span style={{ fontSize: 36, lineHeight: '36px', marginTop: -4 }}>+</span>
+          <span style={{ fontSize: 32, lineHeight: 1, marginTop: -4 }}>+</span>
         </div>
       </div>
     );
   };
 
+  // --- Вкладка УСЛУГИ ---
   const renderServices = () => (
-    <div className="master-dashboard-services-container">
-      {/* Шапка с кнопкой добавления */}
+    <div style={{ backgroundColor: 'var(--tg-theme-secondary-bg-color)', minHeight: '100%', paddingBottom: 100 }}>
       <div style={{
-          padding: '20px 16px 16px',
+          padding: '24px 16px 16px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           position: 'sticky',
           top: 0,
-          background: 'var(--tgui--bg_color)',
+          backgroundColor: 'var(--tg-theme-secondary-bg-color)',
           zIndex: 10,
-          borderBottom: '1px solid rgba(0,0,0,0.05)'
       }}>
-        <Title level="2" style={{ margin: 0, fontSize: 22, fontWeight: '700' }}>Мои услуги</Title>
-        <Button size="s" mode="filled" onClick={onAddService} style={{ borderRadius: 14 }}>
+        <Title level="1" weight="2" style={{ margin: 0 }}>Мои услуги</Title>
+        <Button size="s" mode="filled" onClick={() => { triggerHaptic(); onAddService(); }} style={{ borderRadius: 100 }}>
           + Добавить
         </Button>
       </div>
@@ -412,19 +419,20 @@ export const MasterDashboardScreen: React.FC<Props> = ({
       {loadingServices && <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><Spinner size="m"/></div>}
 
       {!loadingServices && services.length === 0 && (
-         <Placeholder header="Нет услуг" description="Добавьте услуги, чтобы клиенты могли записываться.">
-            <LottieIcon src="/stickers/duck_out.json" size={140} />
-         </Placeholder>
+         <div style={{ marginTop: 20 }}>
+             <Placeholder header="Нет услуг" description="Добавьте услуги, чтобы клиенты могли записываться.">
+                <LottieIcon src="/stickers/duck_out.json" size={140} />
+             </Placeholder>
+         </div>
       )}
 
-      {/* Список услуг */}
       {!loadingServices && services.length > 0 && (
-        <div style={{ padding: '16px' }}>
+        <div style={{ padding: '0 16px 16px' }}>
           {services.map((s) => (
              <div
                 key={s.id}
                 style={{
-                   background: 'var(--tgui--secondary_bg_color)',
+                   backgroundColor: 'var(--tg-theme-bg-color)',
                    borderRadius: 16,
                    padding: '16px',
                    marginBottom: 12,
@@ -432,79 +440,27 @@ export const MasterDashboardScreen: React.FC<Props> = ({
                    position: 'relative'
                 }}
              >
-                {/* Название услуги */}
-                <div style={{
-                   fontSize: 17,
-                   fontWeight: 600,
-                   color: 'var(--tgui--text_color)',
-                   marginBottom: 8,
-                   paddingRight: 40 // чтобы текст не налезал на кнопку удаления
-                }}>
+                <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--tg-theme-text-color)', marginBottom: 6, paddingRight: 40 }}>
                    {s.name}
                 </div>
-
-                {/* Описание (если есть) */}
                 {s.description && (
-                   <div style={{
-                      fontSize: 14,
-                      color: 'var(--tgui--hint_color)',
-                      marginBottom: 12,
-                      lineHeight: '1.4'
-                   }}>
+                   <div style={{ fontSize: 14, color: 'var(--tg-theme-hint-color)', marginBottom: 12, lineHeight: '1.4' }}>
                       {s.description}
                    </div>
                 )}
-
-                {/* Бейджи цены и времени */}
                 <div style={{ display: 'flex', gap: 8 }}>
-                   <div style={{
-                      background: 'var(--tgui--bg_color)',
-                      padding: '6px 10px',
-                      borderRadius: 8,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: 'var(--tgui--text_color)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4
-                   }}>
+                   <div style={{ backgroundColor: 'var(--tg-theme-secondary-bg-color)', padding: '6px 10px', borderRadius: 8, fontSize: 13, fontWeight: 600, color: 'var(--tg-theme-text-color)', display: 'flex', alignItems: 'center', gap: 4 }}>
                       🕒 {s.duration} мин
                    </div>
-
-                   <div style={{
-                      background: 'rgba(52, 199, 89, 0.1)', // Нежно-зеленый фон
-                      color: '#34C759', // Зеленый текст
-                      padding: '6px 10px',
-                      borderRadius: 8,
-                      fontSize: 13,
-                      fontWeight: 700,
-                   }}>
-                      {s.price?.toLocaleString()} сум
+                   <div style={{ backgroundColor: 'rgba(52, 199, 89, 0.1)', color: '#34C759', padding: '6px 10px', borderRadius: 8, fontSize: 13, fontWeight: 700 }}>
+                      {s.price?.toLocaleString()} UZS
                    </div>
                 </div>
-
-                {/* Кнопка удаления (Иконка в правом верхнем углу) */}
                 <div
-                   onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteService(s.id);
-                   }}
+                   onClick={(e) => { e.stopPropagation(); handleDeleteService(s.id); }}
                    style={{
-                      position: 'absolute',
-                      top: 12,
-                      right: 12,
-                      width: 32,
-                      height: 32,
-                      borderRadius: '50%',
-                      background: 'rgba(255, 59, 48, 0.1)', // Нежно-красный фон
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      transition: 'transform 0.1s'
+                      position: 'absolute', top: 12, right: 12, width: 32, height: 32, borderRadius: '50%', backgroundColor: 'rgba(255, 59, 48, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
                    }}
-                   onPointerDown={(e) => e.currentTarget.style.transform = 'scale(0.9)'}
-                   onPointerUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 >
                    <Icon28DeleteOutline width={20} height={20} style={{ color: '#FF3B30' }} />
                 </div>
@@ -515,131 +471,108 @@ export const MasterDashboardScreen: React.FC<Props> = ({
     </div>
   );
 
+  // --- Вкладка ПРОФИЛЬ ---
   const renderProfile = () => (
-     <div className="master-dashboard-settings-container">
-
-        {/* Шапка профиля */}
-        <div className="master-dashboard-settings-header">
-            <Title level="1" weight="2" style={{ marginBottom: 8 }}>Мой кабинет</Title>
-            <p style={{ color: 'var(--tgui--hint_color)', margin: 0, fontSize: 15, lineHeight: '1.4' }}>
-                Управляйте своим профилем, расписанием и настройками аккаунта.
-            </p>
+     <div style={{ backgroundColor: 'var(--tg-theme-secondary-bg-color)', minHeight: '100%', paddingBottom: 100 }}>
+        <div style={{ padding: '32px 20px 16px' }}>
+            <Title level="1" weight="2" style={{ marginBottom: 8, color: 'var(--tg-theme-text-color)' }}>Мой кабинет</Title>
+            <Text style={{ color: 'var(--tg-theme-hint-color)', fontSize: 15 }}>
+                Управляйте своим профилем, расписанием и настройками.
+            </Text>
         </div>
 
-        <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-            {/* Блок: Основное */}
-            <div style={{ background: 'var(--tgui--bg_color)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+        <List>
+            <Section>
                 <Cell
-                    before={<div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28EditOutline style={{ color: '#007AFF' }} /></div>}
-                    onClick={onEditProfile}
+                    before={<div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28EditOutline width={24} height={24} style={{ color: '#007AFF'}} /></div>}
+                    onClick={() => { triggerHaptic(); onEditProfile(); }}
                     description="Имя, фото, контакты, портфолио"
-                    after={<span style={{ color: 'var(--tgui--hint_color)' }}>›</span>}
                 >
                     Редактировать профиль
                 </Cell>
-                <div style={{ height: 1, background: 'var(--tgui--secondary_bg_color)', marginLeft: 56 }} />
                 <Cell
-                    before={<div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(255, 149, 0, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28CalendarOutline style={{ color: '#FF9500' }} /></div>}
-                    onClick={onOpenSchedule}
+                    before={<div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(255, 149, 0, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28CalendarOutline width={24} height={24} style={{ color: '#FF9500'}} /></div>}
+                    onClick={() => { triggerHaptic(); onOpenSchedule(); }}
                     description="Генерация свободных слотов"
-                    after={<span style={{ color: 'var(--tgui--hint_color)' }}>›</span>}
                 >
                     Управление расписанием
                 </Cell>
-            </div>
+            </Section>
 
-            {/* Блок: Аналитика и Отзывы */}
-            <div style={{ background: 'var(--tgui--bg_color)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+            <Section>
                 <Cell
-                    before={<div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(52, 199, 89, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28StatisticsOutline style={{ color: '#34C759' }} /></div>}
-                    onClick={onOpenAnalytics}
-                    description="Ваш доход и количество клиентов"
-                    after={<span style={{ color: 'var(--tgui--hint_color)' }}>›</span>}
+                    before={<div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(52, 199, 89, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28StatisticsOutline width={24} height={24} style={{ color: '#34C759'}} /></div>}
+                    onClick={() => { triggerHaptic(); onOpenAnalytics(); }}
                 >
                     Статистика
                 </Cell>
-                <div style={{ height: 1, background: 'var(--tgui--secondary_bg_color)', marginLeft: 56 }} />
                 <Cell
-                    before={<div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(255, 45, 85, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28FavoriteOutline style={{ color: '#FF2D55' }} /></div>}
-                    onClick={onOpenReviews}
-                    description="Что о вас пишут клиенты"
-                    after={<span style={{ color: 'var(--tgui--hint_color)' }}>›</span>}
+                    before={<div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(255, 45, 85, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28FavoriteOutline width={24} height={24} style={{ color: '#FF2D55'}} /></div>}
+                    onClick={() => { triggerHaptic(); onOpenReviews(); }}
                 >
                     Мои отзывы
                 </Cell>
-            </div>
+            </Section>
 
-            {/* Блок: Аккаунт */}
-            <div style={{ marginTop: 8 }}>
-                <Title level="3" style={{ fontSize: 15, color: 'var(--tgui--hint_color)', marginLeft: 16, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>Система</Title>
-                <div style={{ background: 'var(--tgui--bg_color)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-                    <Cell
-                        before={<div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--tgui--secondary_bg_color)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28UserCircleOutline style={{ color: 'var(--tgui--text_color)' }} /></div>}
-                        onClick={onSwitchToClient}
-                    >
-                        Вернуться в режим клиента
-                    </Cell>
-                    <div style={{ height: 1, background: 'var(--tgui--secondary_bg_color)', marginLeft: 56 }} />
-                    <Cell
-                        before={<div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--tgui--secondary_bg_color)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 20 }}>🚪</span></div>}
-                        onClick={handleLogoutClick}
-                    >
-                        Выйти из аккаунта
-                    </Cell>
-                </div>
-            </div>
-
-            {/* Опасная зона */}
-            <div style={{ marginTop: 16, marginBottom: 24, display: 'flex', justifyContent: 'center' }}>
-                <Button
-                    mode="plain"
-                    size="s"
-                    onClick={handleDeleteAccount}
-                    style={{ color: '#FF3B30', fontSize: 14 }}
+            <Section header="Система">
+                <Cell
+                    before={<Icon28UserOutline style={{ color: 'var(--tg-theme-button-color)' }}/>}
+                    onClick={() => { triggerHaptic(); onSwitchToClient(); }}
                 >
+                    Вернуться в режим клиента
+                </Cell>
+                <Cell
+                    before={<Icon28DoorArrowLeftOutline style={{ color: 'var(--tg-theme-destructive-text-color)' }}/>}
+                    onClick={handleLogoutClick}
+                >
+                    <span style={{ color: 'var(--tg-theme-destructive-text-color)' }}>Выйти из аккаунта</span>
+                </Cell>
+            </Section>
+
+            <div style={{ marginTop: 24, marginBottom: 24, display: 'flex', justifyContent: 'center' }}>
+                <Button mode="plain" size="s" onClick={handleDeleteAccount} style={{ color: 'var(--tg-theme-hint-color)' }}>
                     Навсегда удалить аккаунт
                 </Button>
             </div>
-
-        </div>
+        </List>
      </div>
   );
 
   return (
-    <div className="master-dashboard-root">
-      <div className="master-dashboard-content">
+    <div style={{ position: 'relative', height: '100vh', overflow: 'hidden', backgroundColor: 'var(--tg-theme-bg-color)' }}>
+      <main style={{ height: '100%', overflowY: 'auto' }}>
         {activeTab === 'bookings' && renderBookings()}
         {activeTab === 'services' && renderServices()}
         {activeTab === 'profile' && renderProfile()}
-      </div>
+      </main>
 
-      <Tabbar style={{ zIndex: 1000, position: 'relative' }}>
-        <Tabbar.Item text="Календарь" selected={activeTab === 'bookings'} onClick={() => setActiveTab('bookings')}>
+      <Tabbar style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 100 }}>
+        <Tabbar.Item text="Календарь" selected={activeTab === 'bookings'} onClick={() => { triggerHaptic(); setActiveTab('bookings'); }}>
           <Icon28CalendarOutline />
         </Tabbar.Item>
-        <Tabbar.Item text="Услуги" selected={activeTab === 'services'} onClick={() => setActiveTab('services')}>
+        <Tabbar.Item text="Услуги" selected={activeTab === 'services'} onClick={() => { triggerHaptic(); setActiveTab('services'); }}>
           <Icon28ServicesOutline />
         </Tabbar.Item>
-        <Tabbar.Item text="Профиль" selected={activeTab === 'profile'} onClick={() => setActiveTab('profile')}>
+        <Tabbar.Item text="Профиль" selected={activeTab === 'profile'} onClick={() => { triggerHaptic(); setActiveTab('profile'); }}>
           <Icon28UserCircleOutline />
         </Tabbar.Item>
       </Tabbar>
 
       {/* МОДАЛЬНОЕ ОКНО СОЗДАНИЯ ЗАПИСИ */}
       <Modal header={<Modal.Header>Новая запись</Modal.Header>} open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <div style={{ padding: '0 16px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Добавлен скролл (maxHeight, overflowY) и увеличен paddingBottom */}
+        <div style={{ padding: '0 16px 80px', display: 'flex', flexDirection: 'column', gap: 16, maxHeight: '85vh', overflowY: 'auto' }}>
           <Input header="Имя клиента" placeholder="Например, Анна" value={newClientName} onChange={(e) => setNewClientName(e.target.value)} />
-          <Input header="Телефон клиента" placeholder="+7..." value={newClientPhone} onChange={(e) => setNewClientPhone(e.target.value)} />
+          <Input header="Телефон клиента" placeholder="+998 90 000 00 00" type="tel" value={newClientPhone} onChange={(e) => setNewClientPhone(e.target.value)} />
 
           <Select header="Услуга" value={selectedNewServiceId} onChange={(e) => setSelectedNewServiceId(e.target.value)}>
             <option value="" disabled hidden>Выберите услугу</option>
             {services.map((s) => (
-              <option key={s.id} value={s.id}>{s.name} ({s.price?.toLocaleString()} сум)</option>
+              <option key={s.id} value={s.id}>{s.name} ({s.price?.toLocaleString()} UZS)</option>
             ))}
           </Select>
 
-          <Select header="Доступное время (Свободные слоты)" value={selectedNewSlotId} onChange={(e) => setSelectedNewSlotId(e.target.value)} disabled={!selectedNewServiceId || availableSlots.length === 0}>
+          <Select header="Доступное время" value={selectedNewSlotId} onChange={(e) => setSelectedNewSlotId(e.target.value)} disabled={!selectedNewServiceId}>
             <option value="" disabled hidden>
               {!selectedNewServiceId ? 'Сначала выберите услугу' : availableSlots.length === 0 ? 'Нет свободных слотов' : 'Выберите время'}
             </option>
@@ -651,26 +584,26 @@ export const MasterDashboardScreen: React.FC<Props> = ({
             })}
           </Select>
 
-          <div style={{ marginTop: 8 }}>
+          <div style={{ marginTop: 16 }}>
             <Button size="l" mode="filled" stretched loading={isCreatingManual} onClick={handleManualCreateSubmit}>Записать клиента</Button>
-            <Button size="l" mode="plain" stretched onClick={handleCloseCreateModal} style={{ marginTop: 8, color: 'var(--tgui--hint_color)' }}>Отмена</Button>
+            <Button size="l" mode="plain" stretched onClick={handleCloseCreateModal} style={{ marginTop: 8 }}>Отмена</Button>
           </div>
         </div>
       </Modal>
 
       {/* МОДАЛЬНОЕ ОКНО "ПОДЕЛИТЬСЯ ССЫЛКОЙ" */}
-      <Modal header={<Modal.Header>Новый клиент</Modal.Header>} open={isShareModalOpen} onOpenChange={setIsShareModalOpen}>
-        <div style={{ padding: '0 16px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-          <div style={{ width: 80, height: 80, background: 'var(--tgui--secondary_bg_color)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-            <Icon28UserCircleOutline width={48} height={48} style={{ color: 'var(--tgui--button_color)' }} />
+      <Modal header={<Modal.Header>Успешно!</Modal.Header>} open={isShareModalOpen} onOpenChange={setIsShareModalOpen}>
+        <div style={{ padding: '0 16px 60px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', maxHeight: '85vh', overflowY: 'auto' }}>
+          <div style={{ width: 80, height: 80, backgroundColor: 'var(--tg-theme-secondary-bg-color)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+            <Icon28UserCircleOutline width={48} height={48} style={{ color: 'var(--tg-theme-button-color)' }} />
           </div>
-          <h3 style={{ margin: '0 0 8px', fontSize: 20, color: 'var(--tgui--text_color)' }}>Отправить ссылку?</h3>
-          <p style={{ margin: '0 0 24px', fontSize: 15, color: 'var(--tgui--hint_color)', lineHeight: '1.4' }}>
+          <Title level="2" style={{ margin: '0 0 8px', color: 'var(--tg-theme-text-color)' }}>Отправить ссылку?</Title>
+          <Text style={{ margin: '0 0 24px', color: 'var(--tg-theme-hint-color)', lineHeight: '1.4' }}>
             Клиент <b>{newClientDetails.name}</b> ({newClientDetails.phone}) еще не пользуется нашим ботом.<br/><br/>
             Отправьте ему ссылку на ваш профиль в Telegram, чтобы он мог видеть свои записи и записываться сам!
-          </p>
+          </Text>
           <Button size="l" mode="filled" stretched onClick={handleShareLink}>Поделиться ссылкой</Button>
-          <Button size="l" mode="plain" stretched onClick={() => setIsShareModalOpen(false)} style={{ marginTop: 8, color: 'var(--tgui--hint_color)' }}>Не сейчас</Button>
+          <Button size="l" mode="plain" stretched onClick={() => setIsShareModalOpen(false)} style={{ marginTop: 8 }}>Не сейчас</Button>
         </div>
       </Modal>
 
