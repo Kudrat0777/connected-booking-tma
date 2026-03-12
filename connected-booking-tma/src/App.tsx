@@ -52,6 +52,33 @@ type Screen =
 
 type MainTab = 'bookings' | 'masters' | 'settings';
 
+// === ХУК ДЛЯ СОХРАНЕНИЯ СОСТОЯНИЙ ПРИ ПЕРЕЗАГРУЗКЕ ===
+function useSessionState<T>(key: string, defaultValue: T): [T, (val: T | ((prev: T) => T)) => void] {
+  const [state, setState] = useState<T>(() => {
+    try {
+      const saved = sessionStorage.getItem(key);
+      if (saved !== null) return JSON.parse(saved) as T;
+    } catch (e) {
+      console.error(`Error reading ${key} from sessionStorage`, e);
+    }
+    return defaultValue;
+  });
+
+  const setPersistentState = (val: T | ((prev: T) => T)) => {
+    setState((prev) => {
+      const nextVal = val instanceof Function ? (val as Function)(prev) : val;
+      try {
+        sessionStorage.setItem(key, JSON.stringify(nextVal));
+      } catch (e) {
+        console.error(`Error saving ${key} to sessionStorage`, e);
+      }
+      return nextVal;
+    });
+  };
+
+  return [state, setPersistentState];
+}
+
 const App: React.FC = () => {
   const tg = (window as any).Telegram?.WebApp;
 
@@ -71,25 +98,25 @@ const App: React.FC = () => {
       const root = document.documentElement;
 
       if (params.bg_color) {
-          root.style.setProperty('--tgui--bg_color', params.bg_color);
-          root.style.setProperty('--tgui--secondary_bg_color', params.secondary_bg_color || params.bg_color);
+          root.style.setProperty('--tg-theme-bg-color', params.bg_color);
+          root.style.setProperty('--tg-theme-secondary-bg-color', params.secondary_bg_color || params.bg_color);
           document.body.style.backgroundColor = params.bg_color;
       } else {
           const fallbackBg = isDark ? '#000000' : '#ffffff';
           const fallbackSec = isDark ? '#1c1c1d' : '#f1f1f1';
-          root.style.setProperty('--tgui--bg_color', fallbackBg);
-          root.style.setProperty('--tgui--secondary_bg_color', fallbackSec);
+          root.style.setProperty('--tg-theme-bg-color', fallbackBg);
+          root.style.setProperty('--tg-theme-secondary-bg-color', fallbackSec);
           document.body.style.backgroundColor = fallbackBg;
       }
 
-      if (params.text_color) root.style.setProperty('--tgui--text_color', params.text_color);
-      if (params.hint_color) root.style.setProperty('--tgui--hint_color', params.hint_color);
+      if (params.text_color) root.style.setProperty('--tg-theme-text-color', params.text_color);
+      if (params.hint_color) root.style.setProperty('--tg-theme-hint-color', params.hint_color);
       if (params.button_color) {
-          root.style.setProperty('--tgui--button_color', params.button_color);
-          root.style.setProperty('--tgui--button_text_color', params.button_text_color || '#ffffff');
+          root.style.setProperty('--tg-theme-button-color', params.button_color);
+          root.style.setProperty('--tg-theme-button-text-color', params.button_text_color || '#ffffff');
       }
       if (params.destructive_text_color) {
-          root.style.setProperty('--tgui--destructive_text_color', params.destructive_text_color);
+          root.style.setProperty('--tg-theme-destructive-text-color', params.destructive_text_color);
       }
 
       tg.setHeaderColor(params.bg_color || (isDark ? '#000000' : '#ffffff'));
@@ -109,21 +136,44 @@ const App: React.FC = () => {
     return getUserFromQuery();
   }, [tg]);
 
-  const [screen, setScreen] = useState<Screen>('welcome');
-  const [mainTab, setMainTab] = useState<MainTab>('bookings');
+  // === ИСПОЛЬЗУЕМ SESSION STORAGE ДЛЯ ВСЕХ СОСТОЯНИЙ ===
+  const [screen, setScreenState] = useSessionState<Screen>('app_screen', 'welcome');
+  const [history, setHistory] = useSessionState<Screen[]>('app_history', []);
+  const [mainTab, setMainTab] = useSessionState<MainTab>('app_mainTab', 'bookings');
+
+  const [selectedService, setSelectedService] = useSessionState<Service | null>('app_selService', null);
+  const [selectedSlot, setSelectedSlot] = useSessionState<Slot | null>('app_selSlot', null);
+  const [createdBooking, setCreatedBooking] = useSessionState<Booking | null>('app_createdBooking', null);
+  const [selectedMasterName, setSelectedMasterName] = useSessionState<string | null>('app_selMasterName', null);
+  const [selectedMasterId, setSelectedMasterId] = useSessionState<number | null>('app_selMasterId', null);
+
+  const [reviewMaster, setReviewMaster] = useSessionState<{id: number, name: string} | null>('app_reviewMaster', null);
+  const [currentMaster, setCurrentMaster] = useSessionState<any>('app_currentMaster', null);
+  const [reviewsMasterId, setReviewsMasterId] = useSessionState<number | null>('app_reviewsMasterId', null);
+  const [portfolioMaster, setPortfolioMaster] = useSessionState<{id: number, name: string} | null>('app_portfolioMaster', null);
+
   const [isAppLoading, setIsAppLoading] = useState(true);
 
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
-  const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
+  // === УМНАЯ НАВИГАЦИЯ (РОУТЕР С ИСТОРИЕЙ) ===
+  const pushScreen = (newScreen: Screen) => {
+      setHistory(prev => [...prev, screen]); // Добавляем текущий экран в историю
+      setScreenState(newScreen);             // Переходим на новый
+  };
 
-  const [selectedMasterName, setSelectedMasterName] = useState<string | null>(null);
-  const [selectedMasterId, setSelectedMasterId] = useState<number | null>(null);
+  const goBack = (fallbackScreen: Screen) => {
+      setHistory(prev => {
+          const nextHistory = [...prev];
+          const previousScreen = nextHistory.pop();
+          setScreenState(previousScreen || fallbackScreen);
+          return nextHistory;
+      });
+  };
 
-  const [reviewMaster, setReviewMaster] = useState<{id: number, name: string} | null>(null);
-  const [currentMaster, setCurrentMaster] = useState<any>(null);
-  const [reviewsMasterId, setReviewsMasterId] = useState<number | null>(null);
-  const [portfolioMaster, setPortfolioMaster] = useState<{id: number, name: string} | null>(null);
+  const resetScreen = (newScreen: Screen) => {
+      setHistory([]); // Сбрасываем историю
+      setScreenState(newScreen);
+  };
+
 
   const loadCurrentMaster = async () => {
       const uid = user?.id || (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id;
@@ -142,91 +192,93 @@ const App: React.FC = () => {
        setIsAppLoading(true);
 
        const params = new URLSearchParams(window.location.search);
-       const urlRole = params.get('role'); // Проверяем URL параметр ?role=master
+       const urlRole = params.get('role');
 
        const isClientLoggedIn = localStorage.getItem('is_client_logged_in') === 'true';
-       const isMasterLoggedIn = localStorage.getItem('is_master_logged_in') === 'true';
-
        const uid = user?.id || (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id;
 
-       // 1. 🔥 ЖЕСТКАЯ ПРОВЕРКА НА МАСТЕРА ЧЕРЕЗ URL ПАРАМЕТР
-       if (urlRole === 'master') {
-           if (uid) {
-               try {
-                   // Проверяем, существует ли мастер в БД
-                   const res = await fetch(`${API_BASE}/masters/me/?telegram_id=${uid}`);
-                   if (res.ok) {
-                       const data = await res.json();
-                       setCurrentMaster(data);
-                       localStorage.setItem('is_master_logged_in', 'true');
-                       setScreen('master_dashboard');
-                   } else {
-                       // Е��ли нет в БД, показываем экран входа/регистрации мастера
-                       setScreen('master_welcome');
-                   }
-               } catch (e) {
-                   setScreen('master_welcome');
-               }
-           } else {
-               setScreen('master_welcome');
+       // 1. ЕСЛИ ЕСТЬ СОХРАНЕННАЯ СЕССИЯ (Пользователь перезагрузил страницу)
+       const savedScreen = sessionStorage.getItem('app_screen');
+       if (savedScreen) {
+           if (urlRole === 'master' && uid) {
+               loadCurrentMaster();
            }
            setIsAppLoading(false);
-           return;
+           return; // Прерываем инициализацию, так как сессия загрузится сама!
        }
 
-       // 2. ДИПЛИНК НА ПРОФИЛЬ МАСТЕРА (Для клиентов, открывших ссылку t.me/bot?start=master_1)
+       // 2. ДИПЛИНК НА ПРОФИЛЬ МАСТЕРА
        const startParam = getStartParam();
        if (startParam && startParam.startsWith('master_')) {
           const idStr = startParam.replace('master_', '');
           const mId = parseInt(idStr);
           if (!isNaN(mId)) {
              setSelectedMasterId(mId);
-             setScreen('client_master_profile');
+             resetScreen('client_master_profile');
              setIsAppLoading(false);
              return;
           }
        }
 
-       // 3. ЛОГИКА ДЛЯ КЛИЕНТСКОГО БОТА (Если URL без role=master)
+       // 3. ЖЕСТКАЯ ПРОВЕРКА НА МАСТЕРА ЧЕРЕЗ URL
+       if (urlRole === 'master') {
+           if (uid) {
+               try {
+                   const res = await fetch(`${API_BASE}/masters/me/?telegram_id=${uid}`);
+                   if (res.ok) {
+                       const data = await res.json();
+                       setCurrentMaster(data);
+                       localStorage.setItem('is_master_logged_in', 'true');
+                       resetScreen('master_dashboard');
+                   } else {
+                       resetScreen('master_welcome');
+                   }
+               } catch (e) {
+                   resetScreen('master_welcome');
+               }
+           } else {
+               resetScreen('master_welcome');
+           }
+           setIsAppLoading(false);
+           return;
+       }
+
+       // 4. ЛОГИКА ДЛЯ КЛИЕНТСКОГО БОТА
        if (isClientLoggedIn && uid) {
            setMainTab('bookings');
-           setScreen('profile');
+           resetScreen('profile');
            setIsAppLoading(false);
 
-           // В фоне проверяем профиль, чтобы не тормозить запуск
            checkClientProfile(uid).then((profile) => {
                if (!profile) {
                    localStorage.removeItem('is_client_logged_in');
-                   setScreen('welcome');
+                   resetScreen('welcome');
                }
            });
            return;
        }
 
-       // 4. ЕСЛИ ВООБЩЕ НИЧЕГО НЕТ - кидаем клиента на Welcome
-       setScreen('welcome');
+       // 5. ЕСЛИ ВООБЩЕ НИЧЕГО НЕТ
+       resetScreen('welcome');
        setIsAppLoading(false);
     };
 
-    // Небольшая задержка для того, чтобы Telegram API успело прогрузить initDataUnsafe
     setTimeout(initApp, 100);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
-
-  const handleServiceSelected = (service: Service) => { setSelectedService(service); setScreen('slots'); };
-  const handleSlotSelected = (slot: Slot) => { setSelectedSlot(slot); setScreen('bookingConfirm'); };
-  const handleBookingSuccess = (booking: Booking) => { setCreatedBooking(booking); setScreen('bookingDone'); };
 
   const handleMasterLogout = () => {
     localStorage.removeItem('is_master_logged_in');
     setCurrentMaster(null);
     setSelectedMasterId(null);
     setSelectedMasterName(null);
-    setScreen('master_welcome');
+    resetScreen('master_welcome');
   };
 
   const handleClientLogout = () => {
     localStorage.removeItem('is_client_logged_in');
-    setScreen('welcome');
+    sessionStorage.clear(); // Полностью очищаем сессию при логауте
+    resetScreen('welcome');
   };
 
   const resetToStart = () => {
@@ -237,9 +289,9 @@ const App: React.FC = () => {
     setSelectedMasterId(null);
     if (localStorage.getItem('is_client_logged_in') === 'true') {
         setMainTab('bookings');
-        setScreen('profile');
+        resetScreen('profile');
     } else {
-        setScreen('welcome');
+        resetScreen('welcome');
     }
   };
 
@@ -251,7 +303,7 @@ const App: React.FC = () => {
       if (tgInstance?.showAlert) {
           tgInstance.showAlert("⚠️ Ошибка: Приложение открыто как обычная ссылка. Пожалуйста, настройте кнопку в боте как Web App.");
       } else {
-          alert("⚠️ Ош��бка: Откройте приложение через специальную кнопку меню в боте Telegram.");
+          alert("⚠️ Ошибка: Откройте приложение через специальную кнопку меню в боте Telegram.");
       }
       return;
     }
@@ -271,7 +323,7 @@ const App: React.FC = () => {
 
       localStorage.setItem('is_client_logged_in', 'true');
       setMainTab('bookings');
-      setScreen('profile');
+      resetScreen('profile');
 
     } catch (e) {
       console.error("Login/Registration error:", e);
@@ -287,7 +339,7 @@ const App: React.FC = () => {
   if (isAppLoading) {
     return (
         <AppRoot appearance={appearance} platform={isIos ? 'ios' : 'base'}>
-          <div style={{ display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center', color: 'var(--tgui--text_color)' }}>
+          <div style={{ display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center', color: 'var(--tg-theme-text-color)' }}>
             Загрузка...
           </div>
         </AppRoot>
@@ -304,22 +356,19 @@ const App: React.FC = () => {
       {screen === 'client_registration' && user && (
         <ClientRegistrationScreen
           telegramId={user.id}
-          onBack={() => setScreen('welcome')}
+          onBack={() => goBack('welcome')}
           onComplete={() => {
             localStorage.setItem('is_client_logged_in', 'true');
             setMainTab('bookings');
-            setScreen('profile');
+            resetScreen('profile');
           }}
         />
       )}
 
       {screen === 'services' && (
         <ServicesScreen
-          onBack={() => {
-            if (localStorage.getItem('is_client_logged_in') === 'true') setScreen('profile');
-            else setScreen('welcome');
-          }}
-          onServiceSelected={handleServiceSelected}
+          onBack={() => goBack('profile')}
+          onServiceSelected={(service) => { setSelectedService(service); pushScreen('slots'); }}
           selectedMasterName={selectedMasterName}
           masterId={selectedMasterId}
         />
@@ -328,11 +377,8 @@ const App: React.FC = () => {
       {screen === 'slots' && selectedService && (
         <SlotsScreen
           service={selectedService}
-          onBack={() => {
-              if (selectedMasterId) setScreen('client_master_profile');
-              else setScreen('services');
-          }}
-          onSlotSelected={handleSlotSelected}
+          onBack={() => goBack('services')}
+          onSlotSelected={(slot) => { setSelectedSlot(slot); pushScreen('bookingConfirm'); }}
         />
       )}
 
@@ -340,8 +386,8 @@ const App: React.FC = () => {
         <BookingConfirmScreen
           service={selectedService}
           slot={selectedSlot}
-          onBack={() => setScreen('slots')}
-          onSuccess={handleBookingSuccess}
+          onBack={() => goBack('slots')}
+          onSuccess={(booking) => { setCreatedBooking(booking); pushScreen('bookingDone'); }}
           user={user}
         />
       )}
@@ -354,37 +400,41 @@ const App: React.FC = () => {
       )}
 
       {screen === 'client_reviews_list' && reviewsMasterId && (
-        <ReviewsListScreen masterId={reviewsMasterId} isOpen={true} onClose={() => setScreen('profile')} />
+        <ReviewsListScreen masterId={reviewsMasterId} isOpen={true} onClose={() => goBack('profile')} />
       )}
 
       {screen === 'client_portfolio' && portfolioMaster && (
-        <PortfolioViewerScreen masterId={portfolioMaster.id} masterName={portfolioMaster.name} onBack={() => setScreen('profile')} />
+        <PortfolioViewerScreen masterId={portfolioMaster.id} masterName={portfolioMaster.name} onBack={() => goBack('profile')} />
       )}
 
       {screen === 'profile' && user && (
         <ProfileScreen
           telegramId={user.id}
           initialTab={mainTab}
-          onBack={() => setScreen('welcome')}
+          onBack={() => {
+             // Если мы в профиле, закрываем приложение (так как это главный экран)
+             const tgInst = (window as any).Telegram?.WebApp;
+             if (tgInst?.close) tgInst.close();
+          }}
           onLogout={handleClientLogout}
           onOpenMasterProfile={(masterId, masterName) => {
             setSelectedMasterId(masterId);
             setSelectedMasterName(masterName || null);
-            setScreen('client_master_profile');
+            pushScreen('client_master_profile');
           }}
           onReview={(booking) => {
               const masterId = booking.slot.service.master;
               const masterName = booking.master_name || 'Мастер';
               setReviewMaster({ id: masterId, name: masterName });
-              setScreen('leave_review');
+              pushScreen('leave_review');
           }}
           onOpenMasterReviews={(id) => {
             setReviewsMasterId(id);
-            setScreen('client_reviews_list');
+            pushScreen('client_reviews_list');
           }}
           onOpenPortfolio={(id, name) => {
             setPortfolioMaster({ id, name });
-            setScreen('client_portfolio');
+            pushScreen('client_portfolio');
           }}
         />
       )}
@@ -395,23 +445,23 @@ const App: React.FC = () => {
           masterId={reviewMaster.id}
           masterName={reviewMaster.name}
           userFirstName={user.first_name}
-          onBack={() => setScreen('profile')}
-          onSuccess={() => setScreen('profile')}
+          onBack={() => goBack('profile')}
+          onSuccess={() => goBack('profile')}
         />
       )}
 
       {/* MASTER SCREENS */}
       {screen === 'master_welcome' && (
-        <MasterWelcomeScreen onStart={() => {}} onLogin={() => setScreen('master_login')} />
+        <MasterWelcomeScreen onStart={() => {}} onLogin={() => pushScreen('master_login')} />
       )}
 
       {screen === 'master_login' && user && (
         <MasterLoginScreen
           telegramId={user.id}
-          onBack={() => setScreen('master_welcome')}
+          onBack={() => goBack('master_welcome')}
           onComplete={() => {
               loadCurrentMaster();
-              setScreen('master_dashboard');
+              resetScreen('master_dashboard');
           }}
         />
       )}
@@ -420,23 +470,23 @@ const App: React.FC = () => {
         <MasterDashboardScreen
           telegramId={user.id}
           onSwitchToClient={() => {
-              if (localStorage.getItem('is_client_logged_in') === 'true') setScreen('profile');
-              else setScreen('welcome');
+              if (localStorage.getItem('is_client_logged_in') === 'true') resetScreen('profile');
+              else resetScreen('welcome');
           }}
-          onOpenSchedule={() => setScreen('master_schedule')}
+          onOpenSchedule={() => pushScreen('master_schedule')}
           onEditProfile={() => {
              loadCurrentMaster();
-             setScreen('master_edit_profile');
+             pushScreen('master_edit_profile');
           }}
-          onOpenAnalytics={() => setScreen('master_analytics')}
-          onOpenReviews={() => setScreen('master_reviews')}
-          onAddService={() => setScreen('master_create_service')}
+          onOpenAnalytics={() => pushScreen('master_analytics')}
+          onOpenReviews={() => pushScreen('master_reviews')}
+          onAddService={() => pushScreen('master_create_service')}
           onLogout={handleMasterLogout}
         />
       )}
 
       {screen === 'master_schedule' && user && (
-        <MasterScheduleScreen telegramId={user.id} onBack={() => setScreen('master_dashboard')} />
+        <MasterScheduleScreen telegramId={user.id} onBack={() => goBack('master_dashboard')} />
       )}
 
       {screen === 'master_edit_profile' && user && (
@@ -450,33 +500,30 @@ const App: React.FC = () => {
              address: currentMaster.address,
              experience_years: currentMaster.experience_years,
           } : undefined}
-          onBack={() => setScreen('master_dashboard')}
-          onSaved={() => { loadCurrentMaster(); setScreen('master_dashboard'); }}
+          onBack={() => goBack('master_dashboard')}
+          onSaved={() => { loadCurrentMaster(); goBack('master_dashboard'); }}
         />
       )}
 
       {screen === 'master_analytics' && user && (
-        <MasterAnalyticsScreen telegramId={user.id} onBack={() => setScreen('master_dashboard')} />
+        <MasterAnalyticsScreen telegramId={user.id} onBack={() => goBack('master_dashboard')} />
       )}
 
       {screen === 'master_reviews' && user && (
-        <MasterReviewsScreen telegramId={user.id} onBack={() => setScreen('master_dashboard')} />
+        <MasterReviewsScreen telegramId={user.id} onBack={() => goBack('master_dashboard')} />
       )}
 
       {screen === 'client_master_profile' && selectedMasterId && (
         <MasterPublicProfileScreen
           masterId={selectedMasterId}
-          onBack={() => {
-            if (localStorage.getItem('is_client_logged_in') === 'true') setScreen('profile');
-            else setScreen('welcome');
-          }}
+          onBack={() => goBack('profile')}
           onBook={(name) => {
             setSelectedMasterName(name);
-            setScreen('services');
+            pushScreen('services');
           }}
           onServiceClick={(service) => {
             setSelectedService(service);
-            setScreen('slots');
+            pushScreen('slots');
           }}
         />
       )}
