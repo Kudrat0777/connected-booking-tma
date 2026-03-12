@@ -97,6 +97,7 @@ type Props = {
     phone: string;
     city?: string;
     address?: string;
+    experience_years?: number; // ДОБАВИЛИ ОПЫТ РАБОТЫ В PROPS
   };
   onBack: () => void;
   onSaved: () => void;
@@ -108,7 +109,10 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
   const [phone, setPhone] = useState(initialData?.phone || '');
   const [city, setCity] = useState(initialData?.city || 'Ургенч');
   const [address, setAddress] = useState(initialData?.address || '');
+  // Состояние для опыта работы (по умолчанию 0, если нет)
+  const [experience, setExperience] = useState(initialData?.experience_years !== undefined ? String(initialData.experience_years) : '0');
   const [avatarUrl, setAvatarUrl] = useState(initialData?.avatarUrl || '');
+
   const [loading, setLoading] = useState(false);
   const [avatarLoading, setAvatarLoading] = useState(false);
 
@@ -116,10 +120,10 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
   const [loadingPortfolio, setLoadingPortfolio] = useState(false);
 
   // Используем Ref для актуальных данных формы, чтобы нативная кнопка всегда видела свежие значения
-  const formRef = useRef({ name, bio, phone, city, address });
+  const formRef = useRef({ name, bio, phone, city, address, experience });
   useEffect(() => {
-      formRef.current = { name, bio, phone, city, address };
-  }, [name, bio, phone, city, address]);
+      formRef.current = { name, bio, phone, city, address, experience };
+  }, [name, bio, phone, city, address, experience]);
 
   // НАСТРОЙКА НАТИВНЫХ КНОПОК
   useEffect(() => {
@@ -144,7 +148,12 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
           tg.MainButton.disable();
 
           try {
-              await updateMasterProfile(telegramId, currentForm);
+              // Передаем данные на бэкенд (преобразуя опыт в число)
+              await updateMasterProfile(telegramId, {
+                  ...currentForm,
+                  experience_years: Number(currentForm.experience) || 0
+              });
+
               if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
               onSaved();
           } catch (e) {
@@ -252,9 +261,18 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
              onChange={(e) => setName(e.target.value)}
              onFocus={() => triggerHaptic('selection')}
           />
+          <Input
+             header="Опыт работы (лет)"
+             placeholder="Например: 5"
+             type="number"
+             inputMode="numeric"
+             value={experience}
+             onChange={(e) => setExperience(e.target.value)}
+             onFocus={() => triggerHaptic('selection')}
+          />
           <Textarea
              header="О себе"
-             placeholder="Расскажите о своем опыте..."
+             placeholder="Расскажите о своем опыте и навыках..."
              value={bio}
              onChange={(e) => setBio(e.target.value)}
              onFocus={() => triggerHaptic('selection')}
