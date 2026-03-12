@@ -1,32 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Input,
   Button,
-  Section,
   Select,
   Textarea,
-  List
+  Modal
 } from '@telegram-apps/telegram-ui';
-import { Icon28ChevronLeftOutline } from '@vkontakte/icons';
 import { createServiceByMaster } from '../helpers/api';
-import '../css/MasterCreateServiceScreen.css';
 
 type Props = {
   telegramId: number;
-  onBack: () => void;
-  onSuccess: () => void;
+  isOpen: boolean;        // Модалка открыта/закрыта
+  onClose: () => void;    // Закрытие без сохранения
+  onSuccess: () => void;  // Успешное создание
 };
 
-export const MasterCreateServiceScreen: React.FC<Props> = ({ telegramId, onBack, onSuccess }) => {
+export const MasterCreateServiceScreen: React.FC<Props> = ({
+  telegramId,
+  isOpen,
+  onClose,
+  onSuccess
+}) => {
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
-  const [duration, setDuration] = useState('60'); // 1 χас по емолчанию
+  const [duration, setDuration] = useState('60'); // 1 час по умолчанию
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Очистка формы при открытии
+  useEffect(() => {
+      if (isOpen) {
+          setName('');
+          setPrice('');
+          setDuration('60');
+          setDescription('');
+      }
+  }, [isOpen]);
+
   const handleSubmit = async () => {
-    if (!name || !price || !duration) {
-      alert('Заполните обязательные поля (Название, Цена, Длительность)');
+    const tg = (window as any).Telegram?.WebApp;
+
+    if (!name.trim() || !price || !duration) {
+      if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+      if (tg?.showAlert) tg.showAlert('Заполните обязательные поля: Название и Цена');
+      else alert('Заполните обязательные поля');
       return;
     }
 
@@ -34,87 +51,100 @@ export const MasterCreateServiceScreen: React.FC<Props> = ({ telegramId, onBack,
     try {
       await createServiceByMaster(
         telegramId,
-        name,
+        name.trim(),
         Number(price),
         Number(duration),
-        description
+        description.trim()
       );
+      if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
       onSuccess();
     } catch (e: any) {
       console.error(e);
-      alert('Ошибка при создании услуги');
+      if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+      alert('Ошибка ��ри создании услуги');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="master-create-service-root">
-      <div className="master-create-service-container">
-        <div className="master-create-service-header">
-          <button className="master-create-service-back-btn" onClick={onBack}>
-            <Icon28ChevronLeftOutline />
-          </button>
-          <h1 className="master-create-service-title">Новая услуга</h1>
+    <Modal
+      header={<Modal.Header>Новая услуга</Modal.Header>}
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <div style={{
+          padding: '0 16px 80px', // Большой отступ снизу для клавиатуры
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16,
+          maxHeight: '85vh',
+          overflowY: 'auto'
+      }}>
+
+        <Input
+          header="Название услуги"
+          placeholder="Например: Мужская стрижка"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+
+        <Input
+          header="Цена (UZS)"
+          placeholder="Например: 50000"
+          type="number"
+          inputMode="numeric"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+        />
+
+        <Select
+          header="Длительность"
+          value={duration}
+          onChange={(e) => setDuration(e.target.value)}
+        >
+          <option value="15">15 мин</option>
+          <option value="30">30 мин</option>
+          <option value="45">45 мин</option>
+          <option value="60">1 час</option>
+          <option value="90">1.5 часа</option>
+          <option value="120">2 часа</option>
+          <option value="150">2.5 часа</option>
+          <option value="180">3 часа</option>
+          <option value="240">4 часа</option>
+        </Select>
+
+        <Textarea
+          header="Описание (необязательно)"
+          placeholder="Что входит в эту услугу? Эта информация поможет клиенту."
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+
+        <div style={{ marginTop: 16 }}>
+          <Button
+            size="l"
+            mode="filled"
+            stretched
+            loading={loading}
+            onClick={handleSubmit}
+          >
+            Создать услугу
+          </Button>
+          <Button
+            size="l"
+            mode="plain"
+            stretched
+            onClick={onClose}
+            style={{ marginTop: 8 }}
+          >
+            Отмена
+          </Button>
         </div>
 
-        <div className="master-create-service-content">
-          <List>
-            <Section header="Основное">
-              <Input
-                header="Название"
-                placeholder="Например: Мужская стрижка"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-              <Input
-                header="Цена (сум)"
-                placeholder="50000"
-                type="number"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-              />
-            </Section>
-
-            <Section header="Длительность и описание">
-              <Select
-                header="Фдлительность"
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-              >
-                <option value="15">15 мин</option>
-                <option value="30">30 мин</option>
-                <option value="45">45 мин</option>
-                <option value="60">1 час</option>
-                <option value="90">1.5 часа</option>
-                <option value="120">2 часа</option>
-                <option value="150">2.5 часа</option>
-                <option value="180">3 часа</option>
-                <option value="240">4 часа</option>
-              </Select>
-
-              <Textarea
-                header="Описание (необязательно)"
-                placeholder="Что входит в услугу..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </Section>
-          </List>
-
-          <div className="master-create-service-actions">
-            <Button
-              size="l"
-              mode="filled"
-              stretched
-              loading={loading}
-              onClick={handleSubmit}
-            >
-              Создать услугь
-            </Button>
-          </div>
-        </div>
       </div>
-    </div>
+    </Modal>
   );
 };

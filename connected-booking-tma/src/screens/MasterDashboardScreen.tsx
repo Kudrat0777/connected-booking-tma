@@ -42,8 +42,8 @@ import {
 
 import type { Booking, Service, Slot } from '../helpers/api';
 
-// ИМПОРТИРУЕМ НОВЫЙ КОМПОНЕНТ УСЛУГ
 import { MasterServicesTab } from '../components/MasterServicesTab';
+import { MasterCreateServiceScreen } from './MasterCreateServiceScreen';
 
 const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
   const container = useRef<HTMLDivElement>(null);
@@ -70,7 +70,7 @@ type Props = {
   onEditProfile: () => void;
   onOpenAnalytics: () => void;
   onOpenReviews: () => void;
-  onAddService: () => void;
+  onAddService?: () => void; // Оставили для совместимости с App.tsx, но использовать будем локальную модалку
   onLogout?: () => void;
 };
 
@@ -84,18 +84,21 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   onEditProfile,
   onOpenAnalytics,
   onOpenReviews,
-  onAddService,
   onLogout
 }) => {
   const [activeTab, setActiveTab] = useState<Tab>('bookings');
 
+  // Состояния для записей
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filter, setFilter] = useState<BookingFilter>('today');
   const [loadingBookings, setLoadingBookings] = useState(false);
 
+  // Состояния для услуг
   const [services, setServices] = useState<Service[]>([]);
   const [loadingServices, setLoadingServices] = useState(false);
+  const [isCreateServiceModalOpen, setIsCreateServiceModalOpen] = useState(false);
 
+  // Состояния для ручного создания записи
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newClientName, setNewClientName] = useState('');
   const [newClientPhone, setNewClientPhone] = useState('');
@@ -104,6 +107,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   const [selectedNewSlotId, setSelectedNewSlotId] = useState<string>('');
   const [isCreatingManual, setIsCreatingManual] = useState(false);
 
+  // Состояние для шеринга
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [newClientDetails, setNewClientDetails] = useState({ name: '', phone: '' });
 
@@ -275,7 +279,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
     return (
       <div style={{ minHeight: '100%', paddingBottom: 100 }}>
 
-        {/* Фильтры */}
+        {/* Фильтры: без черной полосы */}
         <div style={{ padding: '12px 16px', position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--tg-theme-secondary-bg-color)' }}>
           <SegmentedControl>
             <SegmentedControl.Item selected={filter === 'today'} onClick={() => { triggerHaptic(); setFilter('today'); }}>Сегодня</SegmentedControl.Item>
@@ -374,7 +378,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
            </div>
         )}
 
-        {/* ПЛАВАЮЩАЯ КНОПКА (FAB) */}
+        {/* ПЛАВАЮЩАЯ КНОПКА (FAB) ДЛЯ ЗАПИСИ КЛИЕНТА */}
         <div
           onClick={() => { triggerHaptic(); setIsCreateModalOpen(true); }}
           style={{
@@ -472,18 +476,17 @@ export const MasterDashboardScreen: React.FC<Props> = ({
         position: 'relative',
         height: '100vh',
         overflow: 'hidden',
-        // 🚀 ГЛАВНЫЙ ФОН ДАШБОРДА СТАЛ ВТОРИЧНЫМ (СЕРЫМ), ЧТОБЫ СПИСКИ И КАРТОЧКИ ВЫГЛЯДЕЛИ ИДЕАЛЬНО
-        backgroundColor: 'var(--tg-theme-secondary-bg-color)'
+        backgroundColor: 'var(--tg-theme-secondary-bg-color)' // Общий серый фон для всего дашборда
     }}>
       <main style={{ height: '100%', overflowY: 'auto' }}>
         {activeTab === 'bookings' && renderBookings()}
 
-        {/* ИСПОЛЬЗУЕМ НАШ НОВЫЙ КОМПОНЕНТ */}
+        {/* ИСПОЛЬЗУЕМ ВЫДЕЛЕННЫЙ КОМПОНЕНТ ДЛЯ УСЛУГ */}
         {activeTab === 'services' && (
             <MasterServicesTab
                 services={services}
                 loading={loadingServices}
-                onAddService={onAddService}
+                onAddService={() => setIsCreateServiceModalOpen(true)}
                 onDeleteService={handleDeleteService}
                 triggerHaptic={triggerHaptic}
             />
@@ -504,7 +507,20 @@ export const MasterDashboardScreen: React.FC<Props> = ({
         </Tabbar.Item>
       </Tabbar>
 
-      {/* МОДАЛЬНОЕ ОКНО СОЗДАНИЯ ЗАПИСИ */}
+      {/* ---------------- МОДАЛКИ ---------------- */}
+
+      {/* МОДАЛЬНОЕ ОКНО "НОВАЯ УСЛУГА" */}
+      <MasterCreateServiceScreen
+          telegramId={telegramId}
+          isOpen={isCreateServiceModalOpen}
+          onClose={() => setIsCreateServiceModalOpen(false)}
+          onSuccess={() => {
+              setIsCreateServiceModalOpen(false);
+              loadServices();
+          }}
+      />
+
+      {/* МОДАЛЬНОЕ ОКНО СОЗДАНИЯ ЗАПИСИ (РУЧНОЕ ДОБАВЛЕНИЕ КЛИЕНТА) */}
       <Modal header={<Modal.Header>Новая запись</Modal.Header>} open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
         <div style={{ padding: '0 16px 150px', display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', maxHeight: '85vh' }}>
           <Input header="Имя клиента" placeholder="Например, Анна" value={newClientName} onChange={(e) => setNewClientName(e.target.value)} />

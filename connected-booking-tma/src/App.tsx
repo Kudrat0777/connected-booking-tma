@@ -461,14 +461,6 @@ const App: React.FC = () => {
         <MasterReviewsScreen telegramId={user.id} onBack={() => setScreen('master_dashboard')} />
       )}
 
-      {screen === 'master_create_service' && user && (
-        <MasterCreateServiceScreen
-          telegramId={user.id}
-          onBack={() => setScreen('master_dashboard')}
-          onSuccess={() => setScreen('master_dashboard')}
-        />
-      )}
-
       {screen === 'client_master_profile' && selectedMasterId && (
         <MasterPublicProfileScreen
           masterId={selectedMasterId}
