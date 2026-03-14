@@ -1,5 +1,7 @@
 {
-  "url": "https://ton.vote",
-  "name": "TON Vote",
-  "iconUrl": "https://ton.vote/logo.png"
+  "url": "https://connected.uz",
+  "name": "Connected Booking",
+  "iconUrl": "https://raw.githubusercontent.com/Kudrat0777/connected-booking-tma/master/public/apple-touch-icon.png",
+  "termsOfUseUrl": "https://connected.uz/terms",
+  "privacyPolicyUrl": "https://connected.uz/privacy"
 }

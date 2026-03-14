@@ -33,9 +33,18 @@ window.fetch = async function () {
     let [resource, config] = arguments;
     if (!config) config = {};
     if (!config.headers) config.headers = {};
-    config.headers['ngrok-skip-browser-warning'] = 'true';
-    config.headers['bypass-tunnel-reminder'] = 'true';
+
+    // Проверяем, куда идет запрос
+    const url = typeof resource === 'string' ? resource : (resource instanceof Request ? resource.url : '');
+
+    // ДОБАВЛЯЕМ ЗАГОЛОВКИ NGROK/ZROK ТОЛЬКО ЕСЛИ ЗАПРОС ИДЕТ НА НАШ БЭКЕНД
+    if (url.includes('zrok.io') || url.includes('ngrok-free.app')) {
+        config.headers['ngrok-skip-browser-warning'] = 'true';
+        config.headers['bypass-tunnel-reminder'] = 'true';
+    }
+
     config.headers['Accept'] = 'application/json';
+
     return await originalFetch(resource, config);
 };
 

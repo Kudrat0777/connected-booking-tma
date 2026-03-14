@@ -10,6 +10,9 @@ import {
 import { Icon28PhoneOutline, Icon28UserCircleOutline } from '@vkontakte/icons';
 import { updateUserProfile, fetchUserProfile, deleteAccount } from '../helpers/api';
 
+// ИМПОРТИРУЕМ ХУКИ TON CONNECT ВМЕСТО КНОПКИ
+import { useTonConnectUI, useTonWallet } from '@tonconnect/ui-react';
+
 type Props = {
   telegramId: number;
   onBack: () => void;
@@ -24,6 +27,10 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // ХУКИ ДЛЯ РАБОТЫ С КОШЕЛЬКОМ
+  const [tonConnectUI] = useTonConnectUI();
+  const wallet = useTonWallet();
+
   // Загружаем данные
   useEffect(() => {
     const loadData = async () => {
@@ -31,7 +38,6 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
         const tg = (window as any).Telegram?.WebApp;
         const tgUser = tg?.initDataUnsafe?.user;
 
-        // Берем фото прямо из Telegram (оно всегда свежее)
         if (tgUser?.photo_url) {
             setUserPhoto(tgUser.photo_url);
         }
@@ -132,13 +138,28 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
     }
   };
 
+  // ОБРАБОТЧИК КЛИКА ПО ЯЧЕЙКЕ КОШЕЛЬКА
+  const handleWalletClick = () => {
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
+
+    if (wallet) {
+      tonConnectUI.disconnect(); // Если подключен - отключаем
+    } else {
+      tonConnectUI.openModal(); // Если не подключен - открываем шторку
+    }
+  };
+
+  // ФОРМАТИРОВАНИЕ АДРЕСА КОШЕЛЬКА
+  const formatAddress = (address: string) => {
+      return `${address.slice(0, 4)}...${address.slice(-4)}`;
+  };
+
   return (
     <div style={{
-      // Используем secondary_bg_color, так как это стандарт для экранов с настройками в iOS/Telegram,
-      // на котором белые блоки Section смотрятся контрастно.
       backgroundColor: 'var(--tg-theme-secondary-bg-color)',
       minHeight: '100%',
-      paddingBottom: 100 // Отступ для нижнего таббара
+      paddingBottom: 100
     }}>
       {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '100px 0' }}>
@@ -154,7 +175,7 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
             }}>
                <Avatar
                   size={96}
-                  src={userPhoto} // 👈 ТЕПЕРЬ ТУТ ФОТО ИЗ TELEGRAM
+                  src={userPhoto}
                   fallbackIcon={<Icon28UserCircleOutline width={48} height={48} />}
                />
                <div style={{
@@ -168,6 +189,42 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
             </div>
 
             <List>
+
+              {/* === КРАСИВАЯ НАТИВНАЯ ЯЧЕЙКА TON CONNECT === */}
+              <Section header="Web3 (TON)" footer="Привяжите кошелек для будущих бонусов и скидок.">
+                <Cell
+                   onClick={handleWalletClick}
+                   after={
+                       <span style={{
+                           color: wallet ? 'var(--tg-theme-hint-color)' : 'var(--tg-theme-link-color)',
+                           fontWeight: 500,
+                           fontSize: 15
+                       }}>
+                           {wallet ? formatAddress(wallet.account.address) : 'Подключить'}
+                       </span>
+                   }
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{
+                          width: 28,
+                          height: 28,
+                          backgroundColor: '#0098EA',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                      }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="white"/>
+                              <path d="M2 17L12 22L22 17M2 12L12 17L22 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                      </div>
+                      <span style={{ fontWeight: 500, color: 'var(--tg-theme-text-color)' }}>TON Кошелек</span>
+                  </div>
+                </Cell>
+              </Section>
+              {/* ================================================= */}
+
               <Section header="Личные данные">
                 <Input
                   header="Имя"
@@ -217,16 +274,24 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
                  </Cell>
               </Section>
 
-              <Section footer="Удаление аккаунта сотрет ваш профиль и историю записей из базы данных.">
-                  <Cell onClick={handleDeleteAccountClick}>
-                      <div style={{
-                          color: 'var(--tg-theme-destructive-text-color)',
-                          textAlign: 'center',
-                          fontWeight: 500,
-                          width: '100%'
-                      }}>
+              <Section header="Аккаунт" footer="Удаление аккаунта сотрет ваш профиль и историю записей из базы данных.">
+                  <Cell
+                      onClick={() => {
+                          const isConfirmed = window.confirm('Вы точно хотите выйти из аккаунта?');
+                          if (isConfirmed) onLogout();
+                      }}
+                  >
+                      <span style={{ color: 'var(--tg-theme-text-color)', fontWeight: 500 }}>
+                         Выйти из аккаунта
+                      </span>
+                  </Cell>
+
+                  <Cell
+                      onClick={handleDeleteAccountClick}
+                  >
+                      <span style={{ color: 'var(--tg-theme-destructive-text-color)', fontWeight: 500 }}>
                          Удалить аккаунт
-                      </div>
+                      </span>
                   </Cell>
               </Section>
             </List>

@@ -21,7 +21,7 @@
     "@telegram-apps/telegram-ui": "^2.1.13",
     "@telegram-mini-apps/ui": "^0.0.10",
     "@tma.js/sdk-react": "^3.0.8",
-    "@tonconnect/ui-react": "^2.2.0",
+    "@tonconnect/ui-react": "^2.4.2",
     "@vkontakte/icons": "^3.27.0",
     "eruda": "^3.4.3",
     "framer-motion": "^12.35.2",

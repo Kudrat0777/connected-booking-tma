@@ -4,34 +4,10 @@
     <meta charset="UTF-8" />
     <title>Connected Booking</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-    <script
-      async
-      src="https://tganalytics.xyz/index.js"
-      onload="initAnalytics()"
-      type="text/javascript">
-    </script>
-
-    <script>
-      function initAnalytics() {
-        try {
-          if (window.telegramAnalytics) {
-            window.telegramAnalytics.init({
-              token: 'eyJhcHBfbmFtZSI6ImN0aW1lIiwiYXBwX3VybCI6Imh0dHBzOi8vdC5tZS9Db25uZWN0ZWRUaW1lQm90IiwiYXBwX2RvbWFpbiI6Imh0dHBzOi8vQ29ubmVjdGVkLnV6In0=!/KYGkH5VPI7ORIe6G1kpzcvqoflzAo/wj3NB1AvRMQg=',
-              appName: 'ctime'
-            });
-            console.log('✅ Аналитика Telegram успешно загружена');
-          }
-        } catch (e) {
-          console.error('❌ Ошибка инициализации аналитики:', e);
-        }
-      }
-    </script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/index.tsx"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   </body>
 </html>
