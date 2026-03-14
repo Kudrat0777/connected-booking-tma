@@ -62,15 +62,25 @@ export const ServicesScreen: React.FC<Props> = ({
 
   // 2. ЗАГРУЗКА УСЛУГ
   useEffect(() => {
-    const idToFetch = masterId ? masterId : undefined;
+    // Если masterId больше миллиона - это telegram_id.
+    // Стандартный фильтр /api/services/?master=... ожидает внутренний ID.
+    // Поэтому если ID огромный, загружаем ВСЕ услуги и фильтруем на клиенте.
+    const idToFetch = (masterId && masterId < 1000000) ? masterId : undefined;
 
     fetchServices(idToFetch)
-      .then(setServices)
+      .then(data => {
+         // Дополнительная проверка на случай, если мы загрузили все услуги
+         if (masterId && masterId >= 1000000 && selectedMasterName) {
+            setServices(data.filter(s => s.master_name === selectedMasterName));
+         } else {
+            setServices(data);
+         }
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [masterId]);
+  }, [masterId, selectedMasterName]);
 
-  // 3. ФИЛЬТРАЦИЯ
+  // 3. ФИЛЬТРАЦИЯ ПО ПОИСКУ И ИМЕНИ (если зашли не по ID)
   const filteredServices = useMemo(() => {
     let res = services;
 
