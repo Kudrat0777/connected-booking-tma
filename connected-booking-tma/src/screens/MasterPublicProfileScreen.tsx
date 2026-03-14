@@ -19,8 +19,8 @@ import {
 } from '@vkontakte/icons';
 import lottie from 'lottie-web';
 
-// Изменил импорт: используем fetchMasterProfile вместо fetchMasterById
-import { fetchMasterProfile, fetchPortfolio, fetchServices, getFullImageUrl } from '../helpers/api';
+// Возвращаем импорт fetchMasterById
+import { fetchMasterProfile, fetchMasterById, fetchPortfolio, fetchServices, getFullImageUrl } from '../helpers/api';
 import type { MasterPublicProfile, PortfolioItem, Service } from '../helpers/api';
 import { ReviewsListScreen } from './ReviewsListScreen';
 
@@ -43,7 +43,7 @@ const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 
 };
 
 type Props = {
-  masterId: number; // Это telegram_id, переданный из App.tsx
+  masterId: number;
   onBack: () => void;
   onBook: (masterName: string) => void;
   onServiceClick?: (service: Service) => void;
@@ -64,7 +64,7 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false); // Добавлен стейт ошибки
+  const [error, setError] = useState(false);
 
   const [isReviewsModalOpen, setIsReviewsModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -74,10 +74,17 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
       setLoading(true);
       setError(false);
       try {
-        // Сначала грузим профиль мастера по TELEGRAM ID
-        const masterData = await fetchMasterProfile(masterId);
+        let masterData = null;
 
-        // Проверяем, не вернул ли сервер ошибку (например, 404 Not found)
+        // УМНАЯ ПРОВЕРКА:
+        // Если ID огромный (пришел из диплинка) — ищем по telegram_id
+        // Если ID маленький (кликнули в списке) — ищем по внутреннему ID базы данных
+        if (masterId > 1000000) {
+            masterData = await fetchMasterProfile(masterId);
+        } else {
+            masterData = await fetchMasterById(masterId);
+        }
+
         if (!masterData || masterData.detail === "Not found.") {
            setError(true);
            return;
@@ -85,9 +92,6 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
 
         setMaster(masterData);
 
-        // Если мастер найден, берем его внутренний ID базы данных для поиска услуг и портфолио
-        // Если ваш бэкенд ожидает telegram_id везде, то передавайте masterId,
-        // Если внутренний ID (pk), то masterData.id
         const internalId = masterData.id || masterId;
 
         const [portfolioData, servicesData] = await Promise.all([
@@ -112,7 +116,6 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
     const tg = (window as any).Telegram?.WebApp;
     if (!tg) return;
 
-    // Если ошибка загрузки, показываем только кнопку Назад
     if (error) {
         tg.BackButton.show();
         tg.BackButton.onClick(onBack);
@@ -123,7 +126,6 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
     if (loading || !master) return;
 
     const handleBack = () => {
-      // Иерархия закрытия: сначала картинка, потом отзывы, потом выход из профиля
       if (selectedImage) {
           setSelectedImage(null);
       } else if (isReviewsModalOpen) {
@@ -171,7 +173,6 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
     );
   }
 
-  // ОБРАБОТКА ОШИБКИ 404 (МАСТЕР НЕ НАЙДЕН)
   if (error || !master) {
       return (
           <div style={{ backgroundColor: 'var(--tg-theme-bg-color)', minHeight: '100vh', paddingTop: 80 }}>
@@ -335,7 +336,6 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
             </Section>
         )}
 
-        {/* ПОРТФОЛИО */}
         {portfolio.length > 0 && (
             <Section header="Примеры работ">
                 <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, backgroundColor: 'var(--tg-theme-bg-color)' }}>
@@ -365,7 +365,6 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
           onClose={() => setIsReviewsModalOpen(false)}
       />
 
-      {/* FULLSCREEN IMAGE VIEWER (LIGHTBOX) */}
       {selectedImage && (
           <div
               style={{
@@ -384,7 +383,6 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
                   setSelectedImage(null);
               }}
           >
-              {/* Кнопка закрытия (Крестик) */}
               <div style={{ position: 'absolute', top: 20, right: 20, width: 40, height: 40, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M18 6L6 18" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
