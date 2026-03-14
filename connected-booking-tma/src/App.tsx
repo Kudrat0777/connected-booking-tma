@@ -40,7 +40,7 @@ window.fetch = async function () {
     return await originalFetch(resource, config);
 };
 
-const API_BASE = 'https://vdw9a2moqg9j.share.zrok.io/api';
+const API_BASE = 'https://n6jlohcg6gtg.share.zrok.io/api';
 
 type Screen =
   | 'welcome' | 'services' | 'slots' | 'bookingConfirm' | 'bookingDone'
