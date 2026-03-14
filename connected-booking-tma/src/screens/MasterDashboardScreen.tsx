@@ -4,7 +4,6 @@ import {
   Button,
   Placeholder,
   Spinner,
-  SegmentedControl,
   Avatar,
   Title,
   Modal,
@@ -18,6 +17,8 @@ import {
   Icon28ServicesOutline,
   Icon28UserCircleOutline,
   Icon28PhoneOutline,
+  Icon24CheckCircleOutline,
+  Icon24CancelOutline,
 } from '@vkontakte/icons';
 import lottie from 'lottie-web';
 
@@ -70,6 +71,13 @@ type Props = {
 
 type Tab = 'bookings' | 'services' | 'profile';
 type BookingFilter = 'today' | 'tomorrow' | 'week' | 'all';
+
+const PERIODS = [
+  { id: 'today', label: 'Сегодня' },
+  { id: 'tomorrow', label: 'Завтра' },
+  { id: 'week', label: 'Неделя' },
+  { id: 'all', label: 'Все записи' },
+];
 
 export const MasterDashboardScreen: React.FC<Props> = ({
   telegramId,
@@ -260,7 +268,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
     setIsShareModalOpen(false);
   };
 
-  // --- Вкладка ЗАПИСИ (Осталась здесь, так как содержит много логики бронирований) ---
+  // --- Вкладка ЗАПИСИ (Дизайн Timeline) ---
   const renderBookings = () => {
     const grouped = bookings.reduce((acc: any, b) => {
         const d = new Date(b.slot.time);
@@ -271,103 +279,161 @@ export const MasterDashboardScreen: React.FC<Props> = ({
     }, {});
 
     return (
-      <div style={{ backgroundColor: 'var(--tg-theme-bg-color)', minHeight: '100%', paddingBottom: 100 }}>
+      <div style={{ backgroundColor: 'var(--tg-theme-secondary-bg-color)', minHeight: '100%', paddingBottom: 100 }}>
 
-        {/* Фильтры */}
-        <div style={{ padding: '12px 16px', position: 'sticky', top: 0, zIndex: 10, background: 'var(--tgui--bg_color)', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-          <SegmentedControl>
-            <SegmentedControl.Item selected={filter === 'today'} onClick={() => setFilter('today')}>
-              Сегодня
-            </SegmentedControl.Item>
-            <SegmentedControl.Item selected={filter === 'tomorrow'} onClick={() => setFilter('tomorrow')}>
-              Завтра
-            </SegmentedControl.Item>
-            <SegmentedControl.Item selected={filter === 'week'} onClick={() => setFilter('week')}>
-              Неделя
-            </SegmentedControl.Item>
-            <SegmentedControl.Item selected={filter === 'all'} onClick={() => setFilter('all')}>
-              Все
-            </SegmentedControl.Item>
-          </SegmentedControl>
+        {/* СКРЫТЫЙ СКРОЛЛБАР */}
+        <style>{`
+          .hide-scrollbar::-webkit-scrollbar { display: none; }
+          .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        `}</style>
+
+        {/* ГОРИЗОНТАЛЬНЫЕ ФИЛЬТРЫ (ЧИПСЫ) */}
+        <div style={{ padding: '12px 16px', position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'var(--tg-theme-secondary-bg-color)', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+          <div className="hide-scrollbar" style={{ display: 'flex', overflowX: 'auto', gap: 8 }}>
+            {PERIODS.map(p => {
+              const isActive = filter === p.id;
+              return (
+                <div
+                  key={p.id}
+                  onClick={() => { triggerHaptic('light'); setFilter(p.id as BookingFilter); }}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: 20,
+                    backgroundColor: isActive ? 'var(--tg-theme-button-color)' : 'var(--tg-theme-bg-color)',
+                    color: isActive ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
+                    fontSize: 14,
+                    fontWeight: 500,
+                    whiteSpace: 'nowrap',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: isActive ? '0 4px 12px rgba(var(--tg-theme-button-color-rgb), 0.3)' : '0 2px 8px rgba(0,0,0,0.04)'
+                  }}
+                >
+                  {p.label}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {loadingBookings && <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><Spinner size="m"/></div>}
 
         {!loadingBookings && bookings.length === 0 && (
-          <div style={{ marginTop: 20 }}>
-            <Placeholder header="Нет записей" description="На этот период записей пока нет. Отдыхайте!">
+          <div style={{ marginTop: 40 }}>
+            <Placeholder header="Нет записей" description="На этот период записей пока нет.">
                <LottieIcon src="/stickers/duck_out.json" size={140} />
             </Placeholder>
           </div>
         )}
 
         {!loadingBookings && bookings.length > 0 && (
-           <div style={{ padding: '0 16px 20px' }}>
-              {Object.keys(grouped).map(dateKey => (
-                 <div key={dateKey}>
-                    <div style={{ fontWeight: 600, fontSize: 15, margin: '24px 0 12px', color: 'var(--tg-theme-hint-color)', textTransform: 'capitalize' }}>
+           <div style={{ padding: '0 16px 20px', position: 'relative' }}>
+              {Object.keys(grouped).map((dateKey, dateIndex) => (
+                 <div key={dateKey} style={{ animation: 'fadeIn 0.3s ease' }}>
+
+                    <div style={{
+                        fontWeight: 600,
+                        fontSize: 14,
+                        margin: '24px 0 16px',
+                        color: 'var(--tg-theme-hint-color)',
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.5,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12
+                    }}>
                        {dateKey}
+                       <div style={{ flex: 1, height: 1, backgroundColor: 'rgba(0,0,0,0.05)' }} />
                     </div>
 
-                    {grouped[dateKey].map((b: Booking) => {
+                    {grouped[dateKey].map((b: Booking, index: number) => {
                         const timeStr = new Date(b.slot.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                         const isPending = b.status === 'pending';
                         const isConfirmed = b.status === 'confirmed';
+                        const isFuture = new Date(b.slot.time) > new Date();
 
                         return (
-                            <div key={b.id} style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-                                <div style={{ width: 44, flexShrink: 0, paddingTop: 14, textAlign: 'right', fontWeight: 700, fontSize: 16, color: 'var(--tg-theme-text-color)' }}>
-                                    {timeStr}
+                            <div key={b.id} style={{ display: 'flex', gap: 16, marginBottom: 16, position: 'relative' }}>
+
+                                {/* TIMELINE ЛИНИЯ И ВРЕМЯ */}
+                                <div style={{ width: 44, flexShrink: 0, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                    <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--tg-theme-text-color)', marginTop: 2 }}>
+                                        {timeStr}
+                                    </div>
+                                    {/* Линия связи между карточками */}
+                                    {index !== grouped[dateKey].length - 1 && (
+                                        <div style={{ width: 2, flex: 1, backgroundColor: isPending ? '#FF9500' : 'rgba(0,0,0,0.1)', marginTop: 8, borderRadius: 2 }} />
+                                    )}
                                 </div>
 
+                                {/* КАРТОЧКА ЗАПИСИ */}
                                 <div style={{
                                     flex: 1,
-                                    backgroundColor: 'var(--tg-theme-secondary-bg-color)',
-                                    borderLeft: isPending ? '4px solid #FF9500' : '4px solid #34C759',
-                                    borderRadius: '0 16px 16px 0',
+                                    backgroundColor: 'var(--tg-theme-bg-color)',
+                                    borderRadius: 16,
                                     padding: '16px',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 12,
+                                    boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+                                    borderLeft: isPending ? '4px solid #FF9500' : '4px solid transparent',
                                 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                        <Avatar size={48} src={b.photo_url || undefined} fallbackIcon={<Icon28UserCircleOutline />} />
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 2, color: 'var(--tg-theme-text-color)' }}>
-                                                {b.client_name || b.name || 'Клиент'}
-                                            </div>
-                                            <div style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)' }}>
-                                                {b.service_name}
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                            <Avatar size={44} src={b.photo_url || undefined} fallbackIcon={<Icon28UserCircleOutline />} />
+                                            <div>
+                                                <div style={{ fontWeight: 600, fontSize: 16, color: 'var(--tg-theme-text-color)' }}>
+                                                    {b.client_name || b.name || 'Клиент'}
+                                                </div>
+                                                <div style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)', marginTop: 2 }}>
+                                                    {b.service_name} • {b.slot.service.duration} мин
+                                                </div>
                                             </div>
                                         </div>
-                                        {isPending && <span style={{ fontSize: 11, color: '#FF9500', fontWeight: 600, backgroundColor: 'rgba(255, 149, 0, 0.1)', padding: '4px 8px', borderRadius: 6 }}>НОВАЯ</span>}
+
+                                        {/* БЕЙДЖИКИ СТАТУСА */}
+                                        {isPending && (
+                                            <div style={{ fontSize: 11, color: '#FF9500', fontWeight: 700, backgroundColor: 'rgba(255, 149, 0, 0.1)', padding: '4px 8px', borderRadius: 8, whiteSpace: 'nowrap' }}>
+                                                НОВАЯ
+                                            </div>
+                                        )}
+                                        {isConfirmed && isFuture && (
+                                            <div style={{ fontSize: 11, color: '#34C759', fontWeight: 700, backgroundColor: 'rgba(52, 199, 89, 0.1)', padding: '4px 8px', borderRadius: 8, whiteSpace: 'nowrap' }}>
+                                                ПОДТВЕРЖДЕНО
+                                            </div>
+                                        )}
                                     </div>
 
+                                    {/* КНОПКИ СВЯЗИ С КЛИЕНТОМ */}
                                     {(b.client_phone || b.username) && (
-                                        <div style={{ display: 'flex', gap: 8 }}>
+                                        <div style={{ display: 'flex', gap: 8, marginBottom: isPending ? 12 : 0 }}>
                                             {b.client_phone && (
-                                                <a href={`tel:${b.client_phone}`} style={{ flex: 1, textDecoration: 'none', backgroundColor: 'var(--tg-theme-bg-color)', padding: '8px', borderRadius: 10, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--tg-theme-text-color)', fontWeight: 500 }}>
-                                                    <Icon28PhoneOutline width={20} height={20} style={{color: 'var(--tg-theme-button-color)'}}/> Звонок
+                                                <a href={`tel:${b.client_phone}`} style={{ textDecoration: 'none', backgroundColor: 'var(--tg-theme-secondary-bg-color)', padding: '6px 12px', borderRadius: 10, fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--tg-theme-text-color)', fontWeight: 500 }}>
+                                                    <Icon28PhoneOutline width={18} height={18} style={{color: 'var(--tg-theme-button-color)'}}/> Позвонить
                                                 </a>
                                             )}
                                             {b.username && (
-                                                <a href={`https://t.me/${b.username.replace('@', '')}`} target="_blank" rel="noreferrer" style={{ flex: 1, textDecoration: 'none', backgroundColor: 'var(--tg-theme-bg-color)', padding: '8px', borderRadius: 10, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--tg-theme-text-color)', fontWeight: 500 }}>
+                                                <a href={`https://t.me/${b.username.replace('@', '')}`} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', backgroundColor: 'var(--tg-theme-secondary-bg-color)', padding: '6px 12px', borderRadius: 10, fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--tg-theme-text-color)', fontWeight: 500 }}>
                                                     Telegram
                                                 </a>
                                             )}
                                         </div>
                                     )}
 
+                                    {/* КНОПКИ ДЕЙСТВИЙ (ПРИНЯТЬ / ОТКЛОНИТЬ) */}
                                     {isPending && (
-                                        <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                                            <Button size="s" mode="filled" stretched onClick={() => handleConfirm(b.id)}>Принять</Button>
-                                            <Button size="s" mode="bezeled" stretched style={{ color: 'var(--tg-theme-destructive-text-color)' }} onClick={() => handleReject(b.id)}>Отклонить</Button>
+                                        <div style={{ display: 'flex', gap: 8 }}>
+                                            <Button size="m" mode="filled" stretched onClick={() => handleConfirm(b.id)}>
+                                                Принять
+                                            </Button>
+                                            <Button size="m" mode="bezeled" stretched style={{ color: 'var(--tg-theme-destructive-text-color)' }} onClick={() => handleReject(b.id)}>
+                                                Отклонить
+                                            </Button>
                                         </div>
                                     )}
-                                    {isConfirmed && new Date(b.slot.time) > new Date() && (
-                                        <div style={{ marginTop: 4 }}>
-                                            <Button size="s" mode="bezeled" stretched style={{ color: 'var(--tg-theme-destructive-text-color)', backgroundColor: 'rgba(255,59,48,0.08)' }} onClick={() => handleReject(b.id)}>
-                                                Отменить визит
+
+                                    {/* КНОПКА ОТМЕНЫ ДЛЯ ПОДТВЕРЖДЕННЫХ */}
+                                    {isConfirmed && isFuture && (
+                                        <div style={{ marginTop: 12 }}>
+                                            <Button size="s" mode="plain" stretched style={{ color: 'var(--tg-theme-hint-color)', padding: 0, height: 'auto', justifyContent: 'flex-start' }} onClick={() => handleReject(b.id)}>
+                                                Отменить запись
                                             </Button>
                                         </div>
                                     )}
@@ -380,9 +446,9 @@ export const MasterDashboardScreen: React.FC<Props> = ({
            </div>
         )}
 
-        {/* ПЛАВАЮЩАЯ КНОПКА (FAB) ДЛЯ ЗАПИСИ КЛИЕНТА */}
+        {/* ПЛАВАЮЩАЯ КНОПКА (FAB) ДЛЯ РУЧНОЙ ЗАПИСИ КЛИЕНТА */}
         <div
-          onClick={() => { triggerHaptic(); setIsCreateModalOpen(true); }}
+          onClick={() => { triggerHaptic('light'); setIsCreateModalOpen(true); }}
           style={{
             position: 'fixed',
             bottom: 90,
@@ -395,10 +461,14 @@ export const MasterDashboardScreen: React.FC<Props> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+            boxShadow: '0 4px 16px rgba(var(--tg-theme-button-color-rgb), 0.4)',
             cursor: 'pointer',
             zIndex: 100,
+            transition: 'transform 0.1s ease',
           }}
+          onPointerDown={(e) => e.currentTarget.style.transform = 'scale(0.9)'}
+          onPointerUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          onPointerLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
         >
           <span style={{ fontSize: 32, lineHeight: 1, marginTop: -4 }}>+</span>
         </div>
@@ -442,14 +512,15 @@ export const MasterDashboardScreen: React.FC<Props> = ({
         )}
       </main>
 
-      <Tabbar style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 100 }}>
-        <Tabbar.Item text="Календарь" selected={activeTab === 'bookings'} onClick={() => { triggerHaptic(); setActiveTab('bookings'); }}>
+      {/* НИЖНИЙ TABBAR */}
+      <Tabbar style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 100, boxShadow: '0 -1px 0 rgba(0,0,0,0.05)' }}>
+        <Tabbar.Item text="Календарь" selected={activeTab === 'bookings'} onClick={() => { triggerHaptic('light'); setActiveTab('bookings'); }}>
           <Icon28CalendarOutline />
         </Tabbar.Item>
-        <Tabbar.Item text="Услуги" selected={activeTab === 'services'} onClick={() => { triggerHaptic(); setActiveTab('services'); }}>
+        <Tabbar.Item text="Услуги" selected={activeTab === 'services'} onClick={() => { triggerHaptic('light'); setActiveTab('services'); }}>
           <Icon28ServicesOutline />
         </Tabbar.Item>
-        <Tabbar.Item text="Профиль" selected={activeTab === 'profile'} onClick={() => { triggerHaptic(); setActiveTab('profile'); }}>
+        <Tabbar.Item text="Профиль" selected={activeTab === 'profile'} onClick={() => { triggerHaptic('light'); setActiveTab('profile'); }}>
           <Icon28UserCircleOutline />
         </Tabbar.Item>
       </Tabbar>
