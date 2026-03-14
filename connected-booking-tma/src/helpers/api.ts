@@ -307,22 +307,35 @@ export async function uploadMasterAvatar(telegramId: number, file: File) {
 
 
 export type AnalyticsData = {
-  revenue_today: number;
-  revenue_week: number;
-  revenue_month: number;
-  total_bookings: number;
-  unique_clients: number;
-  top_services: { slot__service__name: string; count: number; revenue: number }[];
+  revenue_period?: number;
+  revenue_forecast?: number;
+  earned?: number;            // Поддержка старого/нового бэкенда
+  expected?: number;          // Поддержка старого/нового бэкенда
+  total_completed?: number;
+  completed_bookings?: number; // Поддержка старого/нового бэкенда
+  canceled_bookings?: number;
+  rejected_count?: number;
+  cancel_rate?: number;
+  unique_clients?: number;
+  average_check?: number;
+  top_services?: { slot__service__name: string; count: number; revenue: number }[];
+
+  // Старые поля (на всякий случай, чтобы не было белого экрана)
+  revenue_month?: number;
+  total_bookings?: number;
 };
 
-export async function fetchMasterAnalytics(telegramId: number): Promise<AnalyticsData> {
-  const res = await fetch(`${API_BASE}/masters/analytics/?telegram_id=${telegramId}`);
-  if (!res.ok) throw new Error('Failed to fetch analytics');
+export async function fetchMasterAnalytics(telegramId: number, period: string = 'month'): Promise<AnalyticsData> {
+  const url = `${API_BASE}/masters/analytics/?telegram_id=${telegramId}&period=${period}`;
+  console.log('Fetching analytics from:', url); // Логируем, чтобы видеть запрос
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch analytics: ${res.status}`);
+  }
   return res.json();
 }
 
 // --- REVIEWS ---
-
 export type Review = {
   id: number;
   author_name: string;
