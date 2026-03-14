@@ -269,6 +269,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   };
 
   // --- Вкладка ЗАПИСИ (Дизайн Timeline) ---
+    // --- Вкладка ЗАПИСИ (Дизайн Timeline) ---
   const renderBookings = () => {
     const grouped = bookings.reduce((acc: any, b) => {
         const d = new Date(b.slot.time);
@@ -328,7 +329,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
 
         {!loadingBookings && bookings.length > 0 && (
            <div style={{ padding: '0 16px 20px', position: 'relative' }}>
-              {Object.keys(grouped).map((dateKey, dateIndex) => (
+              {Object.keys(grouped).map((dateKey) => (
                  <div key={dateKey} style={{ animation: 'fadeIn 0.3s ease' }}>
 
                     <div style={{
@@ -347,20 +348,33 @@ export const MasterDashboardScreen: React.FC<Props> = ({
                     </div>
 
                     {grouped[dateKey].map((b: Booking, index: number) => {
-                        const timeStr = new Date(b.slot.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                        // Определение статусов
+                        const bookingTime = new Date(b.slot.time);
+                        const isPast = bookingTime < new Date();
+
                         const isPending = b.status === 'pending';
+                        const isRejected = b.status === 'rejected';
                         const isConfirmed = b.status === 'confirmed';
-                        const isFuture = new Date(b.slot.time) > new Date();
+
+                        const isCompleted = isConfirmed && isPast; // Прошло и было подтверждено
+                        const isFutureConfirmed = isConfirmed && !isPast; // Будущее и подтверждено
+
+                        const timeStr = bookingTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
                         return (
-                            <div key={b.id} style={{ display: 'flex', gap: 16, marginBottom: 16, position: 'relative' }}>
+                            <div key={b.id} style={{ display: 'flex', gap: 16, marginBottom: 16, position: 'relative', opacity: isRejected ? 0.6 : 1 }}>
 
                                 {/* TIMELINE ЛИНИЯ И ВРЕМЯ */}
                                 <div style={{ width: 44, flexShrink: 0, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                    <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--tg-theme-text-color)', marginTop: 2 }}>
+                                    <div style={{
+                                        fontWeight: 700,
+                                        fontSize: 16,
+                                        color: isRejected ? 'var(--tg-theme-hint-color)' : 'var(--tg-theme-text-color)',
+                                        marginTop: 2,
+                                        textDecoration: isRejected ? 'line-through' : 'none'
+                                    }}>
                                         {timeStr}
                                     </div>
-                                    {/* Линия связи между карточками */}
                                     {index !== grouped[dateKey].length - 1 && (
                                         <div style={{ width: 2, flex: 1, backgroundColor: isPending ? '#FF9500' : 'rgba(0,0,0,0.1)', marginTop: 8, borderRadius: 2 }} />
                                     )}
@@ -373,9 +387,10 @@ export const MasterDashboardScreen: React.FC<Props> = ({
                                     borderRadius: 16,
                                     padding: '16px',
                                     boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
-                                    borderLeft: isPending ? '4px solid #FF9500' : '4px solid transparent',
+                                    borderLeft: isPending ? '4px solid #FF9500' : (isRejected ? '4px solid #FF3B30' : '4px solid transparent'),
+                                    filter: isCompleted ? 'grayscale(100%)' : 'none' // Делаем серым завершенные записи
                                 }}>
-                                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: (isPending || !isCompleted) ? 12 : 0 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                             <Avatar size={44} src={b.photo_url || undefined} fallbackIcon={<Icon28UserCircleOutline />} />
                                             <div>
@@ -394,15 +409,25 @@ export const MasterDashboardScreen: React.FC<Props> = ({
                                                 НОВАЯ
                                             </div>
                                         )}
-                                        {isConfirmed && isFuture && (
+                                        {isFutureConfirmed && (
                                             <div style={{ fontSize: 11, color: '#34C759', fontWeight: 700, backgroundColor: 'rgba(52, 199, 89, 0.1)', padding: '4px 8px', borderRadius: 8, whiteSpace: 'nowrap' }}>
                                                 ПОДТВЕРЖДЕНО
                                             </div>
                                         )}
+                                        {isCompleted && (
+                                            <div style={{ fontSize: 11, color: 'var(--tg-theme-hint-color)', fontWeight: 700, backgroundColor: 'var(--tg-theme-secondary-bg-color)', padding: '4px 8px', borderRadius: 8, whiteSpace: 'nowrap' }}>
+                                                ЗАВЕРШЕНО
+                                            </div>
+                                        )}
+                                        {isRejected && (
+                                            <div style={{ fontSize: 11, color: '#FF3B30', fontWeight: 700, backgroundColor: 'rgba(255, 59, 48, 0.1)', padding: '4px 8px', borderRadius: 8, whiteSpace: 'nowrap' }}>
+                                                ОТМЕНЕНО
+                                            </div>
+                                        )}
                                     </div>
 
-                                    {/* КНОПКИ СВЯЗИ С КЛИЕНТОМ */}
-                                    {(b.client_phone || b.username) && (
+                                    {/* КНОПКИ СВЯЗИ С КЛИЕНТОМ (Не показываем для завершенных и отмененных) */}
+                                    {(b.client_phone || b.username) && !isCompleted && !isRejected && (
                                         <div style={{ display: 'flex', gap: 8, marginBottom: isPending ? 12 : 0 }}>
                                             {b.client_phone && (
                                                 <a href={`tel:${b.client_phone}`} style={{ textDecoration: 'none', backgroundColor: 'var(--tg-theme-secondary-bg-color)', padding: '6px 12px', borderRadius: 10, fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--tg-theme-text-color)', fontWeight: 500 }}>
@@ -429,8 +454,8 @@ export const MasterDashboardScreen: React.FC<Props> = ({
                                         </div>
                                     )}
 
-                                    {/* КНОПКА ОТМЕНЫ ДЛЯ ПОДТВЕРЖДЕННЫХ */}
-                                    {isConfirmed && isFuture && (
+                                    {/* КНОПКА ОТМЕНЫ ДЛЯ ПОДТВЕРЖДЕННЫХ В БУДУЩЕМ */}
+                                    {isFutureConfirmed && (
                                         <div style={{ marginTop: 12 }}>
                                             <Button size="s" mode="plain" stretched style={{ color: 'var(--tg-theme-hint-color)', padding: 0, height: 'auto', justifyContent: 'flex-start' }} onClick={() => handleReject(b.id)}>
                                                 Отменить запись
