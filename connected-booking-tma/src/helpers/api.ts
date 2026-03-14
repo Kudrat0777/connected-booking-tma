@@ -107,7 +107,7 @@ export async function createBooking(
   return res.json();
 }
 
-// список броней для клиента
+// список броней для клиен��а
 export async function fetchMyBookings(
   telegramId: number,
 ): Promise<Booking[]> {
@@ -136,17 +136,6 @@ export async function cancelBooking(id: number): Promise<void> {
 }
 
 // --------- MASTER API ---------
-
-// // Регистрация мастера
-// export async function registerMaster(name: string, telegram_id: number) {
-//   const res = await fetch(`${API_BASE}/masters/register/`, {
-//     method: 'POST',
-//     headers: { 'Content-Type': 'application/json' },
-//     body: JSON.stringify({ name, telegram_id }),
-//   });
-//   if (!res.ok) throw new Error('Failed to register master');
-//   return res.json();
-// }
 
 // Авторизация мастера по телефону и паролю
 export async function loginMasterWithPhone(phone: string, password: string, telegram_id: number) {
@@ -278,6 +267,16 @@ export async function fetchMasters(params?: {
 export async function fetchMasterById(id: number): Promise<MasterPublicProfile> {
   const res = await fetch(`${API_BASE}/masters/${id}/`);
   if (!res.ok) throw new Error('Master not found');
+  return res.json();
+}
+
+// НОВАЯ ФУНКЦИЯ ДЛЯ ПОЛУЧЕНИЯ МАСТЕРА ПО TELEGRAM ID ИЗ ДИПЛИНКА
+export async function fetchMasterProfile(telegramId: number): Promise<MasterPublicProfile | null> {
+  const res = await fetch(`${API_BASE}/masters/me/?telegram_id=${telegramId}`);
+  if (!res.ok) {
+    if (res.status === 404) return null; // Если мастера с таким ID нет
+    throw new Error('Failed to fetch master profile');
+  }
   return res.json();
 }
 
@@ -508,17 +507,14 @@ export async function registerClient(data: {
 
 export async function checkClientProfile(telegramId: number) {
   try {
-    // Используем эндпоинт /me/ который уже отлично работает для мастеров и клиентов
     const res = await fetch(`${API_BASE}/users/me/?telegram_id=${telegramId}`);
-
     if (res.ok) {
-      return await res.json(); // Профиль найден
+      return await res.json();
     }
-
-    return null; // Если 404 или любая другая ошибка - профиля нет
+    return null;
   } catch (e) {
     console.error('Check profile error:', e);
-    return null; // В случае сбоя сети тоже считаем, что профиля нет (отправим на регистрацию)
+    return null;
   }
 }
 
@@ -527,7 +523,7 @@ export const getFullImageUrl = (path?: string | null): string | undefined => {
 
   const origin = new URL(API_BASE).origin; // Получаем https://...zrok.io
 
-  // Очищаем путь от любых локальных доменов, если они застряли в базе
+  // Очищаем путь от любых локальных домен��в, если они застряли в базе
   let cleanPath = path;
   if (path.includes('127.0.0.1') || path.includes('localhost') || path.includes('0.0.0.0')) {
     cleanPath = path.replace(/http:\/\/(127\.0\.0\.1|localhost|0\.0\.0\.0):\d+/g, '');
@@ -541,7 +537,6 @@ export const getFullImageUrl = (path?: string | null): string | undefined => {
 
   // === ХАК ДЛЯ ZROK ===
   // Добавляем случайный параметр (timestamp) в конец ссылки.
-  // Это заставляет браузер и туннель скачивать картинку заново, обходя кэш и блокировки.
   return `${origin}${cleanPath}?t=${new Date().getTime()}`;
 };
 
@@ -550,7 +545,7 @@ export const useTunnelImage = (src?: string | null) => {
   const [blobUrl, setBlobUrl] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    let isMounted = true; // Защита от утечек памяти
+    let isMounted = true;
 
     const load = async () => {
       const fullUrl = getFullImageUrl(src);
@@ -569,8 +564,6 @@ export const useTunnelImage = (src?: string | null) => {
         }
       } catch (e) {
         console.error("Image load failed:", e);
-        // Если fetch не сработал (например, сломался zrok),
-        // вставляем хотя бы обычную ссылку, чтобы картинка попыталась загрузиться
         if (isMounted) {
             setBlobUrl(fullUrl);
         }
@@ -580,9 +573,9 @@ export const useTunnelImage = (src?: string | null) => {
     load();
 
     return () => {
-        isMounted = false; // Очистка при удалении компонента
+        isMounted = false;
     };
-  }, [src]); // <- Теперь он сработает строго 1 раз на каждую картинку!
+  }, [src]);
 
   return blobUrl;
 };

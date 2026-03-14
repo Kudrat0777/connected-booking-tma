@@ -258,7 +258,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   };
 
   const handleShareLink = () => {
-    const botUrl = `https://t.me/cbtestconnected_bot?start=master_${telegramId}`;
+    const botUrl = `https://t.me/ConnectedTimeBot?start=master_${telegramId}`;
     const text = `Здравствуйте, ${newClientDetails.name}! Я записал(а) вас на процедуру.\n\nПожалуйста, перейдите по ссылке ниже в мой профиль, чтобы посмотреть детали записи и в будущем записываться самостоятельно:`;
     const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(botUrl)}&text=${encodeURIComponent(text)}`;
 
@@ -269,7 +269,6 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   };
 
   // --- Вкладка ЗАПИСИ (Дизайн Timeline) ---
-    // --- Вкладка ЗАПИСИ (Дизайн Timeline) ---
   const renderBookings = () => {
     const grouped = bookings.reduce((acc: any, b) => {
         const d = new Date(b.slot.time);
@@ -523,8 +522,10 @@ export const MasterDashboardScreen: React.FC<Props> = ({
         )}
 
         {/* ВНЕШНИЙ КОМПОНЕНТ ПРОФИЛЯ */}
+                {/* ВНЕШНИЙ КОМПОНЕНТ ПРОФИЛЯ */}
         {activeTab === 'profile' && (
             <MasterProfileTab
+                telegramId={telegramId}
                 onEditProfile={onEditProfile}
                 onOpenSchedule={onOpenSchedule}
                 onOpenAnalytics={onOpenAnalytics}

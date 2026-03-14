@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Spinner,
   Avatar,
@@ -6,7 +6,9 @@ import {
   Text,
   Section,
   Cell,
-  List
+  List,
+  Button,
+  Placeholder
 } from '@telegram-apps/telegram-ui';
 import {
   Icon28FavoriteOutline,
@@ -15,13 +17,33 @@ import {
   Icon28PhoneOutline,
   Icon28ChevronRightOutline
 } from '@vkontakte/icons';
+import lottie from 'lottie-web';
 
-import { fetchMasterById, fetchPortfolio, fetchServices, getFullImageUrl } from '../helpers/api';
+// Изменил импорт: используем fetchMasterProfile вместо fetchMasterById
+import { fetchMasterProfile, fetchPortfolio, fetchServices, getFullImageUrl } from '../helpers/api';
 import type { MasterPublicProfile, PortfolioItem, Service } from '../helpers/api';
 import { ReviewsListScreen } from './ReviewsListScreen';
 
+const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
+  const container = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!container.current) return;
+    try {
+      const anim = lottie.loadAnimation({
+        container: container.current,
+        renderer: 'svg',
+        loop: true,
+        autoplay: true,
+        path: src,
+      });
+      return () => anim.destroy();
+    } catch (e) { console.error(e); }
+  }, [src]);
+  return <div ref={container} style={{ width: size, height: size, margin: '0 auto 16px' }} />;
+};
+
 type Props = {
-  masterId: number;
+  masterId: number; // Это telegram_id, переданный из App.tsx
   onBack: () => void;
   onBook: (masterName: string) => void;
   onServiceClick?: (service: Service) => void;
@@ -42,30 +64,63 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false); // Добавлен стейт ошибки
 
   const [isReviewsModalOpen, setIsReviewsModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
+      setLoading(true);
+      setError(false);
       try {
-        const [masterData, portfolioData, servicesData] = await Promise.all([
-          fetchMasterById(masterId),
-          fetchPortfolio(masterId),
-          fetchServices(masterId)
-        ]);
+        // Сначала грузим профиль мастера по TELEGRAM ID
+        const masterData = await fetchMasterProfile(masterId);
+
+        // Проверяем, не вернул ли сервер ошибку (например, 404 Not found)
+        if (!masterData || masterData.detail === "Not found.") {
+           setError(true);
+           return;
+        }
+
         setMaster(masterData);
+
+        // Если мастер найден, берем его внутренний ID базы данных для поиска услуг и портфолио
+        // Если ваш бэкенд ожидает telegram_id везде, то передавайте masterId,
+        // Если внутренний ID (pk), то masterData.id
+        const internalId = masterData.id || masterId;
+
+        const [portfolioData, servicesData] = await Promise.all([
+          fetchPortfolio(internalId),
+          fetchServices(internalId)
+        ]);
+
         setPortfolio(portfolioData);
         setServices(servicesData);
-      } catch (e) { console.error(e); }
-      finally { setLoading(false); }
+
+      } catch (e) {
+          console.error('Error loading master data:', e);
+          setError(true);
+      } finally {
+          setLoading(false);
+      }
     };
     loadData();
   }, [masterId]);
 
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
-    if (!tg || loading || !master) return;
+    if (!tg) return;
+
+    // Если ошибка загрузки, показываем только кнопку Назад
+    if (error) {
+        tg.BackButton.show();
+        tg.BackButton.onClick(onBack);
+        tg.MainButton.hide();
+        return () => { tg.BackButton.offClick(onBack); };
+    }
+
+    if (loading || !master) return;
 
     const handleBack = () => {
       // Иерархия закрытия: сначала картинка, потом отзывы, потом выход из профиля
@@ -106,14 +161,29 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
       tg.MainButton.offClick(handleBook);
       tg.MainButton.hide();
     };
-  }, [loading, master, onBack, onBook, isReviewsModalOpen, selectedImage]);
+  }, [loading, master, error, onBack, onBook, isReviewsModalOpen, selectedImage]);
 
-  if (loading || !master) {
+  if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--tg-theme-secondary-bg-color)' }}>
         <Spinner size="l" />
       </div>
     );
+  }
+
+  // ОБРАБОТКА ОШИБКИ 404 (МАСТЕР НЕ НАЙДЕН)
+  if (error || !master) {
+      return (
+          <div style={{ backgroundColor: 'var(--tg-theme-bg-color)', minHeight: '100vh', paddingTop: 80 }}>
+              <Placeholder
+                  header="Мастер не найден"
+                  description="Возможно, ссылка устарела или мастер удалил свой профиль."
+                  action={<Button size="l" stretched onClick={onBack}>На главную</Button>}
+              >
+                  <LottieIcon src="/stickers/duck_out.json" size={140} />
+              </Placeholder>
+          </div>
+      );
   }
 
   const isAddressLink = master.address && master.address.includes('http');
@@ -330,7 +400,6 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
           </div>
       )}
 
-      {/* Простая CSS анимация для появления просмотрщика */}
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; }
