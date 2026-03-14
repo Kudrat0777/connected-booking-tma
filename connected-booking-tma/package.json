@@ -17,7 +17,7 @@
   "dependencies": {
     "@headlessui/react": "^2.2.9",
     "@heroui/react": "^2.8.10",
-    "@telegram-apps/analytics": "^1.4.4",
+    "@telegram-apps/analytics": "^1.6.4",
     "@telegram-apps/telegram-ui": "^2.1.13",
     "@telegram-mini-apps/ui": "^0.0.10",
     "@tma.js/sdk-react": "^3.0.8",
