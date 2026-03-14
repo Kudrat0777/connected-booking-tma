@@ -7,13 +7,17 @@ import {
   Avatar,
   Spinner,
   Select,
-  Text
+  Text,
+  Cell
 } from '@telegram-apps/telegram-ui';
 import {
   Icon28AddCircleOutline,
   Icon28DeleteOutline,
   Icon28UserCircleOutline
 } from '@vkontakte/icons';
+
+// 1. ИМПОРТ TON CONNECT ДЛЯ МАСТЕРА
+import { useTonConnectUI, useTonWallet } from '@tonconnect/ui-react';
 
 import {
   updateMasterProfile,
@@ -97,7 +101,7 @@ type Props = {
     phone: string;
     city?: string;
     address?: string;
-    experience_years?: number; // ДОБАВИЛИ ОПЫТ РАБОТЫ В PROPS
+    experience_years?: number;
   };
   onBack: () => void;
   onSaved: () => void;
@@ -109,7 +113,6 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
   const [phone, setPhone] = useState(initialData?.phone || '');
   const [city, setCity] = useState(initialData?.city || 'Ургенч');
   const [address, setAddress] = useState(initialData?.address || '');
-  // Состояние для опыта работы (по умолчанию 0, если нет)
   const [experience, setExperience] = useState(initialData?.experience_years !== undefined ? String(initialData.experience_years) : '0');
   const [avatarUrl, setAvatarUrl] = useState(initialData?.avatarUrl || '');
 
@@ -119,7 +122,10 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [loadingPortfolio, setLoadingPortfolio] = useState(false);
 
-  // Используем Ref для актуальных данных формы, чтобы нативная кнопка всегда видела свежие значения
+  // 2. ИНИЦИАЛИЗАЦИЯ TON CONNECT В МАСТЕРЕ
+  const [tonConnectUI] = useTonConnectUI();
+  const wallet = useTonWallet();
+
   const formRef = useRef({ name, bio, phone, city, address, experience });
   useEffect(() => {
       formRef.current = { name, bio, phone, city, address, experience };
@@ -148,7 +154,6 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
           tg.MainButton.disable();
 
           try {
-              // Передаем данные на бэкенд (преобразуя опыт в число)
               await updateMasterProfile(telegramId, {
                   ...currentForm,
                   experience_years: Number(currentForm.experience) || 0
@@ -239,6 +244,20 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
       } catch(e) { alert('Ошибка удаления'); }
   };
 
+  // 3. ФУНКЦИИ ДЛЯ РАБОТЫ С КОШЕЛЬКОМ
+  const handleWalletClick = () => {
+    triggerHaptic('selection');
+    if (wallet) {
+      tonConnectUI.disconnect();
+    } else {
+      tonConnectUI.openModal();
+    }
+  };
+
+  const formatAddress = (address: string) => {
+      return `${address.slice(0, 4)}...${address.slice(-4)}`;
+  };
+
   return (
     <div style={{ backgroundColor: 'var(--tg-theme-secondary-bg-color)', minHeight: '100vh', paddingBottom: 80 }}>
 
@@ -251,6 +270,54 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
       </div>
 
       <List style={{ padding: '0 16px', marginTop: 16 }}>
+
+        {/* ================================================= */}
+        {/* --- WEB3 (TON) ДЛЯ МАСТЕРА --- */}
+        {/* ================================================= */}
+        <Section header="Web3 (TON)" footer="Привяжите кошелек для получения оплаты в крипте в будущем.">
+          <Cell
+             onClick={handleWalletClick}
+             after={
+                 <span style={{
+                     color: wallet ? 'var(--tg-theme-hint-color)' : 'var(--tg-theme-link-color)',
+                     fontWeight: 500,
+                     fontSize: 15
+                 }}>
+                     {wallet ? formatAddress(wallet.account.address) : 'Подключить'}
+                 </span>
+             }
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{
+                    width: 28,
+                    height: 28,
+                    backgroundColor: '#0098EA',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="white"/>
+                        <path d="M2 17L12 22L22 17M2 12L12 17L22 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontWeight: 500, color: 'var(--tg-theme-text-color)' }}>TON Кошелек</span>
+                    <span style={{
+                        backgroundColor: 'rgba(255, 171, 0, 0.15)',
+                        color: '#FFAB00',
+                        fontSize: 11,
+                        fontWeight: 600,
+                        padding: '2px 6px',
+                        borderRadius: 4,
+                        textTransform: 'uppercase'
+                    }}>Скоро</span>
+                </div>
+            </div>
+          </Cell>
+        </Section>
+        {/* ================================================= */}
 
         {/* --- ЛИЧНЫЕ ДАННЫЕ --- */}
         <Section header="Личные данные">

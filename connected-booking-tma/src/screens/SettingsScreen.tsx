@@ -219,7 +219,21 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
                               <path d="M2 17L12 22L22 17M2 12L12 17L22 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                           </svg>
                       </div>
-                      <span style={{ fontWeight: 500, color: 'var(--tg-theme-text-color)' }}>TON Кошелек</span>
+
+                      {/* НОВЫЙ БЛОК С ТЕКСТОМ И БЕЙДЖЕМ "СКОРО" */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontWeight: 500, color: 'var(--tg-theme-text-color)' }}>TON Кошелек</span>
+                          <span style={{
+                              backgroundColor: 'rgba(255, 171, 0, 0.15)',
+                              color: '#FFAB00',
+                              fontSize: 11,
+                              fontWeight: 600,
+                              padding: '2px 6px',
+                              borderRadius: 4,
+                              textTransform: 'uppercase'
+                          }}>Скоро</span>
+                      </div>
+
                   </div>
                 </Cell>
               </Section>
