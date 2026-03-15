@@ -1,6 +1,8 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { AppRoot, Spinner } from '@telegram-apps/telegram-ui';
 
+import { LanguageProvider, useLanguage } from './helpers/LanguageContext';
+
 // Client Screens
 import { WelcomeScreen } from './screens/WelcomeScreen';
 import { ServicesScreen } from './screens/ServicesScreen';
@@ -60,8 +62,13 @@ type Screen =
 
 type MainTab = 'bookings' | 'masters' | 'settings';
 
-const App: React.FC = () => {
+
+// ВЫНЕСЛИ ОСНОВНУЮ ЛОГИКУ В ОТДЕЛЬНЫЙ КОМПОНЕНТ, ЧТОБЫ ИСПОЛЬЗОВАТЬ USELANGUAGE
+const AppContent: React.FC = () => {
   const tg = (window as any).Telegram?.WebApp;
+
+  // Достаём язык
+  const { lang } = useLanguage();
 
   const [appearance, setAppearance] = useState<'light' | 'dark'>('light');
 
@@ -261,7 +268,7 @@ const App: React.FC = () => {
         isMounted = false;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  }, [user?.id]); // Обрати внимание: мы НЕ добавляем lang сюда, чтобы не вызывать initApp при смене языка
 
 
   // === ОБРАБОТЧИКИ СОБЫТИЙ ===
@@ -278,11 +285,13 @@ const App: React.FC = () => {
     try {
       const profile = await checkClientProfile(currentUser.id);
       if (!profile) {
+        // ПЕРЕДАЕМ lang ПРИ РЕГИСТРАЦИИ!
         await registerClient({
           telegram_id: currentUser.id,
           first_name: currentUser.first_name || 'Клиент',
           last_name: currentUser.last_name || '',
           username: currentUser.username || '',
+          language: lang,
         });
       }
 
@@ -532,4 +541,12 @@ const App: React.FC = () => {
   );
 };
 
-export default App;
+const AppWrapper: React.FC = () => {
+    return (
+        <LanguageProvider>
+            <AppContent />
+        </LanguageProvider>
+    );
+};
+
+export default AppWrapper;

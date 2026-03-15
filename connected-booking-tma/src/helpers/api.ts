@@ -107,7 +107,7 @@ export async function createBooking(
   return res.json();
 }
 
-// список броней для клиен��а
+// список броней для клиена
 export async function fetchMyBookings(
   telegramId: number,
 ): Promise<Booking[]> {
@@ -153,7 +153,7 @@ export async function loginMasterWithPhone(phone: string, password: string, tele
   return res.json();
 }
 
-// Создание услуги мастером
+// Создание ус��уги мастером
 export async function createServiceByMaster(
   telegram_id: number,
   name: string,
@@ -280,7 +280,8 @@ export async function fetchMasterProfile(telegramId: number): Promise<MasterPubl
   return res.json();
 }
 
-export async function updateMasterProfile(telegramId: number, data: { name?: string; bio?: string; phone?: string; city?: string; address?: string }) {
+// ДОБАВЛЕНО ПОЛЕ language
+export async function updateMasterProfile(telegramId: number, data: { name?: string; bio?: string; phone?: string; city?: string; address?: string; language?: string }) {
   const res = await fetch(`${API_BASE}/masters/me_update/`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -439,7 +440,7 @@ export async function createManualBooking(slotId: number, clientName: string, ph
   const res = await fetch(`${API_BASE}/bookings/manual_create/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ slot_id: slotId, client_name: clientName, phone: phone }),
+    body: JSON.stringify({ slot_id: slotId, clientName: clientName, phone: phone }),
   });
 
   if (!res.ok) {
@@ -464,7 +465,8 @@ export const fetchUserProfile = async (telegramId: number) => {
     return response.json();
 };
 
-export const updateUserProfile = async (telegramId: number, data: { first_name?: string; last_name?: string; phone?: string }) => {
+// ДОБАВЛЕНО ПОЛЕ language
+export const updateUserProfile = async (telegramId: number, data: { first_name?: string; last_name?: string; phone?: string; language?: string }) => {
     const response = await fetch(`${API_BASE}/users/${telegramId}/`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -495,6 +497,7 @@ export async function registerClient(data: {
   last_name?: string;
   username?: string;
   phone?: string;
+  language?: string;
 }) {
   const res = await fetch(`${API_BASE}/users/register/`, {
     method: 'POST',
@@ -523,7 +526,7 @@ export const getFullImageUrl = (path?: string | null): string | undefined => {
 
   const origin = new URL(API_BASE).origin; // Получаем https://...zrok.io
 
-  // Очищаем путь от любых локальных домен��в, если они застряли в базе
+  // Очищаем путь от любых локальных доменв, если они застряли в базе
   let cleanPath = path;
   if (path.includes('127.0.0.1') || path.includes('localhost') || path.includes('0.0.0.0')) {
     cleanPath = path.replace(/http:\/\/(127\.0\.0\.1|localhost|0\.0\.0\.0):\d+/g, '');

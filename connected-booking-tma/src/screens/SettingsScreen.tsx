@@ -6,13 +6,13 @@ import {
   Cell,
   Avatar,
   Spinner,
-  Select // <-- Добавили Select для языков
+  Select
 } from '@telegram-apps/telegram-ui';
 import { Icon28PhoneOutline, Icon28UserCircleOutline } from '@vkontakte/icons';
-import { updateUserProfile, fetchUserProfile, deleteAccount } from '../helpers/api';
+
+import { updateUserProfile, fetchUserProfile, deleteAccount, updateMasterProfile } from '../helpers/api';
 import { useTonConnectUI, useTonWallet } from '@tonconnect/ui-react';
 
-// ИМПОРТИРУЕМ ХУК ЯЗЫКА И ТИПЫ
 import { useLanguage } from '../helpers/LanguageContext';
 import { LangCode } from '../helpers/translations';
 
@@ -33,7 +33,6 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
   const [tonConnectUI] = useTonConnectUI();
   const wallet = useTonWallet();
 
-  // ПОДКЛЮЧАЕМ ЯЗЫКОВЫЕ ФУНКЦИИ
   const { lang, setLang, t } = useLanguage();
 
   useEffect(() => {
@@ -73,15 +72,33 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
       await updateUserProfile(telegramId, {
         first_name: firstName,
         last_name: lastName,
-        phone: phone
+        phone: phone,
       });
       if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-      // Алерт можно не переводить или перевести позже, пока оставим базовый
-      if (tg?.showAlert) tg.showAlert('Success!');
+      if (tg?.showAlert) tg.showAlert(t('success') || 'Success!');
     } catch (e) {
       if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleLangChange = async (newLang: LangCode) => {
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
+
+    setLang(newLang);
+
+    if (telegramId) {
+        try {
+            // Обновляем язык для клиента
+            await updateUserProfile(telegramId, { language: newLang });
+
+            // Пытаемся обновить язык для профиля мастера (ошибку игнорируем, если он не мастер)
+            await updateMasterProfile(telegramId, { language: newLang }).catch(() => {});
+        } catch (e) {
+            console.error("Failed to update language on backend:", e);
+        }
     }
   };
 
@@ -163,11 +180,7 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
                   <Select
                      header="Language / Язык / Til"
                      value={lang}
-                     onChange={(e) => {
-                         const tg = (window as any).Telegram?.WebApp;
-                         if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
-                         setLang(e.target.value as LangCode);
-                     }}
+                     onChange={(e) => handleLangChange(e.target.value as LangCode)}
                   >
                      <option value="en">🇬🇧 English</option>
                      <option value="ru">🇷🇺 Русский</option>
