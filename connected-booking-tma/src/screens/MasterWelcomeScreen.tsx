@@ -17,6 +17,7 @@ import { useLanguage } from '../helpers/LanguageContext';
 type Props = {
   onStart: () => void;
   onLogin?: () => void;
+  onRegister: () => void;
 };
 
 type Slide = {
@@ -228,38 +229,14 @@ export const MasterWelcomeScreen: React.FC<Props> = ({
         })}
       </div>
 
-      {/* КНОПКИ (Прижаты к низу) */}
-      <div style={{ padding: '0 20px 40px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <Button
-          size="l"
-          mode="filled"
-          stretched
-          onClick={() => {
-            triggerHaptic();
-            if (tg?.openTelegramLink) {
-              tg.openTelegramLink('https://t.me/kudratsultanbaev');
-            } else {
-              window.open('https://t.me/kudratsultanbaev', '_blank');
-            }
-          }}
-        >
-          {t('btn_become_master')}
-        </Button>
-
-        {onLogin && (
-          <Button
-            size="l"
-            mode="bezeled"
-            stretched
-            onClick={() => {
-                triggerHaptic();
-                onLogin();
-            }}
-          >
-            {t('btn_have_account')}
-          </Button>
-        )}
-      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 300, marginTop: 32 }}>
+       <Button size="l" stretched mode="filled" onClick={onLogin}>
+          Войти
+       </Button>
+       <Button size="l" stretched mode="bezeled" onClick={onRegister}>
+          Стать партнёром (Регистрация)
+       </Button>
+    </div>
     </div>
   );
 };

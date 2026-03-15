@@ -25,6 +25,7 @@ import { MasterReviewsScreen } from './screens/MasterReviewsScreen';
 import { MasterCreateServiceScreen } from './screens/MasterCreateServiceScreen';
 import { PortfolioViewerScreen } from './screens/PortfolioViewerScreen';
 import { MasterPublicProfileScreen } from './screens/MasterPublicProfileScreen';
+import { MasterRegistrationScreen } from './screens/MasterRegistrationScreen';
 
 import type { Service, Slot, Booking } from './helpers/api';
 import { checkClientProfile, registerClient } from './helpers/api';
@@ -55,7 +56,7 @@ const API_BASE = 'https://n6jlohcg6gtg.share.zrok.io/api';
 type Screen =
   | 'welcome' | 'services' | 'slots' | 'bookingConfirm' | 'bookingDone'
   | 'profile' | 'leave_review' | 'client_reviews_list'
-  | 'master_welcome' | 'master_login' | 'master_dashboard'
+  | 'master_welcome' | 'master_login' | 'master_registration' | 'master_dashboard'
   | 'master_schedule' | 'master_edit_profile' | 'master_analytics'
   | 'master_reviews' | 'master_create_service' | 'client_portfolio'
   | 'client_registration' | 'client_master_profile';
@@ -468,7 +469,24 @@ const AppContent: React.FC = () => {
 
       {/* MASTER SCREENS */}
       {screen === 'master_welcome' && (
-        <MasterWelcomeScreen onStart={() => {}} onLogin={() => pushScreen('master_login')} />
+        <MasterWelcomeScreen
+          onStart={() => {}}
+          onLogin={() => pushScreen('master_login')}
+          onRegister={() => pushScreen('master_registration')} // <-- ДОБАВИЛИ
+        />
+      )}
+
+      {/* НОВЫЙ БЛОК РЕГИСТРАЦИИ МАСТЕРА */}
+      {screen === 'master_registration' && user && (
+        <MasterRegistrationScreen
+          telegramId={user.id}
+          onBack={() => goBack('master_welcome')}
+          onComplete={() => {
+              localStorage.setItem('is_master_logged_in', 'true');
+              loadCurrentMaster(user.id);
+              resetScreen('master_dashboard');
+          }}
+        />
       )}
 
       {screen === 'master_login' && user && (

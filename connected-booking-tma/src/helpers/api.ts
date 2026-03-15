@@ -508,6 +508,27 @@ export async function registerClient(data: {
   return res.json();
 }
 
+export async function registerMaster(data: {
+  telegram_id: number;
+  name: string;
+  phone: string;
+  password: string;
+  category: string;
+  city: string;
+  experience_years: number;
+}) {
+  const res = await fetch(`${API_BASE}/masters/register/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.detail || 'Ошибка регистрации');
+  }
+  return res.json();
+}
+
 export async function checkClientProfile(telegramId: number) {
   try {
     const res = await fetch(`${API_BASE}/users/me/?telegram_id=${telegramId}`);
