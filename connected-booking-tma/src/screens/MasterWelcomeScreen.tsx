@@ -11,6 +11,9 @@ import {
 } from '@telegram-apps/telegram-ui';
 import lottie, { AnimationItem } from 'lottie-web';
 
+// ИМПОРТИРУЕМ ХУК ЛОКАЛИЗАЦИИ
+import { useLanguage } from '../helpers/LanguageContext';
+
 type Props = {
   onStart: () => void;
   onLogin?: () => void;
@@ -22,29 +25,6 @@ type Slide = {
   lottieSrc: string;
 };
 
-const SLIDES: Slide[] = [
-  {
-    lottieSrc: '/stickers/duck_social_out.json',
-    title: 'Управление записями',
-    description: 'Забудьте о бумажных блокнотах. Удобный календарь, который работает 24/7, даже когда вы спите.',
-  },
-  {
-    lottieSrc: '/stickers/duck_wallet.json',
-    title: 'Прием платежей',
-    description: 'Принимайте оплату картами, Telegram Stars или криптовалютой TON. Безопасно и мгновенно.',
-  },
-  {
-    lottieSrc: '/stickers/duck_analitic.json',
-    title: 'Аналитика доходов',
-    description: 'Следите за ростом прибыли. Мы покажем самые популярные услуги и активность клиентов.',
-  },
-  {
-    lottieSrc: '/stickers/duck_meteor_out.json',
-    title: 'Забота о клиентах',
-    description: 'Мы сами напомним клиенту о визите и попросим оставить отзыв. Меньше пропусков — выше доход.',
-  },
-];
-
 const SWIPE_THRESHOLD = 40;
 const AUTO_SLIDE_INTERVAL = 5000;
 
@@ -52,6 +32,31 @@ export const MasterWelcomeScreen: React.FC<Props> = ({
   onStart,
   onLogin,
 }) => {
+  const { t } = useLanguage();
+
+  const SLIDES: Slide[] = [
+    {
+      lottieSrc: '/stickers/duck_social_out.json',
+      title: t('m_slide1_title'),
+      description: t('m_slide1_desc'),
+    },
+    {
+      lottieSrc: '/stickers/duck_wallet.json',
+      title: t('m_slide2_title'),
+      description: t('m_slide2_desc'),
+    },
+    {
+      lottieSrc: '/stickers/duck_analitic.json',
+      title: t('m_slide3_title'),
+      description: t('m_slide3_desc'),
+    },
+    {
+      lottieSrc: '/stickers/duck_meteor_out.json',
+      title: t('m_slide4_title'),
+      description: t('m_slide4_desc'),
+    },
+  ];
+
   const [index, setIndex] = useState(0);
   const slide = SLIDES[index];
 
@@ -122,7 +127,7 @@ export const MasterWelcomeScreen: React.FC<Props> = ({
     };
     resetTimer();
     return () => { if (autoSlideTimerRef.current) clearInterval(autoSlideTimerRef.current); };
-  }, [index]);
+  }, [index, SLIDES.length]);
 
   // --- SWIPE HANDLERS ---
   const handleStart = (x: number) => {
@@ -238,7 +243,7 @@ export const MasterWelcomeScreen: React.FC<Props> = ({
             }
           }}
         >
-          Стать мастером
+          {t('btn_become_master')}
         </Button>
 
         {onLogin && (
@@ -251,7 +256,7 @@ export const MasterWelcomeScreen: React.FC<Props> = ({
                 onLogin();
             }}
           >
-            У меня есть аккаунт
+            {t('btn_have_account')}
           </Button>
         )}
       </div>

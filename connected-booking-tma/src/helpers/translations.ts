@@ -140,6 +140,18 @@ export const translations: TranslationsDictionary = {
     waiting_for_you: "We are waiting for you on", // e.g. We are waiting for you on 10 May at 14:00...
     with_master: "with master",
     for_service: "for",
+
+    // === Master Welcome Screen ===
+    m_slide1_title: "Appointment Management",
+    m_slide1_desc: "Forget about paper notebooks. A convenient calendar that works 24/7, even when you sleep.",
+    m_slide2_title: "Accepting Payments",
+    m_slide2_desc: "Accept payments via cards, Telegram Stars, or TON cryptocurrency. Safe and instant.",
+    m_slide3_title: "Income Analytics",
+    m_slide3_desc: "Track your profit growth. We will show the most popular services and client activity.",
+    m_slide4_title: "Client Care",
+    m_slide4_desc: "We will remind the client about the visit and ask for a review. Fewer no-shows — higher income.",
+    btn_become_master: "Become a master",
+    btn_have_account: "I already have an account"
   },
   ru: {
     // Welcome Screen (Client)
@@ -276,6 +288,18 @@ export const translations: TranslationsDictionary = {
     waiting_for_you: "Ждем вас", // Ждем вас 10 мая в 14:00...
     with_master: "у мастера",
     for_service: "на",
+
+    // === Master Welcome Screen ===
+    m_slide1_title: "Управление записями",
+    m_slide1_desc: "Забудьте о бумажных блокнотах. Удобный календарь, который работает 24/7, даже когда вы спите.",
+    m_slide2_title: "Прием платежей",
+    m_slide2_desc: "Принимайте оплату картами, Telegram Stars или криптовалютой TON. Безопасно и мгновенно.",
+    m_slide3_title: "Аналитика доходов",
+    m_slide3_desc: "Следите за ростом прибыли. Мы покажем самые популярные услуги и активность клиентов.",
+    m_slide4_title: "Забота о клиентах",
+    m_slide4_desc: "Мы сами напомним клиенту о визите и попросим оставить отзыв. Меньше пропусков — выше доход.",
+    btn_become_master: "Стать мастером",
+    btn_have_account: "У меня есть аккаунт"
   },
   uz: {
     // Welcome Screen (Client)
@@ -412,5 +436,17 @@ export const translations: TranslationsDictionary = {
     waiting_for_you: "Sizni kutamiz", // Sizni 10 May soat 14:00 da...
     with_master: "usta",
     for_service: "xizmatiga",
+
+    // === Master Welcome Screen ===
+    m_slide1_title: "Yozuvlarni boshqarish",
+    m_slide1_desc: "Qog'oz daftarlarni unuting. Siz uxlayotganingizda ham 24/7 ishlaydigan qulay taqvim.",
+    m_slide2_title: "To'lovlarni qabul qilish",
+    m_slide2_desc: "Kartalar, Telegram Stars yoki TON kriptovalyutasi orqali to'lovlarni qabul qiling. Xavfsiz va tezkor.",
+    m_slide3_title: "Daromadlar tahlili",
+    m_slide3_desc: "Foyda o'sishini kuzatib boring. Biz eng mashhur xizmatlar va mijozlar faolligini ko'rsatamiz.",
+    m_slide4_title: "Mijozlarga g'amxo'rlik",
+    m_slide4_desc: "Biz mijozga tashrif haqida eslatamiz va sharh qoldirishni so'raymiz. Bekor qilishlar kamroq — daromad yuqori.",
+    btn_become_master: "Usta bo'lish",
+    btn_have_account: "Menda hisob bor"
   }
 };
