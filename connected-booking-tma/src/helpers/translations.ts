@@ -132,7 +132,14 @@ export const translations: TranslationsDictionary = {
     booking_details_header: "BOOKING DETAILS",
     date_and_time: "Date and time",
     at_time: "at", // e.g. Monday at 14:00
-    cost: "Cost"
+    cost: "Cost",
+
+    // === Booking Success Screen ===
+    btn_to_main: "GO TO MAIN SCREEN",
+    success_header: "Successfully booked!",
+    waiting_for_you: "We are waiting for you on", // e.g. We are waiting for you on 10 May at 14:00...
+    with_master: "with master",
+    for_service: "for",
   },
   ru: {
     // Welcome Screen (Client)
@@ -262,6 +269,13 @@ export const translations: TranslationsDictionary = {
     date_and_time: "Дата и время",
     at_time: "в",
     cost: "Стоимость",
+
+    // === Booking Success Screen ===
+    btn_to_main: "НА ГЛАВНЫЙ ЭКРАН",
+    success_header: "Вы успешно записаны!",
+    waiting_for_you: "Ждем вас", // Ждем вас 10 мая в 14:00...
+    with_master: "у мастера",
+    for_service: "на",
   },
   uz: {
     // Welcome Screen (Client)
@@ -390,6 +404,13 @@ export const translations: TranslationsDictionary = {
     booking_details_header: "YOZUV TAFSILOTLARI",
     date_and_time: "Sana va vaqt",
     at_time: "soat",
-    cost: "Narxi"
+    cost: "Narxi",
+
+    // === Booking Success Screen ===
+    btn_to_main: "ASOSIY EKRANGA",
+    success_header: "Siz muvaffaqiyatli yozildingiz!",
+    waiting_for_you: "Sizni kutamiz", // Sizni 10 May soat 14:00 da...
+    with_master: "usta",
+    for_service: "xizmatiga",
   }
 };
