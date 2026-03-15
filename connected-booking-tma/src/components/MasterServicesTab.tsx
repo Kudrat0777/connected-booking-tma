@@ -4,6 +4,8 @@ import { Icon28DeleteOutline } from '@vkontakte/icons';
 import lottie from 'lottie-web';
 import type { Service } from '../helpers/api';
 
+import { useLanguage } from '../helpers/LanguageContext';
+
 const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
   const container = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -37,6 +39,8 @@ export const MasterServicesTab: React.FC<Props> = ({
   onDeleteService,
   triggerHaptic
 }) => {
+  const { t } = useLanguage();
+
   return (
     <div style={{
         backgroundColor: 'var(--tg-theme-secondary-bg-color)',
@@ -55,9 +59,10 @@ export const MasterServicesTab: React.FC<Props> = ({
           backgroundColor: 'var(--tg-theme-secondary-bg-color)',
           zIndex: 10,
       }}>
-        <Title level="1" weight="2" style={{ margin: 0, color: 'var(--tg-theme-text-color)' }}>Мои услуги</Title>
+        <Title level="1" weight="2" style={{ margin: 0, color: 'var(--tg-theme-text-color)' }}>
+            {t('m_my_services')}
+        </Title>
 
-        {/* Элегантная кнопка добавления */}
         <div
            onClick={() => { triggerHaptic(); onAddService(); }}
            style={{
@@ -70,7 +75,7 @@ export const MasterServicesTab: React.FC<Props> = ({
                cursor: 'pointer'
            }}
         >
-           + Добавить
+           {t('m_btn_add')}
         </div>
       </div>
 
@@ -82,7 +87,7 @@ export const MasterServicesTab: React.FC<Props> = ({
 
       {!loading && services.length === 0 && (
          <div style={{ marginTop: 20 }}>
-             <Placeholder header="Нет услуг" description="Добавьте услуги, чтобы клиенты могли записываться.">
+             <Placeholder header={t('m_no_services')} description={t('m_no_services_desc')}>
                 <LottieIcon src="/stickers/duck_out.json" size={140} />
              </Placeholder>
          </div>
@@ -95,7 +100,7 @@ export const MasterServicesTab: React.FC<Props> = ({
             {services.map((s) => (
                <Cell
                   key={s.id}
-                  subtitle={s.description ? `${s.duration} мин • ${s.description}` : `${s.duration} мин`}
+                  subtitle={s.description ? `${s.duration} ${t('min')} • ${s.description}` : `${s.duration} ${t('min')}`}
                   after={
                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                        <span style={{ fontWeight: 600, color: 'var(--tg-theme-text-color)' }}>

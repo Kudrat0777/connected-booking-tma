@@ -231,6 +231,12 @@ export const translations: TranslationsDictionary = {
     m_login_as_client: "Log in as client",
     m_logout: "Log out",
     m_delete_account: "Delete account",
+
+    // === Master Services Tab ===
+    m_my_services: "My services",
+    m_btn_add: "+ Add",
+    m_no_services: "No services",
+    m_no_services_desc: "Add services so clients can book appointments.",
   },
   ru: {
     // Welcome Screen (Client)
@@ -458,6 +464,12 @@ export const translations: TranslationsDictionary = {
     m_login_as_client: "Войти как клиент",
     m_logout: "Выйти из аккаунта",
     m_delete_account: "Удалить аккаунт",
+
+    // === Master Services Tab ===
+    m_my_services: "Мои услуги",
+    m_btn_add: "+ Добавить",
+    m_no_services: "Нет услуг",
+    m_no_services_desc: "Добавьте услуги, чтобы клиенты могли записываться.",
   },
   uz: {
     // Welcome Screen (Client)
@@ -685,5 +697,11 @@ export const translations: TranslationsDictionary = {
     m_login_as_client: "Mijoz sifatida kirish",
     m_logout: "Hisobdan chiqish",
     m_delete_account: "Hisobni o'chirish",
+
+    // === Master Services Tab ===
+    m_my_services: "Mening xizmatlarim",
+    m_btn_add: "+ Qo'shish",
+    m_no_services: "Xizmatlar yo'q",
+    m_no_services_desc: "Mijozlar yozila olishi uchun xizmatlarni qo'shing.",
   }
 };
