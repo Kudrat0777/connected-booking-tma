@@ -12,6 +12,8 @@ import {
 import lottie from 'lottie-web';
 import { fetchMyServices, bulkGenerateSlots, Service } from '../helpers/api';
 
+import { useLanguage } from '../helpers/LanguageContext';
+
 const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
   const container = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -35,17 +37,19 @@ type Props = {
   onBack: () => void;
 };
 
-const DAYS = [
-  { id: 1, label: 'Пн' },
-  { id: 2, label: 'Вт' },
-  { id: 3, label: 'Ср' },
-  { id: 4, label: 'Чт' },
-  { id: 5, label: 'Пт' },
-  { id: 6, label: 'Сб' },
-  { id: 0, label: 'Вс' }, // 0 - это Воскресенье в JS Date
-];
-
 export const MasterScheduleScreen: React.FC<Props> = ({ telegramId, onBack }) => {
+  const { t } = useLanguage();
+
+  const DAYS = [
+    { id: 1, label: t('day_1') },
+    { id: 2, label: t('day_2') },
+    { id: 3, label: t('day_3') },
+    { id: 4, label: t('day_4') },
+    { id: 5, label: t('day_5') },
+    { id: 6, label: t('day_6') },
+    { id: 0, label: t('day_0') }, // 0 - это Воскресенье
+  ];
+
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
@@ -91,13 +95,14 @@ export const MasterScheduleScreen: React.FC<Props> = ({ telegramId, onBack }) =>
 
       if (payload.selectedDays.length === 0) {
         triggerHaptic('error');
-        if (tg.showAlert) tg.showAlert('Выберите хотя бы один рабочий день');
-        else alert('Выберите хотя бы один рабочий день');
+        if (tg.showAlert) tg.showAlert(t('m_schedule_error_days'));
+        else alert(t('m_schedule_error_days'));
         return;
       }
       if (new Date(payload.startDate) > new Date(payload.endDate)) {
         triggerHaptic('error');
-        if (tg.showAlert) tg.showAlert('Дата начала не может быть позже даты окончания');
+        if (tg.showAlert) tg.showAlert(t('m_schedule_error_dates'));
+        else alert(t('m_schedule_error_dates'));
         return;
       }
 
@@ -118,7 +123,8 @@ export const MasterScheduleScreen: React.FC<Props> = ({ telegramId, onBack }) =>
 
       if (times.length === 0) {
         triggerHaptic('error');
-        if (tg.showAlert) tg.showAlert('Неверно указано время работы');
+        if (tg.showAlert) tg.showAlert(t('m_schedule_error_time'));
+        else alert(t('m_schedule_error_time'));
         return;
       }
 
@@ -135,15 +141,15 @@ export const MasterScheduleScreen: React.FC<Props> = ({ telegramId, onBack }) =>
 
         triggerHaptic('success');
         if (tg.showAlert) {
-            tg.showAlert(`Расписание успешно создано!\nСгенерировано слотов: ${totalCreated}`, () => onBack());
+            tg.showAlert(`${t('m_schedule_success_1')} ${totalCreated}`, () => onBack());
         } else {
-            alert(`Расписание успешно создано! Сгенерировано слотов: ${totalCreated}`);
+            alert(`${t('m_schedule_success_2')} ${totalCreated}`);
             onBack();
         }
       } catch (e) {
         console.error(e);
         triggerHaptic('error');
-        alert('Ошибка при генерации расписания');
+        alert(t('m_schedule_error_gen'));
         setGenerating(false);
         tg.MainButton.hideProgress();
         tg.MainButton.enable();
@@ -151,7 +157,7 @@ export const MasterScheduleScreen: React.FC<Props> = ({ telegramId, onBack }) =>
     };
 
     tg.MainButton.setParams({
-        text: 'СГЕНЕРИРОВАТЬ РАСПИСАНИЕ',
+        text: t('m_btn_generate_schedule'),
         color: tg.themeParams?.button_color || '#3390ec',
         text_color: tg.themeParams?.button_text_color || '#ffffff',
         is_active: true,
@@ -164,7 +170,7 @@ export const MasterScheduleScreen: React.FC<Props> = ({ telegramId, onBack }) =>
       tg.MainButton.offClick(handleMainClick);
       tg.MainButton.hide();
     };
-  }, [onBack, generating]);
+  }, [onBack, generating, t]);
 
   // Скрываем/показываем MainButton в зависимости от статуса загрузки и наличия услуг
   useEffect(() => {
@@ -210,8 +216,8 @@ export const MasterScheduleScreen: React.FC<Props> = ({ telegramId, onBack }) =>
     return (
       <div style={{ backgroundColor: 'var(--tg-theme-secondary-bg-color)', minHeight: '100vh', paddingTop: 60 }}>
         <Placeholder
-          header="Нет услуг"
-          description="Сначала добавьте хотя бы одну услугу, чтобы сгенерировать для неё слоты записи."
+          header={t('m_no_services')}
+          description={t('m_schedule_no_services_desc')}
         >
             <LottieIcon src="/stickers/duck_out.json" size={140} />
         </Placeholder>
@@ -225,25 +231,25 @@ export const MasterScheduleScreen: React.FC<Props> = ({ telegramId, onBack }) =>
       {/* ШАПКА */}
       <div style={{ padding: '32px 20px 16px' }}>
           <Title level="1" weight="2" style={{ marginBottom: 8, color: 'var(--tg-theme-text-color)' }}>
-              Авто-расписание
+              {t('m_schedule_title')}
           </Title>
           <Text style={{ color: 'var(--tg-theme-hint-color)', fontSize: 15, lineHeight: '1.4' }}>
-              Укажите ваш график работы. Система автоматически создаст пустые окна для записи на этот период.
+              {t('m_schedule_desc')}
           </Text>
       </div>
 
       <List style={{ padding: '0 16px' }}>
 
         {/* ПЕРИОД */}
-        <Section header="Период генерации">
+        <Section header={t('m_schedule_period')}>
           <Input
-            header="С какого числа"
+            header={t('m_schedule_start_date')}
             type="date"
             value={startDate}
             onChange={e => { triggerHaptic('selection'); setStartDate(e.target.value); }}
           />
           <Input
-            header="По какое число"
+            header={t('m_schedule_end_date')}
             type="date"
             value={endDate}
             onChange={e => { triggerHaptic('selection'); setEndDate(e.target.value); }}
@@ -251,7 +257,7 @@ export const MasterScheduleScreen: React.FC<Props> = ({ telegramId, onBack }) =>
         </Section>
 
         {/* ДНИ НЕДЕЛИ */}
-        <Section header="Рабочие дни недели">
+        <Section header={t('m_schedule_working_days')}>
           <div style={{ padding: '16px 12px', display: 'flex', gap: 8, justifyContent: 'space-between', backgroundColor: 'var(--tg-theme-bg-color)' }}>
             {DAYS.map(day => {
               const isSelected = selectedDays.includes(day.id);
@@ -275,7 +281,8 @@ export const MasterScheduleScreen: React.FC<Props> = ({ telegramId, onBack }) =>
                     boxShadow: isSelected ? '0 4px 12px rgba(0,0,0,0.15)' : 'none'
                   }}
                 >
-                  {day.label}
+                  {/* Берем только первые две буквы, если строка длинная */}
+                  {day.label.slice(0, 2)}
                 </div>
               );
             })}
@@ -283,29 +290,29 @@ export const MasterScheduleScreen: React.FC<Props> = ({ telegramId, onBack }) =>
         </Section>
 
         {/* ВРЕМЯ РАБОТЫ */}
-        <Section header="Время работы">
+        <Section header={t('m_schedule_working_hours')}>
           <Input
-            header="Начало рабочего дня"
+            header={t('m_schedule_start_time')}
             type="time"
             value={startTime}
             onChange={e => { triggerHaptic('selection'); setStartTime(e.target.value); }}
           />
           <Input
-            header="Конец рабочего дня"
+            header={t('m_schedule_end_time')}
             type="time"
             value={endTime}
             onChange={e => { triggerHaptic('selection'); setEndTime(e.target.value); }}
           />
           <Select
-            header="Интервал (шаг записи)"
+            header={t('m_schedule_interval')}
             value={step}
             onChange={e => { triggerHaptic('selection'); setStep(e.target.value); }}
           >
-            <option value="15">Каждые 15 минут</option>
-            <option value="30">Каждые 30 минут</option>
-            <option value="60">Каждый 1 час</option>
-            <option value="90">Каждые 1.5 часа</option>
-            <option value="120">Каждые 2 часа</option>
+            <option value="15">{t('m_every_15_min')}</option>
+            <option value="30">{t('m_every_30_min')}</option>
+            <option value="60">{t('m_every_60_min')}</option>
+            <option value="90">{t('m_every_90_min')}</option>
+            <option value="120">{t('m_every_120_min')}</option>
           </Select>
         </Section>
 
