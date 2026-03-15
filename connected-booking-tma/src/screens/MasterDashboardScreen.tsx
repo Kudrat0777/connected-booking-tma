@@ -16,9 +16,7 @@ import {
   Icon28CalendarOutline,
   Icon28ServicesOutline,
   Icon28UserCircleOutline,
-  Icon28PhoneOutline,
-  Icon24CheckCircleOutline,
-  Icon24CancelOutline,
+  Icon28PhoneOutline
 } from '@vkontakte/icons';
 import lottie from 'lottie-web';
 
@@ -39,6 +37,9 @@ import type { Booking, Service, Slot } from '../helpers/api';
 import { MasterServicesTab } from '../components/MasterServicesTab';
 import { MasterProfileTab } from '../components/MasterProfileTab';
 import { MasterCreateServiceScreen } from './MasterCreateServiceScreen';
+
+// ИМПОРТИРУЕМ ХУК ЛОКАЛИЗАЦИИ
+import { useLanguage } from '../helpers/LanguageContext';
 
 const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
   const container = useRef<HTMLDivElement>(null);
@@ -72,13 +73,6 @@ type Props = {
 type Tab = 'bookings' | 'services' | 'profile';
 type BookingFilter = 'today' | 'tomorrow' | 'week' | 'all';
 
-const PERIODS = [
-  { id: 'today', label: 'Сегодня' },
-  { id: 'tomorrow', label: 'Завтра' },
-  { id: 'week', label: 'Неделя' },
-  { id: 'all', label: 'Все записи' },
-];
-
 export const MasterDashboardScreen: React.FC<Props> = ({
   telegramId,
   onSwitchToClient,
@@ -88,6 +82,16 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   onOpenReviews,
   onLogout
 }) => {
+  // ПОДКЛЮЧАЕМ ПЕРЕВОДЫ
+  const { t, lang } = useLanguage();
+
+  const PERIODS = [
+    { id: 'today', label: t('m_filter_today') },
+    { id: 'tomorrow', label: t('m_filter_tomorrow') },
+    { id: 'week', label: t('m_filter_week') },
+    { id: 'all', label: t('m_filter_all') },
+  ];
+
   const [activeTab, setActiveTab] = useState<Tab>('bookings');
 
   // Состояния для записей
@@ -179,44 +183,44 @@ export const MasterDashboardScreen: React.FC<Props> = ({
       await confirmBooking(id);
       triggerHaptic('success');
       loadBookings();
-    } catch (e) { alert('Ошибка при подтверждении'); }
+    } catch (e) { alert(t('m_confirm_error')); }
   };
 
   const handleReject = async (id: number) => {
     triggerHaptic('warning');
-    if (!window.confirm('Отклонить эту запись?')) return;
+    if (!window.confirm(t('m_reject_confirm'))) return;
     try {
       await rejectBooking(id);
       loadBookings();
-    } catch (e) { alert('Ошибка'); }
+    } catch (e) { alert('Error'); }
   };
 
   const handleDeleteService = async (id: number) => {
     triggerHaptic('warning');
-    if (!window.confirm('Удалить эту услугу?')) return;
+    if (!window.confirm(t('m_delete_service_confirm'))) return;
     try {
       await deleteService(id);
       loadServices();
-    } catch (e) { alert('Ошибка при удалении услуги'); }
+    } catch (e) { alert(t('m_delete_service_error')); }
   };
 
   const handleLogout = () => { window.location.href = '/'; };
 
   const handleDeleteAccount = async () => {
     triggerHaptic('warning');
-    const confirmText = prompt("Чтобы удалить аккаунт и все данные навсегда, введите слово DELETE");
+    const confirmText = prompt(t('m_delete_account_prompt'));
     if (confirmText === 'DELETE') {
         try {
             await deleteAccount(telegramId);
-            alert('Аккаунт успешно удален.');
+            alert(t('m_delete_account_success'));
             handleLogout();
-        } catch (e) { alert('Ошибка при удалении аккаунта.'); }
+        } catch (e) { alert(t('m_delete_account_error')); }
     }
   };
 
   const handleLogoutClick = () => {
     triggerHaptic('warning');
-    const isConfirmed = window.confirm('Вы точно хотите выйти из аккаунта мастера?');
+    const isConfirmed = window.confirm(t('m_logout_confirm'));
     if (isConfirmed && onLogout) onLogout();
   };
 
@@ -231,7 +235,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
 
   const handleManualCreateSubmit = async () => {
     if (!newClientName.trim() || !newClientPhone.trim() || !selectedNewServiceId || !selectedNewSlotId) {
-      alert('Пожалуйста, заполните все поля и выберите время!');
+      alert(t('m_fill_all_fields'));
       return;
     }
 
@@ -246,12 +250,12 @@ export const MasterDashboardScreen: React.FC<Props> = ({
         setNewClientDetails({ name: newClientName, phone: newClientPhone });
         setIsShareModalOpen(true);
       } else {
-        if (tg?.showAlert) tg.showAlert('Запись успешно создана! Клиенту отправлено уведомление.');
-        else alert('Запись успешно создана!');
+        if (tg?.showAlert) tg.showAlert(t('m_booking_created_notify'));
+        else alert(t('m_booking_created'));
       }
     } catch (e: any) {
       triggerHaptic('warning');
-      alert(e.message || 'Ошибка при создании записи');
+      alert(e.message || t('m_create_error'));
     } finally {
       setIsCreatingManual(false);
     }
@@ -259,7 +263,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
 
   const handleShareLink = () => {
     const botUrl = `https://t.me/ConnectedTimeBot?start=master_${telegramId}`;
-    const text = `Здравствуйте, ${newClientDetails.name}! Я записал(а) вас на процедуру.\n\nПожалуйста, перейдите по ссылке ниже в мой профиль, чтобы посмотреть детали записи и в будущем записываться самостоятельно:`;
+    const text = t('m_share_message');
     const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(botUrl)}&text=${encodeURIComponent(text)}`;
 
     if (tg?.openTelegramLink) tg.openTelegramLink(shareUrl);
@@ -268,11 +272,13 @@ export const MasterDashboardScreen: React.FC<Props> = ({
     setIsShareModalOpen(false);
   };
 
+  const localeForDate = lang === 'uz' ? 'uz-UZ' : (lang === 'en' ? 'en-US' : 'ru-RU');
+
   // --- Вкладка ЗАПИСИ (Дизайн Timeline) ---
   const renderBookings = () => {
     const grouped = bookings.reduce((acc: any, b) => {
         const d = new Date(b.slot.time);
-        const dateKey = d.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
+        const dateKey = d.toLocaleDateString(localeForDate, { weekday: 'long', day: 'numeric', month: 'long' });
         if (!acc[dateKey]) acc[dateKey] = [];
         acc[dateKey].push(b);
         return acc;
@@ -320,7 +326,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
 
         {!loadingBookings && bookings.length === 0 && (
           <div style={{ marginTop: 40 }}>
-            <Placeholder header="Нет записей" description="На этот период записей пока нет.">
+            <Placeholder header={t('m_no_bookings')} description={t('m_no_bookings_desc')}>
                <LottieIcon src="/stickers/duck_out.json" size={140} />
             </Placeholder>
           </div>
@@ -347,7 +353,6 @@ export const MasterDashboardScreen: React.FC<Props> = ({
                     </div>
 
                     {grouped[dateKey].map((b: Booking, index: number) => {
-                        // Определение статусов
                         const bookingTime = new Date(b.slot.time);
                         const isPast = bookingTime < new Date();
 
@@ -355,10 +360,10 @@ export const MasterDashboardScreen: React.FC<Props> = ({
                         const isRejected = b.status === 'rejected';
                         const isConfirmed = b.status === 'confirmed';
 
-                        const isCompleted = isConfirmed && isPast; // Прошло и было подтверждено
-                        const isFutureConfirmed = isConfirmed && !isPast; // Будущее и подтверждено
+                        const isCompleted = isConfirmed && isPast;
+                        const isFutureConfirmed = isConfirmed && !isPast;
 
-                        const timeStr = bookingTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                        const timeStr = bookingTime.toLocaleTimeString(localeForDate, {hour: '2-digit', minute:'2-digit', hour12: false});
 
                         return (
                             <div key={b.id} style={{ display: 'flex', gap: 16, marginBottom: 16, position: 'relative', opacity: isRejected ? 0.6 : 1 }}>
@@ -387,17 +392,17 @@ export const MasterDashboardScreen: React.FC<Props> = ({
                                     padding: '16px',
                                     boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
                                     borderLeft: isPending ? '4px solid #FF9500' : (isRejected ? '4px solid #FF3B30' : '4px solid transparent'),
-                                    filter: isCompleted ? 'grayscale(100%)' : 'none' // Делаем серым завершенные записи
+                                    filter: isCompleted ? 'grayscale(100%)' : 'none'
                                 }}>
                                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: (isPending || !isCompleted) ? 12 : 0 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                             <Avatar size={44} src={b.photo_url || undefined} fallbackIcon={<Icon28UserCircleOutline />} />
                                             <div>
                                                 <div style={{ fontWeight: 600, fontSize: 16, color: 'var(--tg-theme-text-color)' }}>
-                                                    {b.client_name || b.name || 'Клиент'}
+                                                    {b.client_name || b.name || t('m_share_link_desc_1')}
                                                 </div>
                                                 <div style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)', marginTop: 2 }}>
-                                                    {b.service_name} • {b.slot.service.duration} мин
+                                                    {b.service_name} • {b.slot.service.duration} {t('min')}
                                                 </div>
                                             </div>
                                         </div>
@@ -405,36 +410,36 @@ export const MasterDashboardScreen: React.FC<Props> = ({
                                         {/* БЕЙДЖИКИ СТАТУСА */}
                                         {isPending && (
                                             <div style={{ fontSize: 11, color: '#FF9500', fontWeight: 700, backgroundColor: 'rgba(255, 149, 0, 0.1)', padding: '4px 8px', borderRadius: 8, whiteSpace: 'nowrap' }}>
-                                                НОВАЯ
+                                                {t('m_status_new')}
                                             </div>
                                         )}
                                         {isFutureConfirmed && (
                                             <div style={{ fontSize: 11, color: '#34C759', fontWeight: 700, backgroundColor: 'rgba(52, 199, 89, 0.1)', padding: '4px 8px', borderRadius: 8, whiteSpace: 'nowrap' }}>
-                                                ПОДТВЕРЖДЕНО
+                                                {t('m_status_confirmed')}
                                             </div>
                                         )}
                                         {isCompleted && (
                                             <div style={{ fontSize: 11, color: 'var(--tg-theme-hint-color)', fontWeight: 700, backgroundColor: 'var(--tg-theme-secondary-bg-color)', padding: '4px 8px', borderRadius: 8, whiteSpace: 'nowrap' }}>
-                                                ЗАВЕРШЕНО
+                                                {t('m_status_completed')}
                                             </div>
                                         )}
                                         {isRejected && (
                                             <div style={{ fontSize: 11, color: '#FF3B30', fontWeight: 700, backgroundColor: 'rgba(255, 59, 48, 0.1)', padding: '4px 8px', borderRadius: 8, whiteSpace: 'nowrap' }}>
-                                                ОТМЕНЕНО
+                                                {t('m_status_rejected')}
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* КНОПКИ СВЯЗИ С КЛИЕНТОМ (Не показываем для завершенных и отмененных) */}
+                                    {/* КНОПКИ СВЯЗИ С КЛИЕНТОМ */}
                                     {(b.client_phone || b.username) && !isCompleted && !isRejected && (
                                         <div style={{ display: 'flex', gap: 8, marginBottom: isPending ? 12 : 0 }}>
                                             {b.client_phone && (
-                                                <a href={`tel:${b.client_phone}`} style={{ textDecoration: 'none', backgroundColor: 'var(--tg-theme-secondary-bg-color)', padding: '6px 12px', borderRadius: 10, fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--tg-theme-text-color)', fontWeight: 500 }}>
-                                                    <Icon28PhoneOutline width={18} height={18} style={{color: 'var(--tg-theme-button-color)'}}/> Позвонить
+                                                <a href={`tel:${b.client_phone}`} style={{ textDecoration: 'none', backgroundColor: 'var(--tg-theme-secondary-bg-color)', padding: '6px 12px', borderRadius: 8, color: 'var(--tg-theme-text-color)', fontSize: 14, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                    <Icon28PhoneOutline width={18} height={18} style={{color: 'var(--tg-theme-button-color)'}}/> {t('m_call')}
                                                 </a>
                                             )}
                                             {b.username && (
-                                                <a href={`https://t.me/${b.username.replace('@', '')}`} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', backgroundColor: 'var(--tg-theme-secondary-bg-color)', padding: '6px 12px', borderRadius: 10, fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--tg-theme-text-color)', fontWeight: 500 }}>
+                                                <a href={`https://t.me/${b.username.replace('@', '')}`} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', backgroundColor: 'var(--tg-theme-secondary-bg-color)', padding: '6px 12px', borderRadius: 8, color: 'var(--tg-theme-button-color)', fontSize: 14, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
                                                     Telegram
                                                 </a>
                                             )}
@@ -445,19 +450,19 @@ export const MasterDashboardScreen: React.FC<Props> = ({
                                     {isPending && (
                                         <div style={{ display: 'flex', gap: 8 }}>
                                             <Button size="m" mode="filled" stretched onClick={() => handleConfirm(b.id)}>
-                                                Принять
+                                                {t('m_btn_accept')}
                                             </Button>
                                             <Button size="m" mode="bezeled" stretched style={{ color: 'var(--tg-theme-destructive-text-color)' }} onClick={() => handleReject(b.id)}>
-                                                Отклонить
+                                                {t('m_btn_reject')}
                                             </Button>
                                         </div>
                                     )}
 
-                                    {/* КНОПКА ОТМЕНЫ ДЛЯ ПОДТВЕРЖДЕННЫХ В БУДУЩЕМ */}
+                                    {/* КНОПКА ОТМЕНЫ */}
                                     {isFutureConfirmed && (
                                         <div style={{ marginTop: 12 }}>
                                             <Button size="s" mode="plain" stretched style={{ color: 'var(--tg-theme-hint-color)', padding: 0, height: 'auto', justifyContent: 'flex-start' }} onClick={() => handleReject(b.id)}>
-                                                Отменить запись
+                                                {t('m_btn_cancel_booking')}
                                             </Button>
                                         </div>
                                     )}
@@ -510,7 +515,6 @@ export const MasterDashboardScreen: React.FC<Props> = ({
       <main style={{ height: '100%', overflowY: 'auto' }}>
         {activeTab === 'bookings' && renderBookings()}
 
-        {/* ВНЕШНИЙ КОМПОНЕНТ УСЛУГ */}
         {activeTab === 'services' && (
             <MasterServicesTab
                 services={services}
@@ -521,8 +525,6 @@ export const MasterDashboardScreen: React.FC<Props> = ({
             />
         )}
 
-        {/* ВНЕШНИЙ КОМПОНЕНТ ПРОФИЛЯ */}
-                {/* ВНЕШНИЙ КОМПОНЕНТ ПРОФИЛЯ */}
         {activeTab === 'profile' && (
             <MasterProfileTab
                 telegramId={telegramId}
@@ -540,13 +542,13 @@ export const MasterDashboardScreen: React.FC<Props> = ({
 
       {/* НИЖНИЙ TABBAR */}
       <Tabbar style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 100, boxShadow: '0 -1px 0 rgba(0,0,0,0.05)' }}>
-        <Tabbar.Item text="Календарь" selected={activeTab === 'bookings'} onClick={() => { triggerHaptic('light'); setActiveTab('bookings'); }}>
+        <Tabbar.Item text={t('m_tab_calendar')} selected={activeTab === 'bookings'} onClick={() => { triggerHaptic('light'); setActiveTab('bookings'); }}>
           <Icon28CalendarOutline />
         </Tabbar.Item>
-        <Tabbar.Item text="Услуги" selected={activeTab === 'services'} onClick={() => { triggerHaptic('light'); setActiveTab('services'); }}>
+        <Tabbar.Item text={t('m_tab_services')} selected={activeTab === 'services'} onClick={() => { triggerHaptic('light'); setActiveTab('services'); }}>
           <Icon28ServicesOutline />
         </Tabbar.Item>
-        <Tabbar.Item text="Профиль" selected={activeTab === 'profile'} onClick={() => { triggerHaptic('light'); setActiveTab('profile'); }}>
+        <Tabbar.Item text={t('m_tab_profile')} selected={activeTab === 'profile'} onClick={() => { triggerHaptic('light'); setActiveTab('profile'); }}>
           <Icon28UserCircleOutline />
         </Tabbar.Item>
       </Tabbar>
@@ -565,50 +567,50 @@ export const MasterDashboardScreen: React.FC<Props> = ({
       />
 
       {/* МОДАЛЬНОЕ ОКНО СОЗДАНИЯ ЗАПИСИ (РУЧНОЕ ДОБАВЛЕНИЕ КЛИЕНТА) */}
-      <Modal header={<Modal.Header>Новая запись</Modal.Header>} open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+      <Modal header={<Modal.Header>{t('m_modal_create_title')}</Modal.Header>} open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
         <div style={{ padding: '0 16px 150px', display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', maxHeight: '85vh' }}>
-          <Input header="Имя клиента" placeholder="Например, Анна" value={newClientName} onChange={(e) => setNewClientName(e.target.value)} />
-          <Input header="Телефон клиента" placeholder="+998 90 000 00 00" type="tel" value={newClientPhone} onChange={(e) => setNewClientPhone(e.target.value)} />
+          <Input header={t('m_client_name')} placeholder={t('m_client_name_placeholder')} value={newClientName} onChange={(e) => setNewClientName(e.target.value)} />
+          <Input header={t('m_client_phone')} placeholder="+998 90 000 00 00" type="tel" value={newClientPhone} onChange={(e) => setNewClientPhone(e.target.value)} />
 
-          <Select header="Услуга" value={selectedNewServiceId} onChange={(e) => setSelectedNewServiceId(e.target.value)}>
-            <option value="" disabled hidden>Выберите услугу</option>
+          <Select header={t('m_service')} value={selectedNewServiceId} onChange={(e) => setSelectedNewServiceId(e.target.value)}>
+            <option value="" disabled hidden>{t('m_select_service')}</option>
             {services.map((s) => (
               <option key={s.id} value={s.id}>{s.name} ({s.price?.toLocaleString()} UZS)</option>
             ))}
           </Select>
 
-          <Select header="Доступное время" value={selectedNewSlotId} onChange={(e) => setSelectedNewSlotId(e.target.value)} disabled={!selectedNewServiceId}>
+          <Select header={t('m_select_time')} value={selectedNewSlotId} onChange={(e) => setSelectedNewSlotId(e.target.value)} disabled={!selectedNewServiceId}>
             <option value="" disabled hidden>
-              {!selectedNewServiceId ? 'Сначала выберите услугу' : availableSlots.length === 0 ? 'Нет свободных слотов' : 'Выберите время'}
+              {!selectedNewServiceId ? t('m_select_service_first') : availableSlots.length === 0 ? t('m_no_free_slots') : t('m_select_time')}
             </option>
             {availableSlots.map((s) => {
               const d = new Date(s.time);
-              const dateStr = d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
-              const timeStr = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-              return <option key={s.id} value={s.id}>{dateStr} в {timeStr}</option>;
+              const dateStr = d.toLocaleDateString(localeForDate, { day: '2-digit', month: '2-digit' });
+              const timeStr = d.toLocaleTimeString(localeForDate, { hour: '2-digit', minute: '2-digit', hour12: false });
+              return <option key={s.id} value={s.id}>{dateStr} {t('at_time')} {timeStr}</option>;
             })}
           </Select>
 
           <div style={{ marginTop: 16 }}>
-            <Button size="l" mode="filled" stretched loading={isCreatingManual} onClick={handleManualCreateSubmit}>Записать клиента</Button>
-            <Button size="l" mode="plain" stretched onClick={handleCloseCreateModal} style={{ marginTop: 8 }}>Отмена</Button>
+            <Button size="l" mode="filled" stretched loading={isCreatingManual} onClick={handleManualCreateSubmit}>{t('m_btn_book_client')}</Button>
+            <Button size="l" mode="plain" stretched onClick={handleCloseCreateModal} style={{ marginTop: 8 }}>{t('m_btn_cancel')}</Button>
           </div>
         </div>
       </Modal>
 
       {/* МОДАЛЬНОЕ ОКНО "ПОДЕЛИТЬСЯ ССЫЛКОЙ" */}
-      <Modal header={<Modal.Header>Успешно!</Modal.Header>} open={isShareModalOpen} onOpenChange={setIsShareModalOpen}>
+      <Modal header={<Modal.Header>{t('m_modal_success_title')}</Modal.Header>} open={isShareModalOpen} onOpenChange={setIsShareModalOpen}>
         <div style={{ padding: '0 16px 80px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', overflowY: 'auto', maxHeight: '85vh' }}>
           <div style={{ width: 80, height: 80, backgroundColor: 'var(--tg-theme-secondary-bg-color)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
             <Icon28UserCircleOutline width={48} height={48} style={{ color: 'var(--tg-theme-button-color)' }} />
           </div>
-          <Title level="2" style={{ margin: '0 0 8px', color: 'var(--tg-theme-text-color)' }}>Отправить ссылку?</Title>
+          <Title level="2" style={{ margin: '0 0 8px', color: 'var(--tg-theme-text-color)' }}>{t('m_share_link_title')}</Title>
           <Text style={{ margin: '0 0 24px', color: 'var(--tg-theme-hint-color)', lineHeight: '1.4' }}>
-            Клиент <b>{newClientDetails.name}</b> ({newClientDetails.phone}) еще не пользуется нашим ботом.<br/><br/>
-            Отправьте ему ссылку на ваш профиль в Telegram, чтобы он мог видеть свои записи и записываться сам!
+            {t('m_share_link_desc_1')} <b>{newClientDetails.name}</b> ({newClientDetails.phone}) {t('m_share_link_desc_2')}<br/><br/>
+            {t('m_share_link_desc_3')}
           </Text>
-          <Button size="l" mode="filled" stretched onClick={handleShareLink}>Поделиться ссылкой</Button>
-          <Button size="l" mode="plain" stretched onClick={() => setIsShareModalOpen(false)} style={{ marginTop: 8 }}>Не сейчас</Button>
+          <Button size="l" mode="filled" stretched onClick={handleShareLink}>{t('m_btn_share_link')}</Button>
+          <Button size="l" mode="plain" stretched onClick={() => setIsShareModalOpen(false)} style={{ marginTop: 8 }}>{t('m_btn_not_now')}</Button>
         </div>
       </Modal>
 
