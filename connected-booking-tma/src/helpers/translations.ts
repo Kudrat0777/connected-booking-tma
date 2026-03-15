@@ -98,7 +98,15 @@ export const translations: TranslationsDictionary = {
     min: "min",
     about_me: "About me",
     portfolio_header: "Portfolio",
-    btn_online_booking: "BOOK ONLINE"
+    btn_online_booking: "BOOK ONLINE",
+
+    // === Services Screen ===
+    search_service_placeholder: "Search service...",
+    no_services_found: "Nothing found",
+    no_services_desc: "No services found for your request",
+    services_of_master: "Services of master:",
+    all_services: "All services",
+    free: "Free",
   },
   ru: {
     // Welcome Screen (Client)
@@ -193,7 +201,15 @@ export const translations: TranslationsDictionary = {
     min: "мин",
     about_me: "Обо мне",
     portfolio_header: "Примеры работ",
-    btn_online_booking: "ОНЛАЙН-ЗАПИСЬ"
+    btn_online_booking: "ОНЛАЙН-ЗАПИСЬ",
+
+    // === Services Screen ===
+    search_service_placeholder: "Поиск услуги...",
+    no_services_found: "Ничего нет",
+    no_services_desc: "Услуги по вашему запросу не найдены",
+    services_of_master: "Услуги мастера:",
+    all_services: "Все услуги",
+    free: "Бесплатно",
   },
   uz: {
     // Welcome Screen (Client)
@@ -288,6 +304,14 @@ export const translations: TranslationsDictionary = {
     min: "daq",
     about_me: "Men haqimda",
     portfolio_header: "Ish namunalari",
-    btn_online_booking: "ONLAYN YOZILISH"
+    btn_online_booking: "ONLAYN YOZILISH",
+
+    // === Services Screen ===
+    search_service_placeholder: "Xizmatni qidiring...",
+    no_services_found: "Hech narsa topilmadi",
+    no_services_desc: "So'rovingiz bo'yicha xizmatlar topilmadi",
+    services_of_master: "Usta xizmatlari:",
+    all_services: "Barcha xizmatlar",
+    free: "Bepul",
   }
 };

@@ -4,12 +4,13 @@ import {
   Section,
   Cell,
   Placeholder,
-  Spinner,
-  Text
+  Spinner
 } from '@telegram-apps/telegram-ui';
 import { fetchServices, Service } from '../helpers/api';
 import { Icon24Search, Icon28ChevronRightOutline } from '@vkontakte/icons';
 import lottie from 'lottie-web';
+
+import { useLanguage } from '../helpers/LanguageContext';
 
 const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
   const container = useRef<HTMLDivElement>(null);
@@ -42,6 +43,9 @@ export const ServicesScreen: React.FC<Props> = ({
   selectedMasterName,
   masterId
 }) => {
+  // ПОДКЛЮЧАЕМ ПЕРЕВОДЫ
+  const { t } = useLanguage();
+
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -62,14 +66,10 @@ export const ServicesScreen: React.FC<Props> = ({
 
   // 2. ЗАГРУЗКА УСЛУГ
   useEffect(() => {
-    // Если masterId больше миллиона - это telegram_id.
-    // Стандартный фильтр /api/services/?master=... ожидает внутренний ID.
-    // Поэтому если ID огромный, загружаем ВСЕ услуги и фильтруем на клиенте.
     const idToFetch = (masterId && masterId < 1000000) ? masterId : undefined;
 
     fetchServices(idToFetch)
       .then(data => {
-         // Дополнительная проверка на случай, если мы загрузили все услуги
          if (masterId && masterId >= 1000000 && selectedMasterName) {
             setServices(data.filter(s => s.master_name === selectedMasterName));
          } else {
@@ -80,7 +80,7 @@ export const ServicesScreen: React.FC<Props> = ({
       .finally(() => setLoading(false));
   }, [masterId, selectedMasterName]);
 
-  // 3. ФИЛЬТРАЦИЯ ПО ПОИСКУ И ИМЕНИ (если зашли не по ID)
+  // 3. ФИЛЬТРАЦИЯ ПО ПОИСКУ И ИМЕНИ
   const filteredServices = useMemo(() => {
     let res = services;
 
@@ -95,7 +95,6 @@ export const ServicesScreen: React.FC<Props> = ({
     return res;
   }, [services, search, selectedMasterName, masterId]);
 
-  // Вызов вибрации при клике
   const handleServiceClick = (s: Service) => {
       const tg = (window as any).Telegram?.WebApp;
       if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
@@ -109,7 +108,7 @@ export const ServicesScreen: React.FC<Props> = ({
         paddingBottom: 40
     }}>
 
-      {/* ПЛАВАЮЩИЙ ПОИСК (Прилипает к верху) */}
+      {/* ПЛАВАЮЩИЙ ПОИСК */}
       <div style={{
           position: 'sticky',
           top: 0,
@@ -128,7 +127,7 @@ export const ServicesScreen: React.FC<Props> = ({
             <Icon24Search style={{ color: 'var(--tg-theme-hint-color)', marginRight: '8px' }} />
             <input
               type="text"
-              placeholder="Поиск услуги..."
+              placeholder={t('search_service_placeholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{
@@ -152,24 +151,24 @@ export const ServicesScreen: React.FC<Props> = ({
           ) : filteredServices.length === 0 ? (
             <div style={{ marginTop: 20 }}>
                <Placeholder
-                 header="Ничего нет"
-                 description="Услуги по вашему запросу не найдены"
+                 header={t('no_services_found')}
+                 description={t('no_services_desc')}
                >
                   <LottieIcon src="/stickers/duck_out.json" size={140} />
                </Placeholder>
             </div>
           ) : (
             <List style={{ padding: '0 16px' }}>
-                <Section header={selectedMasterName ? `Услуги мастера: ${selectedMasterName}` : 'Все услуги'}>
+                <Section header={selectedMasterName ? `${t('services_of_master')} ${selectedMasterName}` : t('all_services')}>
                   {filteredServices.map((s) => (
                     <Cell
                       key={s.id}
                       onClick={() => handleServiceClick(s)}
-                      subtitle={s.description ? `${s.duration} мин • ${s.description}` : `${s.duration} мин`}
+                      subtitle={s.description ? `${s.duration} ${t('min')} • ${s.description}` : `${s.duration} ${t('min')}`}
                       after={
                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                            <span style={{ fontWeight: 600, color: 'var(--tg-theme-text-color)' }}>
-                             {s.price ? `${s.price.toLocaleString('ru-RU')} UZS` : 'Бесплатно'}
+                             {s.price ? `${s.price.toLocaleString('ru-RU')} UZS` : t('free')}
                            </span>
                            <Icon28ChevronRightOutline width={20} height={20} style={{ color: 'var(--tg-theme-hint-color)' }} />
                          </div>
@@ -178,7 +177,6 @@ export const ServicesScreen: React.FC<Props> = ({
                     >
                       <span style={{ fontWeight: 500, fontSize: 16 }}>{s.name}</span>
 
-                      {/* Если мы зашли со страницы "Все услуги" (без мастера), показываем имя мастера */}
                       {!selectedMasterName && !masterId && s.master_name && (
                          <div style={{ fontSize: 13, color: 'var(--tg-theme-button-color)', marginTop: 4 }}>
                             {s.master_name}
