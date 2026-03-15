@@ -18,6 +18,9 @@ import type { Booking } from '../helpers/api';
 import { fetchMyBookings, cancelBooking } from '../helpers/api';
 import { RateBookingModal } from '../components/RateBookingModal';
 
+// ИМПОРТИРУЕМ ХУК ЛОКАЛИЗАЦИИ
+import { useLanguage } from '../helpers/LanguageContext';
+
 const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
   const container = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -41,15 +44,22 @@ type Props = {
   onReview?: (booking: Booking) => void;
 };
 
-function formatDateTime(iso: string): string {
+// Выносим форматирование даты в компонент, чтобы иметь доступ к текущему языку
+const formatDateTime = (iso: string, lang: string): string => {
   const d = new Date(iso);
-  return d.toLocaleString('ru-RU', {
+  // Маппинг наших кодов языков на локали для Date.toLocaleString
+  const locales: Record<string, string> = {
+    ru: 'ru-RU',
+    en: 'en-US',
+    uz: 'uz-UZ'
+  };
+  return d.toLocaleString(locales[lang] || 'en-US', {
     day: '2-digit',
-    month: 'long',
+    month: 'short',
     hour: '2-digit',
     minute: '2-digit',
   });
-}
+};
 
 type Segment = 'upcoming' | 'past';
 type StatusFilter = 'all' | 'confirmed' | 'pending' | 'rejected';
@@ -60,6 +70,9 @@ export const MyBookingsScreen: React.FC<Props> = ({
   onGoToServices,
   onReview
 }) => {
+  // ПОДКЛЮЧАЕМ ПЕРЕВОДЫ
+  const { t, lang } = useLanguage();
+
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +91,7 @@ export const MyBookingsScreen: React.FC<Props> = ({
       setBookings(data);
     } catch (e) {
       console.error(e);
-      setError('Не удалось загрузить ваши записи.');
+      setError(t('error_load'));
     } finally {
       setLoading(false);
     }
@@ -93,8 +106,8 @@ export const MyBookingsScreen: React.FC<Props> = ({
     const up: Booking[] = [];
     const pa: Booking[] = [];
     bookings.forEach((b) => {
-      const t = new Date(b.slot.time);
-      if (t.getTime() >= now.getTime()) up.push(b);
+      const tTime = new Date(b.slot.time);
+      if (tTime.getTime() >= now.getTime()) up.push(b);
       else pa.push(b);
     });
     up.sort((a, b) => new Date(a.slot.time).getTime() - new Date(b.slot.time).getTime());
@@ -110,13 +123,13 @@ export const MyBookingsScreen: React.FC<Props> = ({
   }, [segment, upcoming, past, statusFilter]);
 
   const handleCancel = async (b: Booking) => {
-    if (!window.confirm('Отменить эту запись?')) return;
+    if (!window.confirm(t('confirm_cancel'))) return;
     try {
       setCancellingId(b.id);
       await cancelBooking(b.id);
       await load();
     } catch (e: any) {
-      alert('Не удалось отменить запись. Возможно, до начала осталось меньше 30 минут.');
+      alert(t('error_cancel'));
     } finally {
       setCancellingId(null);
     }
@@ -139,10 +152,10 @@ export const MyBookingsScreen: React.FC<Props> = ({
 
   const getStatusText = (status: string) => {
       switch (status) {
-          case 'confirmed': return 'Подтверждено';
-          case 'pending': return 'Ожидание';
-          case 'rejected': return 'Отменено';
-          default: return 'Неизвестно';
+          case 'confirmed': return t('status_confirmed');
+          case 'pending': return t('status_pending');
+          case 'rejected': return t('status_rejected');
+          default: return t('status_unknown');
       }
   };
 
@@ -160,27 +173,26 @@ export const MyBookingsScreen: React.FC<Props> = ({
           flexDirection: 'column'
       }}>
 
-        {/* ШАПК�� С ФИЛЬТРАМИ (Убрали borderBottom!) */}
+        {/* ШАПКА С ФИЛЬТРАМИ */}
         <div style={{
             position: 'sticky',
             top: 0,
             zIndex: 10,
             backgroundColor: 'var(--tg-theme-bg-color)',
             padding: '16px 16px 8px'
-            // Граница удалена, теперь фон абсолютно сплошной
         }}>
           <SegmentedControl size="m">
             <SegmentedControl.Item
               selected={segment === 'upcoming'}
               onClick={() => { triggerHaptic(); setSegment('upcoming'); setStatusFilter('all'); }}
             >
-              Предстоящие
+              {t('tab_upcoming')}
             </SegmentedControl.Item>
             <SegmentedControl.Item
               selected={segment === 'past'}
               onClick={() => { triggerHaptic(); setSegment('past'); setStatusFilter('all'); }}
             >
-              Прошедшие
+              {t('tab_past')}
             </SegmentedControl.Item>
           </SegmentedControl>
 
@@ -194,16 +206,16 @@ export const MyBookingsScreen: React.FC<Props> = ({
               msOverflowStyle: 'none'
           }}>
               <Button size="s" mode={statusFilter === 'all' ? 'filled' : 'bezeled'} onClick={() => { triggerHaptic(); setStatusFilter('all'); }} style={{ flexShrink: 0, borderRadius: 100 }}>
-                  Все
+                  {t('filter_all')}
               </Button>
               <Button size="s" mode={statusFilter === 'confirmed' ? 'filled' : 'bezeled'} onClick={() => { triggerHaptic(); setStatusFilter('confirmed'); }} style={{ flexShrink: 0, borderRadius: 100 }}>
-                  Подтверждено
+                  {t('filter_confirmed')}
               </Button>
               <Button size="s" mode={statusFilter === 'pending' ? 'filled' : 'bezeled'} onClick={() => { triggerHaptic(); setStatusFilter('pending'); }} style={{ flexShrink: 0, borderRadius: 100 }}>
-                  Ожидание
+                  {t('filter_pending')}
               </Button>
               <Button size="s" mode={statusFilter === 'rejected' ? 'filled' : 'bezeled'} onClick={() => { triggerHaptic(); setStatusFilter('rejected'); }} style={{ flexShrink: 0, borderRadius: 100 }}>
-                  Отменено
+                  {t('filter_rejected')}
               </Button>
           </div>
         </div>
@@ -218,19 +230,19 @@ export const MyBookingsScreen: React.FC<Props> = ({
           )}
 
           {!loading && error && (
-            <Placeholder header="Ошибка" description={error}>
-                <Button size="m" mode="filled" onClick={load}>Повторить</Button>
+            <Placeholder header="Error" description={error}>
+                <Button size="m" mode="filled" onClick={load}>{t('retry')}</Button>
             </Placeholder>
           )}
 
           {!loading && !error && displayedList.length === 0 && (
             <div style={{ marginTop: '20px' }}>
               <Placeholder
-                header={statusFilter === 'all' ? 'Список пуст' : 'Ничего не найдено'}
+                header={statusFilter === 'all' ? t('list_empty') : t('not_found')}
                 description={
                   statusFilter === 'all'
-                    ? (segment === 'upcoming' ? 'У вас пока нет предстоящих записей' : 'История записей пуста')
-                    : 'Записей с таким статусом нет'
+                    ? (segment === 'upcoming' ? t('no_upcoming') : t('no_past'))
+                    : t('no_status')
                 }
               >
                 <LottieIcon
@@ -244,9 +256,9 @@ export const MyBookingsScreen: React.FC<Props> = ({
           {!loading && !error && displayedList.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {displayedList.map((b) => {
-                const serviceName = b.service_name || b.slot.service?.name || 'Услуга';
-                const masterName = b.master_name || b.slot.service?.master_name || 'Мастер';
-                const timeStr = formatDateTime(b.slot.time);
+                const serviceName = b.service_name || b.slot.service?.name || t('service');
+                const masterName = b.master_name || b.slot.service?.master_name || t('master');
+                const timeStr = formatDateTime(b.slot.time, lang); // Передаем язык для форматирования даты
                 const isPast = segment === 'past';
 
                 return (
@@ -256,7 +268,7 @@ export const MyBookingsScreen: React.FC<Props> = ({
                     before={<div style={{ padding: '8px' }}>{getBannerIcon(b.status, isPast)}</div>}
                     header={serviceName}
                     subheader={timeStr}
-                    description={`Мастер: ${masterName} • ${getStatusText(b.status)}`}
+                    description={`${t('master')}: ${masterName} • ${getStatusText(b.status)}`}
                     style={{
                       backgroundColor: 'var(--tg-theme-secondary-bg-color)',
                       borderRadius: '12px'
@@ -269,7 +281,7 @@ export const MyBookingsScreen: React.FC<Props> = ({
                          loading={cancellingId === b.id}
                          onClick={() => handleCancel(b)}
                        >
-                         Отменить запись
+                         {t('cancel_booking')}
                        </Button>
                     )}
 
@@ -283,7 +295,7 @@ export const MyBookingsScreen: React.FC<Props> = ({
                          }}
                          before={<Icon28FavoriteOutline width={16} height={16} />}
                        >
-                         Оценить мастера
+                         {t('rate_master')}
                        </Button>
                     )}
                   </Banner>

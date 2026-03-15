@@ -34,7 +34,32 @@ export const translations: TranslationsDictionary = {
     saving: "Saving...",
     account: "Account",
     logout: "Log out",
-    delete_account: "Delete account"
+    delete_account: "Delete account",
+
+    // === NEW: MyBookings Screen ===
+    tab_upcoming: "Upcoming",
+    tab_past: "Past",
+    filter_all: "All",
+    filter_confirmed: "Confirmed",
+    filter_pending: "Pending",
+    filter_rejected: "Canceled",
+    error_load: "Failed to load bookings.",
+    error_cancel: "Failed to cancel booking. Perhaps there is less than 30 minutes left.",
+    retry: "Retry",
+    list_empty: "List is empty",
+    not_found: "Nothing found",
+    no_upcoming: "You have no upcoming bookings",
+    no_past: "Booking history is empty",
+    no_status: "No bookings with this status",
+    cancel_booking: "Cancel booking",
+    rate_master: "Rate master",
+    confirm_cancel: "Cancel this booking?",
+    master: "Master",
+    service: "Service",
+    status_confirmed: "Confirmed",
+    status_pending: "Pending",
+    status_rejected: "Canceled",
+    status_unknown: "Unknown"
   },
   ru: {
     // Welcome Screen (Client)
@@ -42,7 +67,7 @@ export const translations: TranslationsDictionary = {
     slide1_desc: "Выбирай услугу и время — всё остальное мы сделаем сами.",
     slide2_title: "Все уведомления в Telegram",
     slide2_desc: "Подтверждение записи, напоминания и изменения — сразу в мессенджере.",
-    slide3_title: "Любимые масте��а под рукой",
+    slide3_title: "Любимые мастера под рукой",
     slide3_desc: "Сохраняй мастеров, оставляй отзывы и возвращайся к лучшим.",
     slide4_title: "Современная оплата",
     slide4_desc: "Оплачивайте услуги картами, TON или Stars. Быстро и безопасно.",
@@ -65,7 +90,32 @@ export const translations: TranslationsDictionary = {
     saving: "Сохранение...",
     account: "Аккаунт",
     logout: "Выйти из аккаунта",
-    delete_account: "Удалить аккаунт"
+    delete_account: "Удалить аккаунт",
+
+    // === NEW: MyBookings Screen ===
+    tab_upcoming: "Предстоящие",
+    tab_past: "Прошедшие",
+    filter_all: "Все",
+    filter_confirmed: "Подтверждено",
+    filter_pending: "Ожидание",
+    filter_rejected: "Отменено",
+    error_load: "Не удалось загрузить ваши записи.",
+    error_cancel: "Не удалось отменить запись. Возможно, до начала осталось меньше 30 минут.",
+    retry: "Повторить",
+    list_empty: "Список пуст",
+    not_found: "Ничего не найдено",
+    no_upcoming: "У вас пока нет предстоящих записей",
+    no_past: "История записей пуста",
+    no_status: "Записей с таким статусом нет",
+    cancel_booking: "Отменить запись",
+    rate_master: "Оценить мастера",
+    confirm_cancel: "Отменить эту запись?",
+    master: "Мастер",
+    service: "Услуга",
+    status_confirmed: "Подтверждено",
+    status_pending: "Ожидание",
+    status_rejected: "Отменено",
+    status_unknown: "Неизвестно"
   },
   uz: {
     // Welcome Screen (Client)
@@ -96,6 +146,31 @@ export const translations: TranslationsDictionary = {
     saving: "Saqlanmoqda...",
     account: "Hisob",
     logout: "Hisobdan chiqish",
-    delete_account: "Hisobni o'chirish"
+    delete_account: "Hisobni o'chirish",
+
+    // === NEW: MyBookings Screen ===
+    tab_upcoming: "Kelgusi",
+    tab_past: "O'tgan",
+    filter_all: "Barchasi",
+    filter_confirmed: "Tasdiqlangan",
+    filter_pending: "Kutilmoqda",
+    filter_rejected: "Bekor qilingan",
+    error_load: "Yozuvlaringizni yuklab bo'lmadi.",
+    error_cancel: "Yozuvni bekor qilib bo'lmadi. Ehtimol, boshlanishiga 30 daqiqadan kam vaqt qolgan.",
+    retry: "Qayta urinish",
+    list_empty: "Ro'yxat bo'sh",
+    not_found: "Hech narsa topilmadi",
+    no_upcoming: "Sizda hozircha kelgusi yozuvlar yo'q",
+    no_past: "Yozuvlar tarixi bo'sh",
+    no_status: "Bunday holatdagi yozuvlar yo'q",
+    cancel_booking: "Bekor qilish",
+    rate_master: "Ustani baholash",
+    confirm_cancel: "Ushbu yozuvni bekor qilasizmi?",
+    master: "Usta",
+    service: "Xizmat",
+    status_confirmed: "Tasdiqlangan",
+    status_pending: "Kutilmoqda",
+    status_rejected: "Bekor qilingan",
+    status_unknown: "Noma'lum"
   }
 };
