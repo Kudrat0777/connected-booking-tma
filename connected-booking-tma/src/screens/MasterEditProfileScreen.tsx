@@ -16,7 +16,6 @@ import {
   Icon28UserCircleOutline
 } from '@vkontakte/icons';
 
-// 1. ИМПОРТ TON CONNECT ДЛЯ МАСТЕРА
 import { useTonConnectUI, useTonWallet } from '@tonconnect/ui-react';
 
 import {
@@ -29,11 +28,17 @@ import {
   getFullImageUrl
 } from '../helpers/api';
 
-const CITIES = ['Ургенч', 'Ташкент', 'Самарканд', 'Бухара', 'Хива'];
+import { useLanguage } from '../helpers/LanguageContext';
 
-// =========================================================
-// УМНЫЕ КОМПОНЕНТЫ ДЛЯ КАРТИНОК
-// =========================================================
+// Массив городов, использующий ключи для перевода (как в ProfileScreen у клиента)
+const CITIES = [
+  { key: 'city_urgench', value: 'Ургенч' },
+  { key: 'city_tashkent', value: 'Ташкент' },
+  { key: 'city_samarkand', value: 'Самарканд' },
+  { key: 'city_bukhara', value: 'Бухара' },
+  { key: 'city_khiva', value: 'Хива' }
+];
+
 const SafeAvatar: React.FC<{ path: string, onChange: (e: any) => void, loading?: boolean }> = ({ path, onChange, loading }) => {
     const [src, setSrc] = useState<string | undefined>(undefined);
 
@@ -73,6 +78,7 @@ const SafeAvatar: React.FC<{ path: string, onChange: (e: any) => void, loading?:
 const SafePortfolioImage: React.FC<{ path: string }> = ({ path }) => {
     const [src, setSrc] = useState<string | undefined>(undefined);
     const [err, setErr] = useState<string | null>(null);
+    const { t } = useLanguage();
 
     useEffect(() => {
         if (!path) return;
@@ -80,15 +86,15 @@ const SafePortfolioImage: React.FC<{ path: string }> = ({ path }) => {
         if (!url) return;
         fetch(url)
             .then(async (res) => {
-                if (!res.ok) throw new Error(`Ошибка`);
+                if (!res.ok) throw new Error(t('m_edit_error_img'));
                 const blob = await res.blob();
                 setSrc(URL.createObjectURL(blob));
             })
             .catch(e => setErr(e.message));
-    }, [path]);
+    }, [path, t]);
 
     if (err) return <div style={{ width: '100%', height: '100%', backgroundColor: 'rgba(255, 59, 48, 0.1)' }} />;
-    if (!src) return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--tg-theme-secondary-bg-color)' }}><Spinner size="s" /></div>;
+    if (!src) return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--tg-theme-secondary-bg-color)' }}><Spinner size="m" /></div>;
     return <img src={src} alt="work" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
 };
 
@@ -108,6 +114,9 @@ type Props = {
 };
 
 export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialData, onBack, onSaved }) => {
+  // ПОДКЛЮЧАЕМ ПЕРЕВОДЫ
+  const { t } = useLanguage();
+
   const [name, setName] = useState(initialData?.name || '');
   const [bio, setBio] = useState(initialData?.bio || '');
   const [phone, setPhone] = useState(initialData?.phone || '');
@@ -122,7 +131,6 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [loadingPortfolio, setLoadingPortfolio] = useState(false);
 
-  // 2. ИНИЦИАЛИЗАЦИЯ TON CONNECT В МАСТЕРЕ
   const [tonConnectUI] = useTonConnectUI();
   const wallet = useTonWallet();
 
@@ -144,7 +152,7 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
 
           const currentForm = formRef.current;
           if (!currentForm.name.trim()) {
-              if (tg.showAlert) tg.showAlert('Пожалуйста, укажите ваше имя.');
+              if (tg.showAlert) tg.showAlert(t('m_edit_name_required'));
               if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
               return;
           }
@@ -163,7 +171,7 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
               onSaved();
           } catch (e) {
               if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-              alert('Ошибка при сохранении профиля');
+              alert(t('m_edit_save_error'));
           } finally {
               setLoading(false);
               tg.MainButton.hideProgress();
@@ -172,7 +180,7 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
       };
 
       tg.MainButton.setParams({
-          text: 'СОХРАНИТЬ',
+          text: t('m_edit_btn_save'),
           color: tg.themeParams?.button_color || '#3390ec',
           text_color: tg.themeParams?.button_text_color || '#ffffff',
           is_active: true,
@@ -186,7 +194,7 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
           tg.MainButton.offClick(handleMainClick);
           tg.MainButton.hide();
       };
-  }, [onBack, onSaved, loading, avatarLoading, loadingPortfolio, telegramId]);
+  }, [onBack, onSaved, loading, avatarLoading, loadingPortfolio, telegramId, t]);
 
   useEffect(() => {
       loadPortfolio();
@@ -218,7 +226,7 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
       try {
         const res = await uploadMasterAvatar(telegramId, e.target.files[0]);
         setAvatarUrl(res.avatar_url);
-      } catch (err) { alert('Ошибка загрузки аватара'); }
+      } catch (err) { alert(t('m_edit_avatar_error')); }
       finally { setAvatarLoading(false); }
     }
   };
@@ -230,21 +238,20 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
           try {
               await uploadPortfolioPhoto(telegramId, e.target.files[0]);
               await loadPortfolio();
-          } catch (err) { alert('Ошибка загрузки фото'); }
+          } catch (err) { alert(t('m_edit_portfolio_error')); }
           finally { setLoadingPortfolio(false); }
       }
   };
 
   const handleDeletePhoto = async (id: number) => {
       triggerHaptic('warning');
-      if(!window.confirm('Удалить это фото из портфолио?')) return;
+      if(!window.confirm(t('m_edit_delete_photo_confirm'))) return;
       try {
           await deletePortfolioPhoto(id);
           setPortfolio(prev => prev.filter(p => p.id !== id));
-      } catch(e) { alert('Ошибка удаления'); }
+      } catch(e) { alert(t('m_edit_delete_error')); }
   };
 
-  // 3. ФУНКЦИИ ДЛЯ РАБОТЫ С КОШЕЛЬКОМ
   const handleWalletClick = () => {
     triggerHaptic('selection');
     if (wallet) {
@@ -265,7 +272,7 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 16px 24px', backgroundColor: 'var(--tg-theme-bg-color)', borderBottom: '1px solid var(--tg-theme-secondary-bg-color)' }}>
         <SafeAvatar path={avatarUrl} onChange={handleAvatarChange} loading={avatarLoading} />
         <Text style={{ marginTop: 16, color: 'var(--tg-theme-hint-color)', fontSize: 14 }}>
-            Нажмите на фото, чтобы изменить
+            {t('m_edit_tap_to_change')}
         </Text>
       </div>
 
@@ -274,7 +281,7 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
         {/* ================================================= */}
         {/* --- WEB3 (TON) ДЛЯ МАСТЕРА --- */}
         {/* ================================================= */}
-        <Section header="Web3 (TON)" footer="Привяжите кошелек для получения оплаты в крипте в будущем.">
+        <Section header={t('web3_title')} footer={t('m_edit_ton_footer')}>
           <Cell
              onClick={handleWalletClick}
              after={
@@ -283,7 +290,7 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
                      fontWeight: 500,
                      fontSize: 15
                  }}>
-                     {wallet ? formatAddress(wallet.account.address) : 'Подключить'}
+                     {wallet ? formatAddress(wallet.account.address) : t('connect')}
                  </span>
              }
           >
@@ -303,7 +310,7 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
                     </svg>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontWeight: 500, color: 'var(--tg-theme-text-color)' }}>TON Кошелек</span>
+                    <span style={{ fontWeight: 500, color: 'var(--tg-theme-text-color)' }}>{t('ton_wallet')}</span>
                     <span style={{
                         backgroundColor: 'rgba(255, 171, 0, 0.15)',
                         color: '#FFAB00',
@@ -312,7 +319,7 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
                         padding: '2px 6px',
                         borderRadius: 4,
                         textTransform: 'uppercase'
-                    }}>Скоро</span>
+                    }}>{t('soon')}</span>
                 </div>
             </div>
           </Cell>
@@ -320,17 +327,17 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
         {/* ================================================= */}
 
         {/* --- ЛИЧНЫЕ ДАННЫЕ --- */}
-        <Section header="Личные данные">
+        <Section header={t('m_edit_personal_data')}>
           <Input
-             header="Имя"
-             placeholder="Как вас зовут?"
+             header={t('m_edit_name_header')}
+             placeholder={t('m_edit_name_placeholder')}
              value={name}
              onChange={(e) => setName(e.target.value)}
              onFocus={() => triggerHaptic('selection')}
           />
           <Input
-             header="Опыт работы (лет)"
-             placeholder="Например: 5"
+             header={t('m_edit_exp_header')}
+             placeholder={t('m_edit_exp_placeholder')}
              type="number"
              inputMode="numeric"
              value={experience}
@@ -338,8 +345,8 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
              onFocus={() => triggerHaptic('selection')}
           />
           <Textarea
-             header="О себе"
-             placeholder="Расскажите о своем опыте и навыках..."
+             header={t('m_edit_bio_header')}
+             placeholder={t('m_edit_bio_placeholder')}
              value={bio}
              onChange={(e) => setBio(e.target.value)}
              onFocus={() => triggerHaptic('selection')}
@@ -347,21 +354,22 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
         </Section>
 
         {/* --- ЛОКАЦИЯ И КОНТАКТЫ --- */}
-        <Section header="Локация и контакты" footer="Укажите номер телефона и точный адрес или вставьте ссылку на Яндекс/Google Карты.">
+        <Section header={t('m_edit_location_header')} footer={t('m_edit_location_footer')}>
           <Input
-             header="Телефон"
+             header={t('phone')}
              placeholder="+998 90 000 00 00"
              type="tel"
              value={phone}
              onChange={(e) => setPhone(e.target.value)}
              onFocus={() => triggerHaptic('selection')}
           />
-          <Select header="Город" value={city} onChange={(e) => { triggerHaptic('selection'); setCity(e.target.value); }}>
-             {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+          <Select header={t('m_edit_city_header')} value={city} onChange={(e) => { triggerHaptic('selection'); setCity(e.target.value); }}>
+             {/* Мы используем русское value для базы данных, но переведенный текст для пользователя */}
+             {CITIES.map(c => <option key={c.value} value={c.value}>{t(c.key)}</option>)}
           </Select>
           <Textarea
-             header="Адрес или ссылка на карту"
-             placeholder="Ул. Амира Темура 10, либо ссылка https://yandex.ru/maps/..."
+             header={t('m_edit_address_header')}
+             placeholder={t('m_edit_address_placeholder')}
              value={address}
              onChange={(e) => setAddress(e.target.value)}
              onFocus={() => triggerHaptic('selection')}
@@ -369,7 +377,7 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
         </Section>
 
         {/* --- ПОРТФОЛИО --- */}
-        <Section header="Мое портфолио" footer="Загрузите фото ваших лучших работ (до 10 шт).">
+        <Section header={t('m_edit_portfolio_header')} footer={t('m_edit_portfolio_footer')}>
             <div style={{ padding: '16px', backgroundColor: 'var(--tg-theme-bg-color)' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
                     {portfolio.map(item => (
@@ -398,7 +406,7 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
                         {loadingPortfolio ? <Spinner size="m" /> : (
                             <>
                                <Icon28AddCircleOutline width={32} height={32} style={{ color: 'var(--tg-theme-hint-color)', marginBottom: 4 }} />
-                               <span style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)', fontWeight: 500 }}>Добавить</span>
+                               <span style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)', fontWeight: 500 }}>{t('m_edit_btn_add')}</span>
                             </>
                         )}
                         <input type="file" hidden accept="image/*" onChange={handlePortfolioUpload} disabled={loadingPortfolio} />
