@@ -5,16 +5,16 @@ import {
   Cell,
   Spinner,
   Placeholder,
-  Title,
-  Text
+  Title
 } from '@telegram-apps/telegram-ui';
 import {
   Icon28ClockOutline,
-  Icon28MoneyCircleOutline,
   Icon28UserOutline
 } from '@vkontakte/icons';
 import type { Service, Slot } from '../helpers/api';
 import { fetchSlotsForService } from '../helpers/api';
+
+import { useLanguage } from '../helpers/LanguageContext';
 
 type Props = {
   service: Service;
@@ -27,7 +27,6 @@ const groupSlotsByDateStr = (slots: Slot[]) => {
   const groups: Record<string, Slot[]> = {};
   slots.forEach((slot) => {
     const d = new Date(slot.time);
-    // Получаем локальную дату в формате YYYY-MM-DD для ключа
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
@@ -39,20 +38,18 @@ const groupSlotsByDateStr = (slots: Slot[]) => {
   return groups;
 };
 
-const DAYS_OF_WEEK = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-const MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
-
 export const SlotsScreen: React.FC<Props> = ({
   service,
   onBack,
   onSlotSelected,
 }) => {
+  const { t, lang } = useLanguage();
+
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-  // Подключение нативной кнопки Назад
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
     if (!tg) return;
@@ -75,7 +72,7 @@ export const SlotsScreen: React.FC<Props> = ({
       setSlots(freeSlots);
     } catch (e) {
       console.error(e);
-      setError('Не удалось загрузить расписание.');
+      setError(t('error_load_slots'));
     } finally {
       setLoading(false);
     }
@@ -83,12 +80,12 @@ export const SlotsScreen: React.FC<Props> = ({
 
   useEffect(() => {
     load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [service.id]);
 
   const groupedSlots = useMemo(() => groupSlotsByDateStr(slots), [slots]);
   const availableDates = useMemo(() => Object.keys(groupedSlots).sort(), [groupedSlots]);
 
-  // Автоматически выбираем первую доступную дату при загрузке
   useEffect(() => {
       if (availableDates.length > 0 && !selectedDate) {
           setSelectedDate(availableDates[0]);
@@ -118,12 +115,12 @@ export const SlotsScreen: React.FC<Props> = ({
       {/* ИНФОРМАЦИЯ ОБ УСЛУГЕ */}
       <div style={{ paddingTop: 16 }}>
           <List>
-            <Section header="ВЫБРАННАЯ УСЛУГА">
+            <Section header={t('selected_service')}>
               <Cell
                  subtitle={service.description}
                  after={
                    <span style={{ fontWeight: 600, color: 'var(--tg-theme-text-color)' }}>
-                     {service.price ? `${service.price.toLocaleString('ru-RU')} UZS` : ''}
+                     {service.price ? `${service.price.toLocaleString('ru-RU')} UZS` : t('free')}
                    </span>
                  }
               >
@@ -131,12 +128,12 @@ export const SlotsScreen: React.FC<Props> = ({
               </Cell>
               {service.master_name && (
                 <Cell before={<Icon28UserOutline style={{ color: 'var(--tg-theme-button-color)' }}/>}>
-                  Мастер: {service.master_name}
+                  {t('master_label')} {service.master_name}
                 </Cell>
               )}
               {service.duration && (
                 <Cell before={<Icon28ClockOutline style={{ color: 'var(--tg-theme-button-color)' }}/>}>
-                  Длительность: {service.duration} мин
+                  {t('duration_label')} {service.duration} {t('min')}
                 </Cell>
               )}
             </Section>
@@ -149,20 +146,20 @@ export const SlotsScreen: React.FC<Props> = ({
         </div>
       ) : error ? (
         <div style={{ marginTop: 20 }}>
-            <Placeholder header="Ошибка" description={error}>
+            <Placeholder header="Error" description={error}>
               <div
                   onClick={load}
                   style={{ color: 'var(--tg-theme-button-color)', fontWeight: 500, cursor: 'pointer', padding: '10px 20px', backgroundColor: 'var(--tg-theme-bg-color)', borderRadius: 8 }}
               >
-                  Повторить
+                  {t('retry')}
               </div>
             </Placeholder>
         </div>
       ) : availableDates.length === 0 ? (
         <div style={{ marginTop: 20 }}>
             <Placeholder
-              header="Нет свободного времени"
-              description="К сожалению, на эту услугу пока нет свободных слотов. Попробуйте выбрать другого мастера."
+              header={t('no_free_time_header')}
+              description={t('no_free_time_desc')}
             >
                <div style={{ fontSize: 48 }}>🗓️</div>
             </Placeholder>
@@ -171,7 +168,7 @@ export const SlotsScreen: React.FC<Props> = ({
         <div style={{ marginTop: 24 }}>
 
           <Title level="3" weight="2" style={{ marginLeft: 16, marginBottom: 12, color: 'var(--tg-theme-hint-color)', textTransform: 'uppercase', fontSize: 13, letterSpacing: '0.5px' }}>
-              Выберите дату
+              {t('choose_date')}
           </Title>
 
           {/* ГОРИЗОНТАЛЬНЫЙ КАЛЕНДАРЬ */}
@@ -185,9 +182,10 @@ export const SlotsScreen: React.FC<Props> = ({
           }}>
              {availableDates.map(dateStr => {
                  const d = new Date(dateStr);
-                 const dayOfWeek = DAYS_OF_WEEK[d.getDay()];
+                 // Берем переводы дней недели и месяцев из словаря
+                 const dayOfWeek = t(`day_${d.getDay()}`);
                  const dayOfMonth = d.getDate();
-                 const monthName = MONTHS[d.getMonth()];
+                 const monthName = t(`month_${d.getMonth()}`);
                  const isSelected = selectedDate === dateStr;
 
                  return (
@@ -230,7 +228,7 @@ export const SlotsScreen: React.FC<Props> = ({
           {selectedDate && groupedSlots[selectedDate] && (
               <div style={{ marginTop: 16 }}>
                  <Title level="3" weight="2" style={{ marginLeft: 16, marginBottom: 12, color: 'var(--tg-theme-hint-color)', textTransform: 'uppercase', fontSize: 13, letterSpacing: '0.5px' }}>
-                    Доступное время
+                    {t('available_time')}
                  </Title>
 
                  <div style={{
@@ -240,9 +238,12 @@ export const SlotsScreen: React.FC<Props> = ({
                      padding: '0 16px'
                  }}>
                     {groupedSlots[selectedDate].map(slot => {
-                        const timeStr = new Date(slot.time).toLocaleTimeString('ru-RU', {
+                        // Форматируем время с учетом текущей локали (хотя для часов/минут это не критично)
+                        const localeForTime = lang === 'uz' ? 'uz-UZ' : (lang === 'en' ? 'en-US' : 'ru-RU');
+                        const timeStr = new Date(slot.time).toLocaleTimeString(localeForTime, {
                             hour: '2-digit',
-                            minute: '2-digit'
+                            minute: '2-digit',
+                            hour12: false // Принудительно 24-часовой формат для всех
                         });
 
                         return (

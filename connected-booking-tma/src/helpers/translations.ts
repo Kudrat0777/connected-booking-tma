@@ -107,6 +107,21 @@ export const translations: TranslationsDictionary = {
     services_of_master: "Services of master:",
     all_services: "All services",
     free: "Free",
+
+    // === Slots Screen ===
+    selected_service: "SELECTED SERVICE",
+    master_label: "Master:",
+    duration_label: "Duration:",
+    error_load_slots: "Failed to load schedule.",
+    no_free_time_header: "No free time",
+    no_free_time_desc: "Unfortunately, there are no free slots for this service yet. Try choosing another master.",
+    choose_date: "CHOOSE DATE",
+    available_time: "AVAILABLE TIME",
+
+    // Days & Months
+    day_0: "Sun", day_1: "Mon", day_2: "Tue", day_3: "Wed", day_4: "Thu", day_5: "Fri", day_6: "Sat",
+    month_0: "January", month_1: "February", month_2: "March", month_3: "April", month_4: "May", month_5: "June",
+    month_6: "July", month_7: "August", month_8: "September", month_9: "October", month_10: "November", month_11: "December"
   },
   ru: {
     // Welcome Screen (Client)
@@ -210,6 +225,21 @@ export const translations: TranslationsDictionary = {
     services_of_master: "Услуги мастера:",
     all_services: "Все услуги",
     free: "Бесплатно",
+
+    // === Slots Screen ===
+    selected_service: "ВЫБРАННАЯ УСЛУГА",
+    master_label: "Мастер:",
+    duration_label: "Длительность:",
+    error_load_slots: "Не удалось загрузить расписание.",
+    no_free_time_header: "Нет свободного времени",
+    no_free_time_desc: "К сожалению, на эту услугу пока нет свободных слотов. Попробуйте выбрать другого мастера.",
+    choose_date: "ВЫБЕРИТЕ ДАТУ",
+    available_time: "ДОСТУПНОЕ ВРЕМЯ",
+
+    // Days & Months
+    day_0: "Вс", day_1: "Пн", day_2: "Вт", day_3: "Ср", day_4: "Чт", day_5: "Пт", day_6: "Сб",
+    month_0: "января", month_1: "февраля", month_2: "марта", month_3: "апреля", month_4: "мая", month_5: "июня",
+    month_6: "июля", month_7: "августа", month_8: "сентября", month_9: "октября", month_10: "ноября", month_11: "декабря"
   },
   uz: {
     // Welcome Screen (Client)
@@ -313,5 +343,20 @@ export const translations: TranslationsDictionary = {
     services_of_master: "Usta xizmatlari:",
     all_services: "Barcha xizmatlar",
     free: "Bepul",
+
+    // === Slots Screen ===
+    selected_service: "TANLANGAN XIZMAT",
+    master_label: "Usta:",
+    duration_label: "Davomiyligi:",
+    error_load_slots: "Jadvalni yuklab bo'lmadi.",
+    no_free_time_header: "Bo'sh vaqt yo'q",
+    no_free_time_desc: "Afsuski, ushbu xizmat uchun hozircha bo'sh vaqt yo'q. Boshqa ustani tanlashga harakat qiling.",
+    choose_date: "SANANI TANLANG",
+    available_time: "MAVJUD VAQT",
+
+    // Days & Months
+    day_0: "Yak", day_1: "Dush", day_2: "Sesh", day_3: "Chor", day_4: "Pay", day_5: "Jum", day_6: "Shan",
+    month_0: "Yanvar", month_1: "Fevral", month_2: "Mart", month_3: "Aprel", month_4: "May", month_5: "Iyun",
+    month_6: "Iyul", month_7: "Avgust", month_8: "Sentabr", month_9: "Oktyabr", month_10: "Noyabr", month_11: "Dekabr"
   }
 };
