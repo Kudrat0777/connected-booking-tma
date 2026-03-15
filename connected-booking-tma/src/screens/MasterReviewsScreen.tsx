@@ -14,7 +14,8 @@ import lottie from 'lottie-web';
 
 import { fetchMasterReviews, Review } from '../helpers/api';
 
-// --- Компонент для Lottie анимации ---
+import { useLanguage } from '../helpers/LanguageContext';
+
 const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
   const container = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -39,6 +40,8 @@ type Props = {
 };
 
 export const MasterReviewsScreen: React.FC<Props> = ({ telegramId, onBack }) => {
+  const { t, lang } = useLanguage();
+
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -76,6 +79,20 @@ export const MasterReviewsScreen: React.FC<Props> = ({ telegramId, onBack }) => 
     ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
     : "0.0";
 
+  // Локализуем дату
+  const localeForDate = lang === 'uz' ? 'uz-UZ' : (lang === 'en' ? 'en-US' : 'ru-RU');
+
+  // Формируем текст "На основе Х оценок"
+  let ratingsText = '';
+  if (lang === 'uz') {
+      // 5 ta baho asosida
+      ratingsText = `${reviews.length} ${t('m_reviews_ratings_many')} ${t('m_reviews_based_on').toLowerCase()}`;
+  } else {
+      // Based on 5 ratings / На основе 5 оценок
+      const ratingWord = reviews.length === 1 ? t('m_reviews_ratings_1') : t('m_reviews_ratings_many');
+      ratingsText = `${t('m_reviews_based_on')} ${reviews.length} ${ratingWord}`;
+  }
+
   return (
     <div style={{ backgroundColor: 'var(--tg-theme-secondary-bg-color)', minHeight: '100vh', paddingBottom: 60 }}>
 
@@ -86,15 +103,15 @@ export const MasterReviewsScreen: React.FC<Props> = ({ telegramId, onBack }) => 
       ) : reviews.length === 0 ? (
         <div style={{ paddingTop: 60 }}>
             <Placeholder
-              header="Нет отзывов"
-              description="Здесь появятся оценки и комментарии от ваших клиентов."
+              header={t('m_reviews_no_reviews')}
+              description={t('m_reviews_no_reviews_desc')}
             >
                <LottieIcon src="/stickers/duck_out.json" size={140} />
             </Placeholder>
         </div>
       ) : (
         <>
-          {/* Б��ок с общим рейтингом (Стиль App Store) */}
+          {/* Бок с общим рейтингом (Стиль App Store) */}
           <div style={{
               padding: '40px 20px 32px',
               textAlign: 'center',
@@ -106,7 +123,7 @@ export const MasterReviewsScreen: React.FC<Props> = ({ telegramId, onBack }) => 
                 <Icon28Favorite style={{ color: '#FF9500', width: 44, height: 44 }} />
              </Title>
              <Text style={{ color: 'var(--tg-theme-hint-color)', fontSize: 15, marginTop: 8, display: 'block' }}>
-                На основе {reviews.length} {reviews.length === 1 ? 'оценки' : 'оценок'}
+                {ratingsText}
              </Text>
           </div>
 
@@ -138,14 +155,14 @@ export const MasterReviewsScreen: React.FC<Props> = ({ telegramId, onBack }) => 
 
                          {/* Дата */}
                          <span style={{ fontSize: 12, color: 'var(--tg-theme-hint-color)', marginTop: 4, fontWeight: 500 }}>
-                            {new Date(r.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+                            {new Date(r.created_at).toLocaleDateString(localeForDate, { day: 'numeric', month: 'long', year: 'numeric' })}
                          </span>
                       </div>
                    }
                    multiline
                 >
                    <span style={{ fontWeight: 600, fontSize: 16, color: 'var(--tg-theme-text-color)' }}>
-                       {r.author_name || 'Клиент'}
+                       {r.author_name || t('m_reviews_client')}
                    </span>
                 </Cell>
               </Section>

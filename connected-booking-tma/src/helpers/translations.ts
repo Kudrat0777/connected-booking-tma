@@ -330,6 +330,14 @@ export const translations: TranslationsDictionary = {
     m_popular_services: "Popular services",
     m_bookings_count: "bookings",
 
+    // === Master Reviews Screen ===
+    m_reviews_no_reviews: "No reviews",
+    m_reviews_no_reviews_desc: "Ratings and comments from your clients will appear here.",
+    m_reviews_based_on: "Based on",
+    m_reviews_ratings_1: "rating",
+    m_reviews_ratings_many: "ratings",
+    m_reviews_client: "Client",
+
   },
   ru: {
     // Welcome Screen (Client)
@@ -656,6 +664,13 @@ export const translations: TranslationsDictionary = {
     m_popular_services: "Популярные услуги",
     m_bookings_count: "записей",
 
+    // === Master Reviews Screen ===
+    m_reviews_no_reviews: "Нет отзывов",
+    m_reviews_no_reviews_desc: "Здесь появятся оценки и комментарии от ваших клиентов.",
+    m_reviews_based_on: "На основе",
+    m_reviews_ratings_1: "оценки",
+    m_reviews_ratings_many: "оценок",
+    m_reviews_client: "Клиент",
   },
   uz: {
     // Welcome Screen (Client)
@@ -981,5 +996,13 @@ export const translations: TranslationsDictionary = {
     m_bookings_canceled: "yozuv bekor qilindi",
     m_popular_services: "Mashhur xizmatlar",
     m_bookings_count: "yozuv",
+
+    // === Master Reviews Screen ===
+    m_reviews_no_reviews: "Sharhlar yo'q",
+    m_reviews_no_reviews_desc: "Mijozlaringizning baholari va izohlari bu yerda paydo bo'ladi.",
+    m_reviews_based_on: "Asosida",
+    m_reviews_ratings_1: "ta baho",
+    m_reviews_ratings_many: "ta baho",
+    m_reviews_client: "Mijoz",
   }
 };
