@@ -74,7 +74,31 @@ export const translations: TranslationsDictionary = {
     city_tashkent: "Tashkent",
     city_samarkand: "Samarkand",
     city_bukhara: "Bukhara",
-    city_khiva: "Khiva"
+    city_khiva: "Khiva",
+
+    // Master Public Profile Screen ===
+    master_not_found: "Master not found",
+    master_not_found_desc: "The link might be expired or the master deleted their profile.",
+    to_main_page: "Go to Main",
+    city_not_specified: "City not specified",
+    open: "Open",
+    closed: "Closed",
+    until: "until",
+    opens_at: "opens at",
+    reviews: "reviews",
+    experience: "Experience",
+    experience_beginner: "Beginner",
+    experience_years_1: "year",
+    experience_years_24: "years",
+    experience_years_5: "years",
+    contacts_header: "Contacts",
+    click_to_call: "Click to call",
+    open_in_map: "Open in map",
+    services_and_prices: "Services & Prices",
+    min: "min",
+    about_me: "About me",
+    portfolio_header: "Portfolio",
+    btn_online_booking: "BOOK ONLINE"
   },
   ru: {
     // Welcome Screen (Client)
@@ -145,7 +169,31 @@ export const translations: TranslationsDictionary = {
     city_tashkent: "Ташкент",
     city_samarkand: "Самарканд",
     city_bukhara: "Бухара",
-    city_khiva: "Хива"
+    city_khiva: "Хива",
+
+    // Master Public Profile Screen ===
+    master_not_found: "Мастер не найден",
+    master_not_found_desc: "Возможно, ссылка устарела или мастер удалил свой профиль.",
+    to_main_page: "На главную",
+    city_not_specified: "Город не указан",
+    open: "Открыто",
+    closed: "Закрыто",
+    until: "до",
+    opens_at: "откроется в",
+    reviews: "отзывов",
+    experience: "Опыт работы",
+    experience_beginner: "Новичок",
+    experience_years_1: "год",
+    experience_years_24: "года",
+    experience_years_5: "лет",
+    contacts_header: "Контакты",
+    click_to_call: "Нажмите, чтобы позвонить",
+    open_in_map: "Открыть на карте",
+    services_and_prices: "Услуги и цены",
+    min: "мин",
+    about_me: "Обо мне",
+    portfolio_header: "Примеры работ",
+    btn_online_booking: "ОНЛАЙН-ЗАПИСЬ"
   },
   uz: {
     // Welcome Screen (Client)
@@ -216,6 +264,30 @@ export const translations: TranslationsDictionary = {
     city_tashkent: "Toshkent",
     city_samarkand: "Samarqand",
     city_bukhara: "Buxoro",
-    city_khiva: "Xiva"
+    city_khiva: "Xiva",
+
+    // Master Public Profile Screen ===
+    master_not_found: "Usta topilmadi",
+    master_not_found_desc: "Ehtimol, havola eskirgan yoki usta o'z profilini o'chirib tashlagan.",
+    to_main_page: "Asosiy sahifaga",
+    city_not_specified: "Shahar ko'rsatilmagan",
+    open: "Ochiq",
+    closed: "Yopiq",
+    until: "gacha",
+    opens_at: "ochiladi",
+    reviews: "sharhlar",
+    experience: "Tajriba",
+    experience_beginner: "Boshlovchi",
+    experience_years_1: "yil",
+    experience_years_24: "yil",
+    experience_years_5: "yil",
+    contacts_header: "Aloqa",
+    click_to_call: "Qo'ng'iroq qilish uchun bosing",
+    open_in_map: "Xaritada ochish",
+    services_and_prices: "Xizmatlar va narxlar",
+    min: "daq",
+    about_me: "Men haqimda",
+    portfolio_header: "Ish namunalari",
+    btn_online_booking: "ONLAYN YOZILISH"
   }
 };

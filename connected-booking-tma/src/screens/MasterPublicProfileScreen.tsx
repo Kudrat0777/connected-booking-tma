@@ -19,10 +19,12 @@ import {
 } from '@vkontakte/icons';
 import lottie from 'lottie-web';
 
-// Возвращаем импорт fetchMasterById
 import { fetchMasterProfile, fetchMasterById, fetchPortfolio, fetchServices, getFullImageUrl } from '../helpers/api';
 import type { MasterPublicProfile, PortfolioItem, Service } from '../helpers/api';
 import { ReviewsListScreen } from './ReviewsListScreen';
+
+// ИМПОРТИРУЕМ ХУК ЛОКАЛИЗАЦИИ
+import { useLanguage } from '../helpers/LanguageContext';
 
 const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
   const container = useRef<HTMLDivElement>(null);
@@ -49,17 +51,10 @@ type Props = {
   onServiceClick?: (service: Service) => void;
 };
 
-const formatExperience = (years?: number) => {
-    if (!years) return 'Новичок';
-    const lastDigit = years % 10;
-    const lastTwo = years % 100;
-    if (lastTwo >= 11 && lastTwo <= 14) return `${years} лет`;
-    if (lastDigit === 1) return `${years} год`;
-    if (lastDigit >= 2 && lastDigit <= 4) return `${years} года`;
-    return `${years} лет`;
-};
-
 export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, onBook, onServiceClick }) => {
+  // ПОДКЛЮЧАЕМ ПЕРЕВОДЫ
+  const { t } = useLanguage();
+
   const [master, setMaster] = useState<MasterPublicProfile | null>(null);
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -69,6 +64,17 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
   const [isReviewsModalOpen, setIsReviewsModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
+  // Функция форматирования опыта работы с учетом перевода
+  const formatExperience = (years?: number) => {
+    if (!years) return t('experience_beginner');
+    const lastDigit = years % 10;
+    const lastTwo = years % 100;
+    if (lastTwo >= 11 && lastTwo <= 14) return `${years} ${t('experience_years_5')}`;
+    if (lastDigit === 1) return `${years} ${t('experience_years_1')}`;
+    if (lastDigit >= 2 && lastDigit <= 4) return `${years} ${t('experience_years_24')}`;
+    return `${years} ${t('experience_years_5')}`;
+  };
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -76,9 +82,6 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
       try {
         let masterData = null;
 
-        // УМНАЯ ПРОВЕРКА:
-        // Если ID огромный (пришел из диплинка) — ищем по telegram_id
-        // Если ID маленький (кликнули в списке) — ищем по внутреннему ID базы данных
         if (masterId > 1000000) {
             masterData = await fetchMasterProfile(masterId);
         } else {
@@ -147,7 +150,7 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
         tg.MainButton.hide();
     } else {
         tg.MainButton.setParams({
-            text: 'ОНЛАЙН-ЗАПИСЬ',
+            text: t('btn_online_booking'), // ПЕРЕВОД КНОПКИ
             color: tg.themeParams?.button_color || '#3390ec',
             text_color: tg.themeParams?.button_text_color || '#ffffff',
             is_active: true,
@@ -163,7 +166,7 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
       tg.MainButton.offClick(handleBook);
       tg.MainButton.hide();
     };
-  }, [loading, master, error, onBack, onBook, isReviewsModalOpen, selectedImage]);
+  }, [loading, master, error, onBack, onBook, isReviewsModalOpen, selectedImage, t]);
 
   if (loading) {
     return (
@@ -177,9 +180,9 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
       return (
           <div style={{ backgroundColor: 'var(--tg-theme-bg-color)', minHeight: '100vh', paddingTop: 80 }}>
               <Placeholder
-                  header="Мастер не найден"
-                  description="Возможно, ссылка устарела или мастер удалил свой профиль."
-                  action={<Button size="l" stretched onClick={onBack}>На главную</Button>}
+                  header={t('master_not_found')}
+                  description={t('master_not_found_desc')}
+                  action={<Button size="l" stretched onClick={onBack}>{t('to_main_page')}</Button>}
               >
                   <LottieIcon src="/stickers/duck_out.json" size={140} />
               </Placeholder>
@@ -221,14 +224,14 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
         <Title level="1" weight="2" style={{ marginBottom: 6, color: 'var(--tg-theme-text-color)' }}>{master.name}</Title>
 
         <Text style={{ color: 'var(--tg-theme-hint-color)', fontSize: 15, marginBottom: 10, textAlign: 'center', padding: '0 16px' }}>
-            {master.city || 'Город не указан'}
+            {master.city || t('city_not_specified')}
             {master.address && !isAddressLink ? `, ${master.address}` : ''}
         </Text>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 500, backgroundColor: 'var(--tg-theme-secondary-bg-color)', padding: '6px 12px', borderRadius: 20 }}>
              <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: isOpen ? '#34C759' : '#FF3B30' }} />
-             <span style={{ color: isOpen ? '#34C759' : '#FF3B30' }}>{isOpen ? 'Открыто' : 'Закрыто'}</span>
-             <span style={{ color: 'var(--tg-theme-hint-color)', fontWeight: 400 }}>• {isOpen ? 'до 20:00' : 'откроется в 10:00'}</span>
+             <span style={{ color: isOpen ? '#34C759' : '#FF3B30' }}>{isOpen ? t('open') : t('closed')}</span>
+             <span style={{ color: 'var(--tg-theme-hint-color)', fontWeight: 400 }}>• {isOpen ? `${t('until')} 20:00` : `${t('opens_at')} 10:00`}</span>
         </div>
 
         <div style={{
@@ -252,7 +255,7 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
                   {master.rating > 0 ? master.rating.toFixed(1) : '5.0'}
               </span>
               <span style={{ fontSize: 13, color: 'var(--tg-theme-link-color)', marginTop: '2px', fontWeight: 500 }}>
-                  {master.reviews_count} отзывов ›
+                  {master.reviews_count} {t('reviews')} ›
               </span>
           </div>
 
@@ -263,19 +266,19 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
               <span style={{ fontWeight: 'bold', fontSize: 16, color: 'var(--tg-theme-text-color)' }}>
                   {formatExperience((master as any).experience_years)}
               </span>
-              <span style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)', marginTop: '2px' }}>Опыт работы</span>
+              <span style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)', marginTop: '2px' }}>{t('experience')}</span>
           </div>
         </div>
       </div>
 
       <List style={{ padding: '0 16px', marginTop: 16, marginBottom: 16 }}>
         {(master.phone || master.address) && (
-             <Section header="Контакты">
+             <Section header={t('contacts_header')}>
                 {master.phone && (
                     <Cell
-                       before={<div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28PhoneOutline width={24} height={24} style={{ color: '#007AFF'}} /></div>}
+                       before={<div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28PhoneOutline width={24} height={24} style={{ color: '#007AFF' }} /></div>}
                        onClick={() => { triggerHaptic('selection'); window.location.href=`tel:${master.phone}`; }}
-                       description="Нажмите, чтобы позвонить"
+                       description={t('click_to_call')}
                     >
                        <span style={{ fontWeight: 500 }}>{master.phone}</span>
                     </Cell>
@@ -283,14 +286,14 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
                 {master.address && (
                     isAddressLink ? (
                        <Cell
-                          before={<div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(52, 199, 89, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon24LocationOutline width={24} height={24} style={{ color: '#34C759'}} /></div>}
+                          before={<div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(52, 199, 89, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon24LocationOutline width={24} height={24} style={{ color: '#34C759' }} /></div>}
                           onClick={() => { triggerHaptic('selection'); window.open(master.address, '_blank'); }}
                        >
-                          <span style={{ color: 'var(--tg-theme-link-color)', fontWeight: 500 }}>Открыть на карте</span>
+                          <span style={{ color: 'var(--tg-theme-link-color)', fontWeight: 500 }}>{t('open_in_map')}</span>
                        </Cell>
                     ) : (
                        <Cell
-                          before={<div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(255, 149, 0, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon24LocationOutline width={24} height={24} style={{ color: '#FF9500'}} /></div>}
+                          before={<div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(255, 149, 0, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon24LocationOutline width={24} height={24} style={{ color: '#FF9500' }} /></div>}
                           multiline
                        >
                           <span style={{ fontWeight: 500 }}>{master.address}</span>
@@ -301,7 +304,7 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
         )}
 
         {services.length > 0 && (
-            <Section header="Услуги и цены">
+            <Section header={t('services_and_prices')}>
                {services.map(s => (
                   <Cell
                      key={s.id}
@@ -309,7 +312,7 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
                         triggerHaptic('selection');
                         onServiceClick?.(s);
                      }}
-                     subtitle={s.description ? `${s.duration} мин • ${s.description}` : `${s.duration} мин`}
+                     subtitle={s.description ? `${s.duration} ${t('min')} • ${s.description}` : `${s.duration} ${t('min')}`}
                      after={
                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                          <span style={{ fontWeight: 600, color: 'var(--tg-theme-text-color)' }}>
@@ -327,7 +330,7 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
         )}
 
         {master.bio && (
-            <Section header="Обо мне">
+            <Section header={t('about_me')}>
                 <div style={{ padding: '12px 16px', backgroundColor: 'var(--tg-theme-bg-color)' }}>
                     <Text style={{ lineHeight: '1.5', color: 'var(--tg-theme-text-color)', fontSize: 15 }}>
                         {master.bio}
@@ -337,7 +340,7 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
         )}
 
         {portfolio.length > 0 && (
-            <Section header="Примеры работ">
+            <Section header={t('portfolio_header')}>
                 <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, backgroundColor: 'var(--tg-theme-bg-color)' }}>
                     {portfolio.slice(0, 6).map(item => {
                         const imgUrl = getFullImageUrl(item.image_url);
@@ -383,7 +386,7 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
                   setSelectedImage(null);
               }}
           >
-              <div style={{ position: 'absolute', top: 20, right: 20, width: 40, height: 40, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <div style={{ position: 'absolute', top: 20, right: 20, width: 40, height: 40, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M18 6L6 18" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                       <path d="M6 6L18 18" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
