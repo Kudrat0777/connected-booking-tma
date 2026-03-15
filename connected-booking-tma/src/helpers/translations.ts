@@ -121,7 +121,18 @@ export const translations: TranslationsDictionary = {
     // Days & Months
     day_0: "Sun", day_1: "Mon", day_2: "Tue", day_3: "Wed", day_4: "Thu", day_5: "Fri", day_6: "Sat",
     month_0: "January", month_1: "February", month_2: "March", month_3: "April", month_4: "May", month_5: "June",
-    month_6: "July", month_7: "August", month_8: "September", month_9: "October", month_10: "November", month_11: "December"
+    month_6: "July", month_7: "August", month_8: "September", month_9: "October", month_10: "November", month_11: "December",
+
+    // === Booking Confirm Screen ===
+    confirm_btn: "CONFIRM BOOKING",
+    error_slot_taken: "Unfortunately, this time is already taken. Please choose another one.",
+    error_booking: "Error creating booking.",
+    check_details_title: "Check details",
+    check_details_desc: "You are almost booked! Check the booking details below.",
+    booking_details_header: "BOOKING DETAILS",
+    date_and_time: "Date and time",
+    at_time: "at", // e.g. Monday at 14:00
+    cost: "Cost"
   },
   ru: {
     // Welcome Screen (Client)
@@ -239,7 +250,18 @@ export const translations: TranslationsDictionary = {
     // Days & Months
     day_0: "Вс", day_1: "Пн", day_2: "Вт", day_3: "Ср", day_4: "Чт", day_5: "Пт", day_6: "Сб",
     month_0: "января", month_1: "февраля", month_2: "марта", month_3: "апреля", month_4: "мая", month_5: "июня",
-    month_6: "июля", month_7: "августа", month_8: "сентября", month_9: "октября", month_10: "ноября", month_11: "декабря"
+    month_6: "июля", month_7: "августа", month_8: "сентября", month_9: "октября", month_10: "ноября", month_11: "декабря",
+
+    // === Booking Confirm Screen ===
+    confirm_btn: "ПОДТВЕРДИТЬ ЗАПИСЬ",
+    error_slot_taken: "К сожалению, это время уже заняли. Пожалуйста, выберите другое.",
+    error_booking: "Ошибка при создании брони.",
+    check_details_title: "Проверьте данные",
+    check_details_desc: "Вы почти записаны! Проверьте детали бронирования ниже.",
+    booking_details_header: "ДЕТАЛИ ЗАПИСИ",
+    date_and_time: "Дата и время",
+    at_time: "в",
+    cost: "Стоимость",
   },
   uz: {
     // Welcome Screen (Client)
@@ -357,6 +379,17 @@ export const translations: TranslationsDictionary = {
     // Days & Months
     day_0: "Yak", day_1: "Dush", day_2: "Sesh", day_3: "Chor", day_4: "Pay", day_5: "Jum", day_6: "Shan",
     month_0: "Yanvar", month_1: "Fevral", month_2: "Mart", month_3: "Aprel", month_4: "May", month_5: "Iyun",
-    month_6: "Iyul", month_7: "Avgust", month_8: "Sentabr", month_9: "Oktyabr", month_10: "Noyabr", month_11: "Dekabr"
+    month_6: "Iyul", month_7: "Avgust", month_8: "Sentabr", month_9: "Oktyabr", month_10: "Noyabr", month_11: "Dekabr",
+
+    // === Booking Confirm Screen ===
+    confirm_btn: "YOZUVNI TASDIQLASH",
+    error_slot_taken: "Afsuski, bu vaqt band qilingan. Boshqa vaqtni tanlang.",
+    error_booking: "Yozuvni yaratishda xatolik.",
+    check_details_title: "Ma'lumotlarni tekshiring",
+    check_details_desc: "Siz deyarli yozildingiz! Quyida band qilish tafsilotlarini tekshiring.",
+    booking_details_header: "YOZUV TAFSILOTLARI",
+    date_and_time: "Sana va vaqt",
+    at_time: "soat",
+    cost: "Narxi"
   }
 };

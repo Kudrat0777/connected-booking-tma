@@ -8,6 +8,8 @@ import {
 } from '@vkontakte/icons';
 import { createBooking, Booking, Service, Slot } from '../helpers/api';
 
+import { useLanguage } from '../helpers/LanguageContext';
+
 type Props = {
   service: Service;
   slot: Slot;
@@ -23,6 +25,8 @@ export const BookingConfirmScreen: React.FC<Props> = ({
   onSuccess,
   user,
 }) => {
+  const { t, lang } = useLanguage();
+
   const isSubmittingRef = useRef(false);
   const onBackRef = useRef(onBack);
   const onSuccessRef = useRef(onSuccess);
@@ -33,9 +37,14 @@ export const BookingConfirmScreen: React.FC<Props> = ({
   }, [onBack, onSuccess]);
 
   const slotDate = new Date(slot.time);
-  const formattedDate = slotDate.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
-  const formattedTime = slotDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-  const priceText = service.price ? `${service.price.toLocaleString('ru-RU')} UZS` : 'Бесплатно';
+
+  // Локализуем дату в зависимости от выбранного языка
+  const localeForDate = lang === 'uz' ? 'uz-UZ' : (lang === 'en' ? 'en-US' : 'ru-RU');
+
+  const formattedDate = slotDate.toLocaleDateString(localeForDate, { weekday: 'long', day: 'numeric', month: 'long' });
+  const formattedTime = slotDate.toLocaleTimeString(localeForDate, { hour: '2-digit', minute: '2-digit', hour12: false });
+
+  const priceText = service.price ? `${service.price.toLocaleString('ru-RU')} UZS` : t('free');
 
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
@@ -66,8 +75,10 @@ export const BookingConfirmScreen: React.FC<Props> = ({
       } catch (e: any) {
         console.error(e);
         if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-        if (tg.showAlert) tg.showAlert('К сожалению, это время уже заняли. Пожалуйста, выберите другое.');
-        else alert('Ошибка при создании брони.');
+
+        // Переведенные алерты
+        if (tg.showAlert) tg.showAlert(t('error_slot_taken'));
+        else alert(t('error_booking'));
 
         isSubmittingRef.current = false;
         tg.MainButton.hideProgress();
@@ -82,7 +93,7 @@ export const BookingConfirmScreen: React.FC<Props> = ({
     const textColor = tg.themeParams?.button_text_color || '#ffffff';
 
     tg.MainButton.setParams({
-        text: `ПОДТВЕРДИТЬ ЗАПИСЬ • ${priceText}`,
+        text: `${t('confirm_btn')} • ${priceText}`,
         color: btnColor,
         text_color: textColor,
         is_active: true,
@@ -97,7 +108,7 @@ export const BookingConfirmScreen: React.FC<Props> = ({
       tg.MainButton.offClick(handleMainClick);
       tg.MainButton.hide();
     };
-  }, [priceText, service.name, slot.id, user]);
+  }, [priceText, service.name, slot.id, user, t]);
 
   return (
     <div style={{
@@ -113,49 +124,50 @@ export const BookingConfirmScreen: React.FC<Props> = ({
              fallbackIcon={<Icon28UserOutline width={44} height={44}/>}
              style={{
                  margin: '0 auto 16px',
-                 border: '3px solid var(--tg-theme-bg-color)', // Красивая обводка в цвет карточек
+                 border: '3px solid var(--tg-theme-bg-color)',
                  boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
              }}
           />
           <Text weight="1" style={{ fontSize: 24, display: 'block', marginBottom: 8, color: 'var(--tg-theme-text-color)' }}>
-              Проверьте данные
+              {t('check_details_title')}
           </Text>
           <Text style={{ color: 'var(--tg-theme-hint-color)', fontSize: 15 }}>
-              Вы почти записаны! Проверьте детали бронирования ниже.
+              {t('check_details_desc')}
           </Text>
       </div>
 
       {/* СПИСОК ДЕТАЛЕЙ */}
       <List style={{ padding: '0 16px' }}>
-        <Section header="ДЕТАЛИ ЗАПИСИ">
+        <Section header={t('booking_details_header')}>
           <Cell
              before={<Icon28CalendarOutline style={{ color: 'var(--tg-theme-button-color)' }}/>}
-             subtitle="Дата и время"
+             subtitle={t('date_and_time')}
           >
              <span style={{ fontWeight: 500 }}>
-                 {formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1)} в {formattedTime}
+                 {/* Формат: Пятница, 10 мая в 14:00 */}
+                 {formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1)} {t('at_time')} {formattedTime}
              </span>
           </Cell>
 
           <Cell
              before={<Icon28UserOutline style={{ color: 'var(--tg-theme-button-color)' }}/>}
-             subtitle="Мастер"
+             subtitle={t('master')}
           >
-             <span style={{ fontWeight: 500 }}>{service.master_name || 'Специалист'}</span>
+             <span style={{ fontWeight: 500 }}>{service.master_name || t('specialist')}</span>
           </Cell>
 
           <Cell
              before={<Icon28ClockOutline style={{ color: 'var(--tg-theme-button-color)' }}/>}
-             subtitle="Услуга"
+             subtitle={t('service')}
           >
              <span style={{ fontWeight: 500 }}>
-                 {service.name} {service.duration ? `(${service.duration} мин)` : ''}
+                 {service.name} {service.duration ? `(${service.duration} ${t('min')})` : ''}
              </span>
           </Cell>
 
           <Cell
              before={<Icon28MoneyCircleOutline style={{ color: 'var(--tg-theme-button-color)' }}/>}
-             subtitle="Стоимость"
+             subtitle={t('cost')}
           >
              <span style={{ fontWeight: 600, color: 'var(--tg-theme-text-color)' }}>{priceText}</span>
           </Cell>
