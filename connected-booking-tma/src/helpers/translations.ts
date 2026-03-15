@@ -59,7 +59,22 @@ export const translations: TranslationsDictionary = {
     status_confirmed: "Confirmed",
     status_pending: "Pending",
     status_rejected: "Canceled",
-    status_unknown: "Unknown"
+    status_unknown: "Unknown",
+
+    // Profile Screen (Main Tabbar & Search) ===
+    tab_bookings: "Bookings",
+    tab_masters: "Masters",
+    tab_settings: "Settings",
+    search_placeholder: "Search for a master or service...",
+    not_found_masters_header: "No one found",
+    not_found_masters_desc: "Try changing the city or search query",
+    recommended: "Recommended",
+    specialist: "Specialist",
+    city_urgench: "Urgench",
+    city_tashkent: "Tashkent",
+    city_samarkand: "Samarkand",
+    city_bukhara: "Bukhara",
+    city_khiva: "Khiva"
   },
   ru: {
     // Welcome Screen (Client)
@@ -115,7 +130,22 @@ export const translations: TranslationsDictionary = {
     status_confirmed: "Подтверждено",
     status_pending: "Ожидание",
     status_rejected: "Отменено",
-    status_unknown: "Неизвестно"
+    status_unknown: "Неизвестно",
+
+    // Profile Screen (Main Tabbar & Search) ===
+    tab_bookings: "Записи",
+    tab_masters: "Мастера",
+    tab_settings: "Настройки",
+    search_placeholder: "Поиск мастера или услуги...",
+    not_found_masters_header: "Никого не нашли",
+    not_found_masters_desc: "Попробуйте изменить город или поисковой запрос",
+    recommended: "Рекомендуемые",
+    specialist: "Специалист",
+    city_urgench: "Ургенч",
+    city_tashkent: "Ташкент",
+    city_samarkand: "Самарканд",
+    city_bukhara: "Бухара",
+    city_khiva: "Хива"
   },
   uz: {
     // Welcome Screen (Client)
@@ -171,6 +201,21 @@ export const translations: TranslationsDictionary = {
     status_confirmed: "Tasdiqlangan",
     status_pending: "Kutilmoqda",
     status_rejected: "Bekor qilingan",
-    status_unknown: "Noma'lum"
+    status_unknown: "Noma'lum",
+
+    // Profile Screen (Main Tabbar & Search) ===
+    tab_bookings: "Yozuvlar",
+    tab_masters: "Ustalar",
+    tab_settings: "Sozlamalar",
+    search_placeholder: "Usta yoki xizmatni qidiring...",
+    not_found_masters_header: "Hech kim topilmadi",
+    not_found_masters_desc: "Shaharni yoki qidiruv so'rovini o'zgartirib ko'ring",
+    recommended: "Tavsiya etilganlar",
+    specialist: "Mutaxassis",
+    city_urgench: "Urganch",
+    city_tashkent: "Toshkent",
+    city_samarkand: "Samarqand",
+    city_bukhara: "Buxoro",
+    city_khiva: "Xiva"
   }
 };

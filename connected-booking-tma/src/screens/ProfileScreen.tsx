@@ -22,6 +22,9 @@ import lottie from 'lottie-web';
 import { fetchMasters, getFullImageUrl } from '../helpers/api';
 import type { MasterPublicProfile, Booking } from '../helpers/api';
 
+// ИМПОРТИРУЕМ ХУК ЛОКАЛИЗАЦИИ
+import { useLanguage } from '../helpers/LanguageContext';
+
 const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
   const container = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -47,18 +50,9 @@ type Props = {
   initialTab?: MainTab;
   onBack: () => void;
   onLogout?: () => void;
-  // Используем onOpenMasterProfile для перехода в визитку мастера
   onOpenMasterProfile?: (masterId: number, masterName: string) => void;
   onReview?: (booking: Booking) => void;
 };
-
-const tabs: { id: MainTab; text: string; Icon: React.ComponentType<any> }[] = [
-  { id: 'bookings', text: 'Записи', Icon: Icon28CalendarOutline },
-  { id: 'masters', text: 'Мастера', Icon: Icon28UserStarBadgeOutline },
-  { id: 'settings', text: 'Настройки', Icon: Icon28SettingsOutline },
-];
-
-const CITIES = ['Ургенч', 'Ташкент', 'Самарканд', 'Бухара', 'Хива'];
 
 export const ProfileScreen: React.FC<Props> = ({
   telegramId,
@@ -68,15 +62,32 @@ export const ProfileScreen: React.FC<Props> = ({
   onOpenMasterProfile,
   onReview,
 }) => {
+  const { t } = useLanguage();
+
+  const tabs: { id: MainTab; text: string; Icon: React.ComponentType<any> }[] = [
+    { id: 'bookings', text: t('tab_bookings'), Icon: Icon28CalendarOutline },
+    { id: 'masters', text: t('tab_masters'), Icon: Icon28UserStarBadgeOutline },
+    { id: 'settings', text: t('tab_settings'), Icon: Icon28SettingsOutline },
+  ];
+
+  const CITIES = [
+    { key: 'city_urgench', value: 'Ургенч' },
+    { key: 'city_tashkent', value: 'Ташкент' },
+    { key: 'city_samarkand', value: 'Самарканд' },
+    { key: 'city_bukhara', value: 'Бухара' },
+    { key: 'city_khiva', value: 'Хива' }
+  ];
+
   const [currentTab, setCurrentTab] = useState<MainTab>(initialTab);
   const [masters, setMasters] = useState<MasterPublicProfile[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [search, setSearch] = useState<string>('');
-  const [selectedCity, setSelectedCity] = useState<string>('Ургенч');
+  // В стейте храним "value" города, чтобы бэкенд понимал запрос (если бэкенд не мультиязычный)
+  const [selectedCityValue, setSelectedCityValue] = useState<string>('Ургенч');
   const [debounceTimeout, setDebounceTimeout] = useState<NodeJS.Timeout | null>(null);
 
-  // Прячем нативные кнопки на главном экране
+  // Пря��ем нативные кнопки на главном экране
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
     if (!tg) return;
@@ -91,7 +102,7 @@ export const ProfileScreen: React.FC<Props> = ({
         setLoading(true);
         fetchMasters({
             search: search.trim() !== '' ? search.trim() : undefined,
-            city: selectedCity,
+            city: selectedCityValue, // Отправляем на бэк русское название
             ordering: 'rating'
         })
           .then(setMasters)
@@ -102,22 +113,28 @@ export const ProfileScreen: React.FC<Props> = ({
     }
     return () => { if (debounceTimeout) clearTimeout(debounceTimeout); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentTab, search, selectedCity]);
+  }, [currentTab, search, selectedCityValue]);
 
   const groupedMasters = useMemo(() => {
     const groups: Record<string, MasterPublicProfile[]> = {};
     masters.forEach(m => {
-        const cat = (m as any).specialization || 'Рекомендуемые';
+        const cat = (m as any).specialization || t('recommended');
         if (!groups[cat]) groups[cat] = [];
         groups[cat].push(m);
     });
     return groups;
-  }, [masters]);
+  }, [masters, t]);
 
   const triggerHaptic = () => {
     const tg = (window as any).Telegram?.WebApp;
     if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
   };
+
+  // Получаем локализованное название выбранного города для отображения
+  const selectedCityLabel = useMemo(() => {
+      const cityObj = CITIES.find(c => c.value === selectedCityValue);
+      return cityObj ? t(cityObj.key) : selectedCityValue;
+  }, [selectedCityValue, t]);
 
   const renderMastersContent = () => (
     <div style={{
@@ -147,7 +164,7 @@ export const ProfileScreen: React.FC<Props> = ({
             <Icon24Search style={{ color: 'var(--tg-theme-hint-color)', marginRight: '8px' }} />
             <input
               type="text"
-              placeholder="Поиск мастера или услуги..."
+              placeholder={t('search_placeholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{
@@ -161,7 +178,7 @@ export const ProfileScreen: React.FC<Props> = ({
             />
         </div>
 
-        {/* Выбор города (Прижат вправо) */}
+        {/* Выбор города */}
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <div style={{
               position: 'relative',
@@ -173,13 +190,13 @@ export const ProfileScreen: React.FC<Props> = ({
               fontWeight: 500
           }}>
              <Icon24LocationOutline width={18} height={18} />
-             <span>{selectedCity}</span>
+             <span>{selectedCityLabel}</span>
              <Icon28ChevronRightOutline width={16} height={16} style={{ transform: 'rotate(90deg)', marginTop: '2px' }} />
 
-             {/* Невидимый нативный селект поверх текста */}
+             {/* Невидимый нативный селект */}
              <select
-                value={selectedCity}
-                onChange={(e) => { triggerHaptic(); setSelectedCity(e.target.value); }}
+                value={selectedCityValue}
+                onChange={(e) => { triggerHaptic(); setSelectedCityValue(e.target.value); }}
                 style={{
                     position: 'absolute',
                     top: 0, left: 0, width: '100%', height: '100%',
@@ -187,7 +204,7 @@ export const ProfileScreen: React.FC<Props> = ({
                     appearance: 'none'
                 }}
              >
-                {CITIES.map(city => <option key={city} value={city}>{city}</option>)}
+                {CITIES.map(city => <option key={city.value} value={city.value}>{t(city.key)}</option>)}
              </select>
           </div>
         </div>
@@ -200,8 +217,8 @@ export const ProfileScreen: React.FC<Props> = ({
         ) : masters.length === 0 ? (
           <div style={{ marginTop: 20 }}>
             <Placeholder
-              header="Никого не нашли"
-              description="Попробуйте изменить город или поисковой запрос"
+              header={t('not_found_masters_header')}
+              description={t('not_found_masters_desc')}
             >
               <LottieIcon src="/stickers/duck_out.json" size={140} />
             </Placeholder>
@@ -257,7 +274,7 @@ export const ProfileScreen: React.FC<Props> = ({
                                 }}
                               />
 
-                              <Card.Cell readOnly subtitle={m.bio || 'Специалист'}>
+                              <Card.Cell readOnly subtitle={m.bio || t('specialist')}>
                                 <span style={{ fontWeight: 600, fontSize: 15, color: 'var(--tg-theme-text-color)' }}>
                                   {m.name}
                                 </span>
