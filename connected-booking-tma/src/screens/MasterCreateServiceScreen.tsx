@@ -8,6 +8,9 @@ import {
 } from '@telegram-apps/telegram-ui';
 import { createServiceByMaster } from '../helpers/api';
 
+// ИМПОРТИРУЕМ ХУК ЛОКАЛИЗАЦИИ
+import { useLanguage } from '../helpers/LanguageContext';
+
 type Props = {
   telegramId: number;
   isOpen: boolean;        // Модалка открыта/закрыта
@@ -21,6 +24,9 @@ export const MasterCreateServiceScreen: React.FC<Props> = ({
   onClose,
   onSuccess
 }) => {
+  // ПОДКЛЮЧАЕМ ПЕРЕВОДЫ
+  const { t } = useLanguage();
+
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [duration, setDuration] = useState('60'); // 1 час по умолчанию
@@ -42,8 +48,8 @@ export const MasterCreateServiceScreen: React.FC<Props> = ({
 
     if (!name.trim() || !price || !duration) {
       if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-      if (tg?.showAlert) tg.showAlert('Заполните обязательные поля: Название и Цена');
-      else alert('Заполните обязательные поля');
+      if (tg?.showAlert) tg.showAlert(t('m_error_fill_fields'));
+      else alert(t('m_error_fill_fields'));
       return;
     }
 
@@ -61,7 +67,7 @@ export const MasterCreateServiceScreen: React.FC<Props> = ({
     } catch (e: any) {
       console.error(e);
       if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-      alert('Ошибка ��ри создании услуги');
+      alert(t('m_error_create_service'));
     } finally {
       setLoading(false);
     }
@@ -69,7 +75,7 @@ export const MasterCreateServiceScreen: React.FC<Props> = ({
 
   return (
     <Modal
-      header={<Modal.Header>Новая услуга</Modal.Header>}
+      header={<Modal.Header>{t('m_new_service_title')}</Modal.Header>}
       open={isOpen}
       onOpenChange={(open) => {
         if (!open) onClose();
@@ -85,15 +91,15 @@ export const MasterCreateServiceScreen: React.FC<Props> = ({
       }}>
 
         <Input
-          header="Название услуги"
-          placeholder="Например: Мужская стрижка"
+          header={t('m_service_name')}
+          placeholder={t('m_service_name_placeholder')}
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
 
         <Input
-          header="Цена (UZS)"
-          placeholder="Например: 50000"
+          header={t('m_service_price')}
+          placeholder={t('m_service_price_placeholder')}
           type="number"
           inputMode="numeric"
           value={price}
@@ -101,24 +107,24 @@ export const MasterCreateServiceScreen: React.FC<Props> = ({
         />
 
         <Select
-          header="Длительность"
+          header={t('m_service_duration')}
           value={duration}
           onChange={(e) => setDuration(e.target.value)}
         >
-          <option value="15">15 мин</option>
-          <option value="30">30 мин</option>
-          <option value="45">45 мин</option>
-          <option value="60">1 час</option>
-          <option value="90">1.5 часа</option>
-          <option value="120">2 часа</option>
-          <option value="150">2.5 часа</option>
-          <option value="180">3 часа</option>
-          <option value="240">4 часа</option>
+          <option value="15">15 {t('min')}</option>
+          <option value="30">30 {t('min')}</option>
+          <option value="45">45 {t('min')}</option>
+          <option value="60">{t('m_hour_1')}</option>
+          <option value="90">{t('m_hour_1_5')}</option>
+          <option value="120">{t('m_hour_2')}</option>
+          <option value="150">{t('m_hour_2_5')}</option>
+          <option value="180">{t('m_hour_3')}</option>
+          <option value="240">{t('m_hour_4')}</option>
         </Select>
 
         <Textarea
-          header="Описание (необязательно)"
-          placeholder="Что входит в эту услугу? Эта информация поможет клиенту."
+          header={t('m_service_desc')}
+          placeholder={t('m_service_desc_placeholder')}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
@@ -131,7 +137,7 @@ export const MasterCreateServiceScreen: React.FC<Props> = ({
             loading={loading}
             onClick={handleSubmit}
           >
-            Создать услугу
+            {t('m_btn_create_service')}
           </Button>
           <Button
             size="l"
@@ -140,7 +146,7 @@ export const MasterCreateServiceScreen: React.FC<Props> = ({
             onClick={onClose}
             style={{ marginTop: 8 }}
           >
-            Отмена
+            {t('m_btn_cancel')}
           </Button>
         </div>
 

@@ -237,6 +237,25 @@ export const translations: TranslationsDictionary = {
     m_btn_add: "+ Add",
     m_no_services: "No services",
     m_no_services_desc: "Add services so clients can book appointments.",
+
+    // === Master Create Service Screen ===
+    m_new_service_title: "New service",
+    m_service_name: "Service name",
+    m_service_name_placeholder: "e.g. Men's haircut",
+    m_service_price: "Price (UZS)",
+    m_service_price_placeholder: "e.g. 50000",
+    m_service_duration: "Duration",
+    m_hour_1: "1 hour",
+    m_hour_1_5: "1.5 hours",
+    m_hour_2: "2 hours",
+    m_hour_2_5: "2.5 hours",
+    m_hour_3: "3 hours",
+    m_hour_4: "4 hours",
+    m_service_desc: "Description (optional)",
+    m_service_desc_placeholder: "What is included in this service? This information will help the client.",
+    m_btn_create_service: "Create service",
+    m_error_fill_fields: "Please fill in the required fields: Name and Price",
+    m_error_create_service: "Error creating service",
   },
   ru: {
     // Welcome Screen (Client)
@@ -470,6 +489,25 @@ export const translations: TranslationsDictionary = {
     m_btn_add: "+ Добавить",
     m_no_services: "Нет услуг",
     m_no_services_desc: "Добавьте услуги, чтобы клиенты могли записываться.",
+
+    // === Master Create Service Screen ===
+    m_new_service_title: "Новая услуга",
+    m_service_name: "Название услуги",
+    m_service_name_placeholder: "Например: Мужская стрижка",
+    m_service_price: "Цена (UZS)",
+    m_service_price_placeholder: "Например: 50000",
+    m_service_duration: "Длительность",
+    m_hour_1: "1 час",
+    m_hour_1_5: "1.5 часа",
+    m_hour_2: "2 часа",
+    m_hour_2_5: "2.5 часа",
+    m_hour_3: "3 часа",
+    m_hour_4: "4 часа",
+    m_service_desc: "Описание (необязательно)",
+    m_service_desc_placeholder: "Что входит в эту услугу? Эта информация поможет клиенту.",
+    m_btn_create_service: "Создать услугу",
+    m_error_fill_fields: "Заполните обязательные поля: Название и Цена",
+    m_error_create_service: "Ошибка при создании услуги"
   },
   uz: {
     // Welcome Screen (Client)
@@ -703,5 +741,24 @@ export const translations: TranslationsDictionary = {
     m_btn_add: "+ Qo'shish",
     m_no_services: "Xizmatlar yo'q",
     m_no_services_desc: "Mijozlar yozila olishi uchun xizmatlarni qo'shing.",
+
+    // === Master Create Service Screen ===
+    m_new_service_title: "Yangi xizmat",
+    m_service_name: "Xizmat nomi",
+    m_service_name_placeholder: "Masalan: Erkaklar sochini qirqish",
+    m_service_price: "Narxi (UZS)",
+    m_service_price_placeholder: "Masalan: 50000",
+    m_service_duration: "Davomiyligi",
+    m_hour_1: "1 soat",
+    m_hour_1_5: "1.5 soat",
+    m_hour_2: "2 soat",
+    m_hour_2_5: "2.5 soat",
+    m_hour_3: "3 soat",
+    m_hour_4: "4 soat",
+    m_service_desc: "Tavsifi (ixtiyoriy)",
+    m_service_desc_placeholder: "Ushbu xizmatga nimalar kiradi? Bu ma'lumot mijozga yordam beradi.",
+    m_btn_create_service: "Xizmat yaratish",
+    m_error_fill_fields: "Majburiy maydonlarni to'ldiring: Nomi va Narxi",
+    m_error_create_service: "Xizmatni yaratishda xatolik",
   }
 };
