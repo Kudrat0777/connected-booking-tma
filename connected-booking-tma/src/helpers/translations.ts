@@ -308,6 +308,28 @@ export const translations: TranslationsDictionary = {
     m_schedule_success_2: "Schedule successfully created! Slots generated:",
     m_schedule_error_gen: "Error generating schedule",
     m_btn_generate_schedule: "GENERATE SCHEDULE",
+
+    // === Master Analytics Screen ===
+    m_period_day: "Day",
+    m_period_week: "Week",
+    m_period_month: "Month",
+    m_period_half_year: "Half year",
+    m_period_year: "Year",
+    m_analytics_error: "Failed to load data",
+    m_analytics_no_data: "No data",
+    m_analytics_no_data_desc: "You had no activity during the selected period.",
+    m_earned: "Earned",
+    m_expected: "Expected",
+    m_funnel_metrics: "Funnel and metrics",
+    m_completed_bookings: "Completed bookings",
+    m_average_check: "Average check",
+    m_unique_clients: "Unique clients",
+    m_cancellation_analysis: "Cancellation analysis",
+    m_cancellation_rate: "Cancellation rate",
+    m_bookings_canceled: "bookings were canceled",
+    m_popular_services: "Popular services",
+    m_bookings_count: "bookings",
+
   },
   ru: {
     // Welcome Screen (Client)
@@ -611,7 +633,29 @@ export const translations: TranslationsDictionary = {
     m_schedule_success_1: "Расписание успешно создано!\nСгенерировано слотов:",
     m_schedule_success_2: "Расписание успешно создано! Сгенерировано слотов:",
     m_schedule_error_gen: "Ошибка при генерации расписания",
-    m_btn_generate_schedule: "СГЕНЕРИРОВАТЬ РАСПИСАНИЕ"
+    m_btn_generate_schedule: "СГЕНЕРИРОВАТЬ РАСПИСАНИЕ",
+
+    // === Master Analytics Screen ===
+    m_period_day: "День",
+    m_period_week: "Неделя",
+    m_period_month: "Месяц",
+    m_period_half_year: "Полгода",
+    m_period_year: "Год",
+    m_analytics_error: "Не удалось загрузить данные",
+    m_analytics_no_data: "Нет данных",
+    m_analytics_no_data_desc: "За выбранный период у вас не было активности.",
+    m_earned: "Заработано",
+    m_expected: "Ожидается",
+    m_funnel_metrics: "Воронка и показатели",
+    m_completed_bookings: "Выполнено записей",
+    m_average_check: "Средний чек",
+    m_unique_clients: "Уникальных клиентов",
+    m_cancellation_analysis: "Анализ отмен",
+    m_cancellation_rate: "Процент отмен",
+    m_bookings_canceled: "записей было отменено",
+    m_popular_services: "Популярные услуги",
+    m_bookings_count: "записей",
+
   },
   uz: {
     // Welcome Screen (Client)
@@ -916,5 +960,26 @@ export const translations: TranslationsDictionary = {
     m_schedule_success_2: "Jadval muvaffaqiyatli yaratildi! Yaratilgan joylar:",
     m_schedule_error_gen: "Jadvalni yaratishda xatolik",
     m_btn_generate_schedule: "JADVAL YARATISH",
+
+    // === Master Analytics Screen ===
+    m_period_day: "Kun",
+    m_period_week: "Hafta",
+    m_period_month: "Oy",
+    m_period_half_year: "Yarim yil",
+    m_period_year: "Yil",
+    m_analytics_error: "Ma'lumotlarni yuklab bo'lmadi",
+    m_analytics_no_data: "Ma'lumot yo'q",
+    m_analytics_no_data_desc: "Tanlangan davrda sizda faollik bo'lmadi.",
+    m_earned: "Ishlab topildi",
+    m_expected: "Kutilmoqda",
+    m_funnel_metrics: "Voronka va ko'rsatkichlar",
+    m_completed_bookings: "Bajarilgan yozuvlar",
+    m_average_check: "O'rtacha chek",
+    m_unique_clients: "Noyob mijozlar",
+    m_cancellation_analysis: "Bekor qilishlar tahlili",
+    m_cancellation_rate: "Bekor qilish foizi",
+    m_bookings_canceled: "yozuv bekor qilindi",
+    m_popular_services: "Mashhur xizmatlar",
+    m_bookings_count: "yozuv",
   }
 };

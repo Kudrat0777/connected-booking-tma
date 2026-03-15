@@ -15,6 +15,8 @@ import lottie from 'lottie-web';
 
 import { fetchMasterAnalytics, AnalyticsData } from '../helpers/api';
 
+import { useLanguage } from '../helpers/LanguageContext';
+
 const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
   const container = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -38,15 +40,17 @@ type Props = {
   onBack: () => void;
 };
 
-const PERIODS = [
-  { id: 'day', label: 'День' },
-  { id: 'week', label: 'Неделя' },
-  { id: 'month', label: 'Месяц' },
-  { id: 'half_year', label: 'Полгода' },
-  { id: 'year', label: 'Год' },
-];
-
 export const MasterAnalyticsScreen: React.FC<Props> = ({ telegramId, onBack }) => {
+  const { t } = useLanguage();
+
+  const PERIODS = [
+    { id: 'day', label: t('m_period_day') },
+    { id: 'week', label: t('m_period_week') },
+    { id: 'month', label: t('m_period_month') },
+    { id: 'half_year', label: t('m_period_half_year') },
+    { id: 'year', label: t('m_period_year') },
+  ];
+
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activePeriod, setActivePeriod] = useState<string>('month');
@@ -78,12 +82,11 @@ export const MasterAnalyticsScreen: React.FC<Props> = ({ telegramId, onBack }) =
       })
       .catch((e) => {
           console.error('Analytics error:', e);
-          setError('Не удалось загрузить данные');
+          setError(t('m_analytics_error'));
       })
       .finally(() => setLoading(false));
-  }, [telegramId, activePeriod]);
+  }, [telegramId, activePeriod, t]);
 
-  // Универсальные геттеры (поддерживают и старый, и новый бэкенд)
   const earned = data?.earned || data?.revenue_period || data?.revenue_month || 0;
   const expected = data?.expected || data?.revenue_forecast || 0;
   const completed = data?.total_completed || data?.completed_bookings || data?.total_bookings || 0;
@@ -146,8 +149,8 @@ export const MasterAnalyticsScreen: React.FC<Props> = ({ telegramId, onBack }) =
       {isEmpty && (
         <div style={{ paddingTop: 40 }}>
             <Placeholder
-               header="Нет данных"
-               description="За выбранный период у вас не было активности."
+               header={t('m_analytics_no_data')}
+               description={t('m_analytics_no_data_desc')}
             >
                <LottieIcon src="/stickers/duck_analitic.json" size={140} />
             </Placeholder>
@@ -160,7 +163,7 @@ export const MasterAnalyticsScreen: React.FC<Props> = ({ telegramId, onBack }) =
           {/* ГЛАВНЫЙ БЛОК: ЗАРАБОТАНО / ОЖИДАЕТСЯ */}
           <div style={{ padding: '40px 20px 24px', textAlign: 'center' }}>
              <Text style={{ color: 'var(--tg-theme-hint-color)', fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, display: 'block' }}>
-                 Заработано
+                 {t('m_earned')}
              </Text>
              <div style={{ fontSize: 44, fontWeight: 800, color: 'var(--tg-theme-text-color)', lineHeight: 1.1, marginBottom: 12 }}>
                  {earned.toLocaleString('ru-RU')} <span style={{ fontSize: 24, fontWeight: 600 }}>UZS</span>
@@ -168,7 +171,7 @@ export const MasterAnalyticsScreen: React.FC<Props> = ({ telegramId, onBack }) =
 
              {expected > 0 && (
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, backgroundColor: 'rgba(52, 199, 89, 0.15)', color: '#34C759', padding: '6px 12px', borderRadius: 12, fontSize: 14, fontWeight: 600 }}>
-                    ↗ Ожидается {expected.toLocaleString('ru-RU')} UZS
+                    ↗ {t('m_expected')} {expected.toLocaleString('ru-RU')} UZS
                 </div>
              )}
           </div>
@@ -176,29 +179,29 @@ export const MasterAnalyticsScreen: React.FC<Props> = ({ telegramId, onBack }) =
           <div style={{ padding: '0 16px' }}>
             {/* ВОРОНКА И ПОКАЗАТЕЛИ */}
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--tg-theme-hint-color)', textTransform: 'uppercase', letterSpacing: 0.5, margin: '24px 0 8px' }}>
-                Воронка и показатели
+                {t('m_funnel_metrics')}
             </div>
             <div style={{ backgroundColor: 'var(--tg-theme-secondary-bg-color)', borderRadius: 16, padding: '8px 0' }}>
               <Cell
                 style={{ backgroundColor: 'transparent' }}
-                before={<div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28StatisticsOutline width={22} height={22} style={{ color: '#007AFF'}} /></div>}
+                before={<div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28StatisticsOutline width={20} height={20} style={{ color: '#007AFF' }} /></div>}
                 after={<span style={{ fontWeight: 600, fontSize: 16, color: 'var(--tg-theme-text-color)' }}>{completed}</span>}
               >
-                Выполнено записей
+                {t('m_completed_bookings')}
               </Cell>
               <Cell
                 style={{ backgroundColor: 'transparent' }}
-                before={<div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(255, 149, 0, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28MoneyCircleOutline width={22} height={22} style={{ color: '#FF9500'}} /></div>}
+                before={<div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(255, 149, 0, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28MoneyCircleOutline width={20} height={20} style={{ color: '#FF9500' }} /></div>}
                 after={<span style={{ fontWeight: 600, fontSize: 16, color: 'var(--tg-theme-text-color)' }}>{averageCheck.toLocaleString('ru-RU')} UZS</span>}
               >
-                Средний чек
+                {t('m_average_check')}
               </Cell>
               <Cell
                 style={{ backgroundColor: 'transparent' }}
-                before={<div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(52, 199, 89, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28UserOutline width={22} height={22} style={{ color: '#34C759'}} /></div>}
+                before={<div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(52, 199, 89, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28UserOutline width={20} height={20} style={{ color: '#34C759' }} /></div>}
                 after={<span style={{ fontWeight: 600, fontSize: 16, color: 'var(--tg-theme-text-color)' }}>{uniqueClients}</span>}
               >
-                Уникальных клиентов
+                {t('m_unique_clients')}
               </Cell>
             </div>
 
@@ -206,16 +209,16 @@ export const MasterAnalyticsScreen: React.FC<Props> = ({ telegramId, onBack }) =
             {canceled > 0 && (
                 <>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--tg-theme-hint-color)', textTransform: 'uppercase', letterSpacing: 0.5, margin: '24px 0 8px' }}>
-                        Анализ отмен
+                        {t('m_cancellation_analysis')}
                     </div>
                     <div style={{ backgroundColor: 'var(--tg-theme-secondary-bg-color)', borderRadius: 16, padding: '8px 0' }}>
                     <Cell
                         style={{ backgroundColor: 'transparent' }}
-                        before={<div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(255, 59, 48, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28CancelOutline width={22} height={22} style={{ color: '#FF3B30'}} /></div>}
+                        before={<div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(255, 59, 48, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28CancelOutline width={20} height={20} style={{ color: '#FF3B30' }} /></div>}
                         after={<span style={{ fontWeight: 700, fontSize: 16, color: '#FF3B30' }}>{cancelRate}%</span>}
-                        description={<span style={{ color: 'var(--tg-theme-hint-color)' }}>{canceled} записей было отменено</span>}
+                        description={<span style={{ color: 'var(--tg-theme-hint-color)' }}>{canceled} {t('m_bookings_canceled')}</span>}
                     >
-                        Процент отмен
+                        {t('m_cancellation_rate')}
                     </Cell>
                     </div>
                 </>
@@ -225,7 +228,7 @@ export const MasterAnalyticsScreen: React.FC<Props> = ({ telegramId, onBack }) =
             {topServices.length > 0 && (
               <>
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--tg-theme-hint-color)', textTransform: 'uppercase', letterSpacing: 0.5, margin: '24px 0 8px' }}>
-                    Популярные услуги
+                    {t('m_popular_services')}
                 </div>
                 <div style={{ backgroundColor: 'var(--tg-theme-secondary-bg-color)', borderRadius: 16, padding: '8px 0' }}>
                   {topServices.map((s, i) => (
@@ -233,7 +236,7 @@ export const MasterAnalyticsScreen: React.FC<Props> = ({ telegramId, onBack }) =
                       key={i}
                       style={{ backgroundColor: 'transparent' }}
                       after={<span style={{ fontWeight: 600, color: 'var(--tg-theme-text-color)' }}>{s.revenue.toLocaleString('ru-RU')} UZS</span>}
-                      description={<span style={{ color: 'var(--tg-theme-hint-color)' }}>{s.count} записей</span>}
+                      description={<span style={{ color: 'var(--tg-theme-hint-color)' }}>{s.count} {t('m_bookings_count')}</span>}
                     >
                       <span style={{ fontWeight: 500, color: 'var(--tg-theme-text-color)' }}>{i + 1}. {s.slot__service__name}</span>
                     </Cell>
