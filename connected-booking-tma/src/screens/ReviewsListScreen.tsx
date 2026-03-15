@@ -10,6 +10,9 @@ import {
 import { Icon28Favorite } from '@vkontakte/icons';
 import { fetchReviews, Review } from '../helpers/api';
 
+// ИМПОРТИРУЕМ ХУК ЛОКАЛИЗАЦИИ
+import { useLanguage } from '../helpers/LanguageContext';
+
 type Props = {
   masterId: number;
   isOpen: boolean;       // Новое свойство: открыта ли модалка
@@ -17,6 +20,9 @@ type Props = {
 };
 
 export const ReviewsListScreen: React.FC<Props> = ({ masterId, isOpen, onClose }) => {
+  // ПОДКЛЮЧАЕМ ПЕРЕВОДЫ
+  const { t, lang } = useLanguage();
+
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -35,9 +41,21 @@ export const ReviewsListScreen: React.FC<Props> = ({ masterId, isOpen, onClose }
     ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
     : "0.0";
 
+  // Локализация даты
+  const localeForDate = lang === 'uz' ? 'uz-UZ' : (lang === 'en' ? 'en-US' : 'ru-RU');
+
+  // Формируем текст "На основе Х оценок" (используем ключи, добавленные ранее для MasterReviewsScreen)
+  let ratingsText = '';
+  if (lang === 'uz') {
+      ratingsText = `${reviews.length} ${t('m_reviews_ratings_many')} ${t('m_reviews_based_on').toLowerCase()}`;
+  } else {
+      const ratingWord = reviews.length === 1 ? t('m_reviews_ratings_1') : t('m_reviews_ratings_many');
+      ratingsText = `${t('m_reviews_based_on')} ${reviews.length} ${ratingWord}`;
+  }
+
   return (
     <Modal
-      header={<Modal.Header>Отзывы о мастере</Modal.Header>}
+      header={<Modal.Header>{t('reviews_modal_title')}</Modal.Header>}
       open={isOpen}
       onOpenChange={(open) => {
         if (!open) onClose();
@@ -56,8 +74,8 @@ export const ReviewsListScreen: React.FC<Props> = ({ masterId, isOpen, onClose }
           </div>
         ) : reviews.length === 0 ? (
           <Placeholder
-            header="Нет отзывов"
-            description="Бу��ьте первым, кто оценит этого мастера!"
+            header={t('m_reviews_no_reviews')}
+            description={t('reviews_first_to_rate')}
           >
              <div style={{ fontSize: 40 }}>💬</div>
           </Placeholder>
@@ -76,7 +94,7 @@ export const ReviewsListScreen: React.FC<Props> = ({ masterId, isOpen, onClose }
                   {average}
                </div>
                <div style={{ color: 'var(--tg-theme-hint-color)', fontSize: 15, marginTop: '4px' }}>
-                  На основе {reviews.length} отзывов
+                  {ratingsText}
                </div>
             </div>
 
@@ -90,10 +108,10 @@ export const ReviewsListScreen: React.FC<Props> = ({ masterId, isOpen, onClose }
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                        <span style={{ fontWeight: 600, fontSize: 16, color: 'var(--tg-theme-text-color)' }}>
-                         {r.author_name || 'Клиент'}
+                         {r.author_name || t('m_reviews_client')}
                        </span>
                        <span style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)' }}>
-                          {new Date(r.created_at).toLocaleDateString('ru-RU')}
+                          {new Date(r.created_at).toLocaleDateString(localeForDate)}
                        </span>
                     </div>
 

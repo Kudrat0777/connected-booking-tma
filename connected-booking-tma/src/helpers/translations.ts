@@ -338,6 +338,19 @@ export const translations: TranslationsDictionary = {
     m_reviews_ratings_many: "ratings",
     m_reviews_client: "Client",
 
+    // Leave Review Screen
+    rev_rating_title: "Rating",
+    rev_how_was_visit: "How was your visit to",
+    rev_rate_desc: "Rate and write a few words.",
+    rev_out_of_5: "out of 5",
+    rev_comment: "Your comment (optional)",
+    rev_comment_ph: "Everything was great, the master is a pro...",
+    rev_btn_send: "Send review",
+    rev_success: "Thank you for your review!",
+    rev_error: "Error sending review",
+
+    reviews_modal_title: "Master Reviews",
+    reviews_first_to_rate: "Be the first to rate this master!"
   },
   ru: {
     // Welcome Screen (Client)
@@ -671,6 +684,20 @@ export const translations: TranslationsDictionary = {
     m_reviews_ratings_1: "оценки",
     m_reviews_ratings_many: "оценок",
     m_reviews_client: "Клиент",
+
+    // Leave Review Screen
+    rev_rating_title: "Оценка",
+    rev_how_was_visit: "Как вам визит к",
+    rev_rate_desc: "Поставьте оценку и напишите пару слов.",
+    rev_out_of_5: "из 5",
+    rev_comment: "Ваш комментарий (необязательно)",
+    rev_comment_ph: "Все понравилось, мастер профи...",
+    rev_btn_send: "Отправить отзыв",
+    rev_success: "Спасибо за ваш отзыв!",
+    rev_error: "Ошибка при отправке отзыва",
+
+    reviews_modal_title: "Отзывы о мастере",
+    reviews_first_to_rate: "Будьте первым, кто оценит этого мастера!"
   },
   uz: {
     // Welcome Screen (Client)
@@ -1004,5 +1031,19 @@ export const translations: TranslationsDictionary = {
     m_reviews_ratings_1: "ta baho",
     m_reviews_ratings_many: "ta baho",
     m_reviews_client: "Mijoz",
+
+    // Leave Review Screen
+    rev_rating_title: "Baho",
+    rev_how_was_visit: "Tashrifingiz qanday o'tdi:",
+    rev_rate_desc: "Baho bering va bir necha so'z yozing.",
+    rev_out_of_5: "5 dan",
+    rev_comment: "Izohingiz (ixtiyoriy)",
+    rev_comment_ph: "Barchasi yoqdi, usta professional...",
+    rev_btn_send: "Sharh yuborish",
+    rev_success: "Sharhingiz uchun rahmat!",
+    rev_error: "Sharh yuborishda xatolik",
+
+    reviews_modal_title: "Usta haqida sharhlar",
+    reviews_first_to_rate: "Ushbu ustani birinchi bo'lib baholang!"
   }
 };

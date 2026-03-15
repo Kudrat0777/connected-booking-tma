@@ -10,6 +10,8 @@ import { Icon28Favorite, Icon28FavoriteOutline } from '@vkontakte/icons';
 import { ScreenLayout } from '../components/ScreenLayout';
 import { addReview } from '../helpers/api';
 
+import { useLanguage } from '../helpers/LanguageContext';
+
 type Props = {
   telegramId: number;
   masterId: number;
@@ -27,6 +29,7 @@ export const LeaveReviewScreen: React.FC<Props> = ({
   onBack,
   onSuccess
 }) => {
+  const { t } = useLanguage();
   const [rating, setRating] = useState(5);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,13 +42,13 @@ export const LeaveReviewScreen: React.FC<Props> = ({
         telegram_id: telegramId,
         rating,
         text,
-        author_name: userFirstName || 'Клиент'
+        author_name: userFirstName || t('m_reviews_client')
       });
-      alert('Спасибо за ваш отзыв!');
+      alert(t('rev_success'));
       onSuccess();
     } catch (e: any) {
       console.error(e);
-      alert(e.message || 'Ошибка при отправке отзыва');
+      alert(e.message || t('rev_error'));
     } finally {
       setLoading(false);
     }
@@ -59,7 +62,7 @@ export const LeaveReviewScreen: React.FC<Props> = ({
             {star <= rating ? (
               <Icon28Favorite width={48} height={48} style={{ color: '#FFD700' }} />
             ) : (
-              <Icon28FavoriteOutline width={48} height={48} style={{ color: 'var(--tgui--hint_color)' }} />
+              <Icon28FavoriteOutline width={48} height={48} style={{ color: 'var(--tg-theme-hint-color)' }} />
             )}
           </div>
         ))}
@@ -68,20 +71,20 @@ export const LeaveReviewScreen: React.FC<Props> = ({
   };
 
   return (
-    <ScreenLayout title="Оценка" onBack={onBack}>
+    <ScreenLayout title={t('rev_rating_title')} onBack={onBack}>
       <div style={{ padding: 16 }}>
         <Placeholder
-           header={`Как вам визит к ${masterName}?`}
-           description="Поставьте оценку и напишите пару слов."
+           header={`${t('rev_how_was_visit')} ${masterName}?`}
+           description={t('rev_rate_desc')}
         >
            {renderStars()}
-           <Title level="3" style={{ marginBottom: 20 }}>{rating} из 5</Title>
+           <Title level="3" style={{ marginBottom: 20 }}>{rating} {t('rev_out_of_5')}</Title>
         </Placeholder>
 
         <Section>
           <Textarea
-            header="Ваш комментарий (необязательно)"
-            placeholder="Все понравилось, мастер профи..."
+            header={t('rev_comment')}
+            placeholder={t('rev_comment_ph')}
             value={text}
             onChange={(e) => setText(e.target.value)}
           />
@@ -95,7 +98,7 @@ export const LeaveReviewScreen: React.FC<Props> = ({
             loading={loading}
             onClick={handleSubmit}
           >
-            Отправить отзыв
+            {t('rev_btn_send')}
           </Button>
         </div>
       </div>
