@@ -7,6 +7,8 @@ import React, {
 import { Button, Title, Text } from '@telegram-apps/telegram-ui';
 import lottie, { AnimationItem } from 'lottie-web';
 
+import { useLanguage } from '../helpers/LanguageContext';
+
 type Props = {
   onContinue: (user?: any) => void;
 };
@@ -17,33 +19,37 @@ type Slide = {
   lottieSrc: string;
 };
 
-const SLIDES: Slide[] = [
-  {
-    lottieSrc: '/stickers/booking.json',
-    title: 'Лучшая система бронирования',
-    description: 'Выбирай услугу и время — всё остальное мы сделаем сами.',
-  },
-  {
-    lottieSrc: '/stickers/notifications.json',
-    title: 'Все уведомления в Telegram',
-    description: 'Подтверждение записи, напоминания и изменения — сразу в мессенджере.',
-  },
-  {
-    lottieSrc: '/stickers/favorites.json',
-    title: 'Любимые мастера под рукой',
-    description: 'Сохраняй мастеров, оставляй отзывы и возвращайся к лучшим.',
-  },
-  {
-    lottieSrc: '/stickers/duck_wallet.json',
-    title: 'Современная оплата',
-    description: 'Оплачивайте услуги картами, TON или Stars. Быстро и безопасно.',
-  },
-];
-
 const SWIPE_THRESHOLD = 40;
 const AUTO_SLIDE_INTERVAL = 5000;
 
 export const WelcomeScreen: React.FC<Props> = ({ onContinue }) => {
+  // 2. ПОЛУЧАЕМ ФУНКЦИЮ ПЕРЕВОДА
+  const { t } = useLanguage();
+
+  // 3. ПЕРЕНОСИМ SLIDES ВНУТРЬ КОМПОНЕНТА И ИСПОЛЬЗУЕМ t()
+  const SLIDES: Slide[] = [
+    {
+      lottieSrc: '/stickers/booking.json',
+      title: t('slide1_title'),
+      description: t('slide1_desc'),
+    },
+    {
+      lottieSrc: '/stickers/notifications.json',
+      title: t('slide2_title'),
+      description: t('slide2_desc'),
+    },
+    {
+      lottieSrc: '/stickers/favorites.json',
+      title: t('slide3_title'),
+      description: t('slide3_desc'),
+    },
+    {
+      lottieSrc: '/stickers/duck_wallet.json',
+      title: t('slide4_title'),
+      description: t('slide4_desc'),
+    },
+  ];
+
   const [index, setIndex] = useState(0);
   const slide = SLIDES[index];
 
@@ -117,7 +123,7 @@ export const WelcomeScreen: React.FC<Props> = ({ onContinue }) => {
     };
     resetTimer();
     return () => { if (autoSlideTimerRef.current) clearInterval(autoSlideTimerRef.current); };
-  }, [index]);
+  }, [index, SLIDES.length]); // Добавил SLIDES.length в зависимости, чтобы избежать предупреждений
 
   // --- SWIPE HANDLERS ---
   const handleStart = (x: number) => {
@@ -233,7 +239,8 @@ export const WelcomeScreen: React.FC<Props> = ({ onContinue }) => {
             stretched
             onClick={handleLoginClick}
         >
-          Начать работу
+          {/* 4. ПЕРЕВОД КНОПКИ */}
+          {t('btn_start')}
         </Button>
       </div>
 
