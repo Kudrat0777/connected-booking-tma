@@ -238,16 +238,20 @@ export const MasterDashboardScreen: React.FC<Props> = ({
     }
   };
 
-  // ИСПРАВЛЕННЫЙ ВЫХОД ИЗ АККАУНТА (Используем нативный showConfirm)
   const handleLogoutClick = () => {
     triggerHaptic('warning');
     if (tg?.showConfirm) {
         tg.showConfirm(t('m_logout_confirm') || 'Вы уверены, что хотите выйти?', (isConfirmed: boolean) => {
-            if (isConfirmed && onLogout) onLogout();
+            if (isConfirmed && onLogout) {
+                // Оборачиваем в setTimeout для предотвращения краша React
+                setTimeout(() => {
+                    onLogout();
+                }, 10);
+            }
         });
     } else {
         const isConfirmed = window.confirm(t('m_logout_confirm') || 'Вы уверены, что хотите выйти?');
-        if (isConfirmed && onLogout) onLogout();
+        if (isConfirmed && onLogout) onLogout(); // Обычный браузерный confirm работает синхронно, тут безопасно
     }
   };
 

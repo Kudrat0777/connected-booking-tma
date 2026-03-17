@@ -32,6 +32,7 @@ const AUTO_SLIDE_INTERVAL = 5000;
 export const MasterWelcomeScreen: React.FC<Props> = ({
   onStart,
   onLogin,
+  onRegister, // <--- ОБЯЗАТЕЛЬНО: добавлено сюда, иначе приложение упадет!
 }) => {
   const { t } = useLanguage();
 
@@ -229,14 +230,14 @@ export const MasterWelcomeScreen: React.FC<Props> = ({
         })}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 300, marginTop: 32 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 300, marginTop: 32, alignSelf: 'center', marginBottom: 32 }}>
        <Button size="l" stretched mode="filled" onClick={onLogin}>
-          Войти
+          {t('btn_have_account')}
        </Button>
        <Button size="l" stretched mode="bezeled" onClick={onRegister}>
-          Стать партнёром (Регистрация)
+          {t('btn_become_master')}
        </Button>
-    </div>
+      </div>
     </div>
   );
 };

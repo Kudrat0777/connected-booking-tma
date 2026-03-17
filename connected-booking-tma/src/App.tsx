@@ -51,7 +51,7 @@ window.fetch = async function () {
     return await originalFetch(resource, config);
 };
 
-const API_BASE = 'https://n6jlohcg6gtg.share.zrok.io/api';
+const API_BASE = 'https://a9a1ghgcoh38.share.zrok.io/api';
 
 type Screen =
   | 'welcome' | 'services' | 'slots' | 'bookingConfirm' | 'bookingDone'
@@ -209,14 +209,27 @@ const AppContent: React.FC = () => {
            // 2. ПРОВЕРКА РОЛИ МАСТЕРА
            const params = new URLSearchParams(window.location.search);
            if (params.get('role') === 'master') {
-               const isMasterLoaded = await loadCurrentMaster(uid);
-               if (isMounted) {
-                   if (isMasterLoaded || localStorage.getItem('is_master_logged_in') === 'true') {
-                       resetScreen('master_dashboard');
-                   } else {
-                       resetScreen('master_welcome');
+               // Строго проверяем флаг сессии в localStorage
+               const isLoggedIn = localStorage.getItem('is_master_logged_in') === 'true';
+
+               if (isLoggedIn) {
+                   const isMasterLoaded = await loadCurrentMaster(uid);
+                   if (isMounted) {
+                       if (isMasterLoaded) {
+                           resetScreen('master_dashboard');
+                       } else {
+                           // Если мастера удалили из базы, сбрасываем сессию
+                           localStorage.removeItem('is_master_logged_in');
+                           resetScreen('master_welcome');
+                       }
+                       setIsAppLoading(false);
                    }
-                   setIsAppLoading(false);
+               } else {
+                   // Если флаг отсутствует (пользователь вышел), строго показываем приветствие
+                   if (isMounted) {
+                       resetScreen('master_welcome');
+                       setIsAppLoading(false);
+                   }
                }
                return;
            }
