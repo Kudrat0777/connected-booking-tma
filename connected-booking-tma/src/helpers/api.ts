@@ -1,4 +1,4 @@
-const API_BASE = 'https://a9a1ghgcoh38.share.zrok.io/api';
+const API_BASE = 'https://kudratsultanbaev06.fvds.ru/api';
 
 import { useState, useEffect } from 'react';
 
