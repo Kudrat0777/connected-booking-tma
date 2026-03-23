@@ -51,7 +51,7 @@ window.fetch = async function () {
     return await originalFetch(resource, config);
 };
 
-const API_BASE = 'https://kudratsultanbaev06.fvds.ru/api';
+const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
 type Screen =
   | 'welcome' | 'services' | 'slots' | 'bookingConfirm' | 'bookingDone'
