@@ -1,4 +1,4 @@
-const API_BASE = 'https://kudratsultanbaev06.fvds.ru/api';
+const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
 import { useState, useEffect } from 'react';
 
