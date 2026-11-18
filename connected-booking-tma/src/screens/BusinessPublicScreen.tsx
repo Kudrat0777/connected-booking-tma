@@ -3,6 +3,7 @@ import { Title, Text, Spinner } from '@telegram-apps/telegram-ui';
 
 import { fetchBusinessBySlug, BusinessPublic, useTunnelImage } from '../helpers/api';
 import { Konnektik } from '../components/Konnektik';
+import { useLanguage } from '../helpers/LanguageContext';
 
 type Props = {
   slug: string;
@@ -24,6 +25,7 @@ const MasterAvatar: React.FC<{ src?: string; name: string }> = ({ src, name }) =
 /** Страница заведения для клиента: кто работает, рейтинг, переход к записи к конкретному мастеру. */
 export const BusinessPublicScreen: React.FC<Props> = ({ slug, onBack, onOpenMaster }) => {
   const tg = (window as any).Telegram?.WebApp;
+  const { t } = useLanguage();
   const [biz, setBiz] = useState<BusinessPublic | null>(null);
   const [state, setState] = useState<'loading' | 'ok' | 'missing'>('loading');
 
@@ -48,8 +50,8 @@ export const BusinessPublicScreen: React.FC<Props> = ({ slug, onBack, onOpenMast
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, textAlign: 'center', color: 'var(--tg-theme-text-color)' }}>
         <Konnektik mood="think" size={140} />
-        <Title level="2" weight="1" style={{ marginTop: 16 }}>Заведение не найдено</Title>
-        <Text style={{ color: 'var(--tg-theme-hint-color)', marginTop: 8 }}>Возможно, ссылка устарела.</Text>
+        <Title level="2" weight="1" style={{ marginTop: 16 }}>{t('biz_not_found')}</Title>
+        <Text style={{ color: 'var(--tg-theme-hint-color)', marginTop: 8 }}>{t('biz_link_old')}</Text>
       </div>
     );
   }
@@ -75,7 +77,7 @@ export const BusinessPublicScreen: React.FC<Props> = ({ slug, onBack, onOpenMast
 
       <div style={{ padding: '0 16px' }}>
         <Text style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--tg-theme-hint-color)', textTransform: 'uppercase', margin: '8px 4px' }}>
-          Выберите мастера
+          {t('biz_choose_master')}
         </Text>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {biz.masters.map((m) => (
@@ -92,13 +94,13 @@ export const BusinessPublicScreen: React.FC<Props> = ({ slug, onBack, onOpenMast
                   {m.category}{m.rating ? ` · ★ ${m.rating}` : ''}{m.reviews_count ? ` (${m.reviews_count})` : ''}
                 </div>
               </div>
-              <span style={{ color: 'var(--tg-theme-button-color)', fontWeight: 600, fontSize: 14 }}>Записаться →</span>
+              <span style={{ color: 'var(--tg-theme-button-color)', fontWeight: 600, fontSize: 14 }}>{t('biz_book')}</span>
             </button>
           ))}
           {biz.masters.length === 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16 }}>
               <Konnektik mood="think" size={70} />
-              <Text style={{ color: 'var(--tg-theme-hint-color)' }}>Мастера скоро появятся.</Text>
+              <Text style={{ color: 'var(--tg-theme-hint-color)' }}>{t('biz_masters_soon')}</Text>
             </div>
           )}
         </div>

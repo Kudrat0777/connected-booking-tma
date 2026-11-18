@@ -5,6 +5,8 @@ import {
   fetchSchedule, saveSchedule, addTimeOff, deleteTimeOff, MasterSchedule, ScheduleDay,
 } from '../helpers/api';
 import { Konnektik } from '../components/Konnektik';
+import { useLanguage } from '../helpers/LanguageContext';
+import { fill } from '../helpers/translationsBusiness';
 
 type Props = {
   /** Чей график: не указан — свой; иначе мастер команды (для владельца/админа) */
@@ -12,7 +14,6 @@ type Props = {
   onBack: () => void;
 };
 
-const DAY_FULL = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
 
 const card: React.CSSProperties = {
   backgroundColor: 'var(--tg-theme-bg-color)',
@@ -76,10 +77,14 @@ const todayIso = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-const fmtDate = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+const LOCALE: Record<string, string> = { ru: 'ru-RU', uz: 'uz-UZ', en: 'en-GB' };
+const fmtDate = (iso: string, lang: string) =>
+  new Date(`${iso}T00:00:00`).toLocaleDateString(LOCALE[lang] || 'ru-RU', { day: 'numeric', month: 'long' });
 
 export const MasterWorkHoursScreen: React.FC<Props> = ({ masterId, onBack }) => {
   const tg = (window as any).Telegram?.WebApp;
+  const { t, lang } = useLanguage();
+  const dayName = (wd: number) => t(`wh_day_${wd}`);
   const [data, setData] = useState<MasterSchedule | null>(null);
   const [days, setDays] = useState<ScheduleDay[]>([]);
   const [step, setStep] = useState(30);
@@ -144,9 +149,7 @@ export const MasterWorkHoursScreen: React.FC<Props> = ({ masterId, onBack }) => 
       apply(res);
       setDirty(false);
       haptic('success');
-      say(res.uses_schedule
-        ? 'График сохранён. Клиенты видят свободное время автоматически.'
-        : 'График сохранён. Отметьте хотя бы один рабочий день, чтобы открыть запись.');
+      say(res.uses_schedule ? t('wh_saved_auto') : t('wh_saved_no_days'));
     } catch (e: any) {
       haptic('error');
       say(e.message);
@@ -162,7 +165,7 @@ export const MasterWorkHoursScreen: React.FC<Props> = ({ masterId, onBack }) => 
       setOffNote('');
       haptic('success');
       if (res.clashing_bookings) {
-        say(`На эти дни уже есть записи: ${res.clashing_bookings}. Новые записи закрыты, существующие перенесите или отмените вручную.`);
+        say(fill(t('wh_off_clash'), { count: res.clashing_bookings }));
       }
     } catch (e: any) { haptic('error'); say(e.message); }
   };
@@ -195,17 +198,17 @@ export const MasterWorkHoursScreen: React.FC<Props> = ({ masterId, onBack }) => 
         <Konnektik mood="explain" size={84} />
         <div>
           <Title level="2" weight="1" style={{ marginBottom: 4 }}>
-            {masterId ? `График: ${data.master_name}` : 'Рабочий график'}
+            {masterId ? fill(t('wh_title_for'), { name: data.master_name }) : t('wh_title')}
           </Title>
           <Text style={{ color: 'var(--tg-theme-hint-color)', fontSize: 14, lineHeight: 1.35 }}>
-            Укажите, когда вы работаете. Свободное время для записи посчитается само — с учётом длительности услуг и уже занятых окон.
+            {t('wh_desc')}
           </Text>
         </div>
       </div>
 
       {!data.uses_schedule && (
         <div style={{ margin: '8px 16px', padding: 12, borderRadius: 12, backgroundColor: 'rgba(80, 200, 120, 0.12)', fontSize: 14, lineHeight: 1.4 }}>
-          Сейчас клиенты видят только слоты, созданные вручную. После сохранения графика запись будет считаться автоматически.
+          {t('wh_manual_note')}
         </div>
       )}
 
@@ -214,16 +217,16 @@ export const MasterWorkHoursScreen: React.FC<Props> = ({ masterId, onBack }) => 
           <div key={d.weekday} style={{ ...card, opacity: d.is_working ? 1 : 0.75 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 16 }}>{DAY_FULL[d.weekday]}</div>
+                <div style={{ fontWeight: 700, fontSize: 16 }}>{dayName(d.weekday)}</div>
                 <div style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)' }}>
                   {d.is_working
-                    ? `${d.start}–${d.end}${d.break_start ? `, перерыв ${d.break_start}–${d.break_end}` : ''}`
-                    : 'Выходной'}
+                    ? `${d.start}–${d.end}${d.break_start ? `, ${t('wh_break_short')} ${d.break_start}–${d.break_end}` : ''}`
+                    : t('wh_day_off')}
                 </div>
               </div>
               <Toggle
                 on={d.is_working}
-                label={`${DAY_FULL[d.weekday]}: рабочий день`}
+                label={fill(t('wh_working_day'), { day: dayName(d.weekday) })}
                 onChange={(v) => { haptic(); patchDay(d.weekday, { is_working: v }); }}
               />
             </div>
@@ -231,22 +234,22 @@ export const MasterWorkHoursScreen: React.FC<Props> = ({ masterId, onBack }) => 
             {d.is_working && (
               <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <input type="time" aria-label="Начало работы" value={d.start} style={timeInput}
+                  <input type="time" aria-label={t('wh_work_start')} value={d.start} style={timeInput}
                     onChange={(e) => patchDay(d.weekday, { start: e.target.value })} />
                   <span style={{ color: 'var(--tg-theme-hint-color)' }}>—</span>
-                  <input type="time" aria-label="Конец работы" value={d.end} style={timeInput}
+                  <input type="time" aria-label={t('wh_work_end')} value={d.end} style={timeInput}
                     onChange={(e) => patchDay(d.weekday, { end: e.target.value })} />
                 </div>
 
                 {d.break_start && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)', width: 60 }}>Перерыв</span>
-                    <input type="time" aria-label="Начало перерыва" value={d.break_start} style={timeInput}
+                    <span style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)', width: 60 }}>{t('wh_break')}</span>
+                    <input type="time" aria-label={t('wh_break_start')} value={d.break_start} style={timeInput}
                       onChange={(e) => patchDay(d.weekday, { break_start: e.target.value })} />
                     <span style={{ color: 'var(--tg-theme-hint-color)' }}>—</span>
-                    <input type="time" aria-label="Конец перерыва" value={d.break_end} style={timeInput}
+                    <input type="time" aria-label={t('wh_break_end')} value={d.break_end} style={timeInput}
                       onChange={(e) => patchDay(d.weekday, { break_end: e.target.value })} />
-                    <button type="button" aria-label="Убрать перерыв" onClick={() => patchDay(d.weekday, { break_start: '', break_end: '' })}
+                    <button type="button" aria-label={t('wh_remove_break')} onClick={() => patchDay(d.weekday, { break_start: '', break_end: '' })}
                       style={{ border: 'none', background: 'none', color: 'var(--tg-theme-hint-color)', fontSize: 20, cursor: 'pointer', padding: 4 }}>×</button>
                   </div>
                 )}
@@ -254,12 +257,12 @@ export const MasterWorkHoursScreen: React.FC<Props> = ({ masterId, onBack }) => 
                 <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}>
                   {!d.break_start && (
                     <button type="button" style={linkBtn} onClick={() => patchDay(d.weekday, { break_start: '13:00', break_end: '14:00' })}>
-                      + Перерыв
+                      {t('wh_add_break')}
                     </button>
                   )}
                   {workingCount > 1 && (
                     <button type="button" style={linkBtn} onClick={() => copyToWorkingDays(d)}>
-                      Так же во все рабочие дни
+                      {t('wh_copy_all')}
                     </button>
                   )}
                 </div>
@@ -269,63 +272,58 @@ export const MasterWorkHoursScreen: React.FC<Props> = ({ masterId, onBack }) => 
         ))}
 
         <div style={card}>
-          <div style={{ fontWeight: 700, marginBottom: 8 }}>Настройки записи</div>
-          <Select header="Клиент может записаться с шагом" value={String(step)} onChange={(e) => { setStep(Number(e.target.value)); setDirty(true); }}>
-            {[15, 20, 30, 45, 60, 90, 120].map((v) => <option key={v} value={v}>каждые {v} мин</option>)}
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>{t('wh_settings')}</div>
+          <Select header={t('wh_step')} value={String(step)} onChange={(e) => { setStep(Number(e.target.value)); setDirty(true); }}>
+            {[15, 20, 30, 45, 60, 90, 120].map((v) => <option key={v} value={v}>{fill(t('wh_step_opt'), { n: v })}</option>)}
           </Select>
-          <Select header="Запись открыта вперёд на" value={String(horizon)} onChange={(e) => { setHorizon(Number(e.target.value)); setDirty(true); }}>
-            {[7, 14, 30, 60, 90].map((v) => <option key={v} value={v}>{v} дней</option>)}
+          <Select header={t('wh_horizon')} value={String(horizon)} onChange={(e) => { setHorizon(Number(e.target.value)); setDirty(true); }}>
+            {[7, 14, 30, 60, 90].map((v) => <option key={v} value={v}>{fill(t('wh_horizon_opt'), { n: v })}</option>)}
           </Select>
-          <Select header="Не раньше чем за" value={String(lead)} onChange={(e) => { setLead(Number(e.target.value)); setDirty(true); }}>
-            <option value="0">без ограничения</option>
-            <option value="30">30 минут</option>
-            <option value="60">1 час</option>
-            <option value="120">2 часа</option>
-            <option value="180">3 часа</option>
-            <option value="1440">1 день</option>
+          <Select header={t('wh_lead')} value={String(lead)} onChange={(e) => { setLead(Number(e.target.value)); setDirty(true); }}>
+            {[0, 30, 60, 120, 180, 1440].map((v) => <option key={v} value={v}>{t(`wh_lead_${v}`)}</option>)}
           </Select>
           <Text style={{ display: 'block', fontSize: 13, color: 'var(--tg-theme-hint-color)', marginTop: 8, lineHeight: 1.4 }}>
-            Шаг — как часто начинаются окна: при шаге 30 минут клиент видит 10:00, 10:30, 11:00… Длительность берётся из услуги.
+            {t('wh_step_hint')}
           </Text>
         </div>
 
         <div style={card}>
-          <div style={{ fontWeight: 700, marginBottom: 4 }}>Выходные и отпуск</div>
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>{t('wh_off_title')}</div>
           <Text style={{ display: 'block', fontSize: 13, color: 'var(--tg-theme-hint-color)', marginBottom: 10 }}>
-            В эти дни запись будет закрыта.
+            {t('wh_off_desc')}
           </Text>
           {data.time_off.map((o) => (
             <div key={o.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderTop: '1px solid var(--tg-theme-secondary-bg-color)' }}>
               <div>
                 <div style={{ fontWeight: 600 }}>
-                  {o.start_date === o.end_date ? fmtDate(o.start_date) : `${fmtDate(o.start_date)} — ${fmtDate(o.end_date)}`}
+                  {o.start_date === o.end_date ? fmtDate(o.start_date, lang) : `${fmtDate(o.start_date, lang)} — ${fmtDate(o.end_date, lang)}`}
                 </div>
                 {o.note && <div style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)' }}>{o.note}</div>}
               </div>
               <Button size="s" mode="plain" onClick={() => onDeleteOff(o.id)}>
-                <span style={{ color: 'var(--tg-theme-destructive-text-color, #FF3B30)' }}>Удалить</span>
+                <span style={{ color: 'var(--tg-theme-destructive-text-color, #FF3B30)' }}>{t('btn_delete')}</span>
               </Button>
             </div>
           ))}
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <Input header="С" type="date" value={offFrom} min={todayIso()}
+            <Input header={t('wh_off_from')} type="date" value={offFrom} min={todayIso()}
               onChange={(e) => { setOffFrom(e.target.value); if (e.target.value > offTo) setOffTo(e.target.value); }} />
-            <Input header="По" type="date" value={offTo} min={offFrom} onChange={(e) => setOffTo(e.target.value)} />
+            <Input header={t('wh_off_to')} type="date" value={offTo} min={offFrom} onChange={(e) => setOffTo(e.target.value)} />
           </div>
-          <Input header="Комментарий" placeholder="Например: отпуск" value={offNote} onChange={(e) => setOffNote(e.target.value)} />
+          <Input header={t('wh_off_note')} placeholder={t('wh_off_note_ph')} value={offNote} onChange={(e) => setOffNote(e.target.value)} />
           <div style={{ marginTop: 8 }}>
-            <Button size="m" mode="bezeled" stretched onClick={onAddOff}>Добавить выходные</Button>
+            <Button size="m" mode="bezeled" stretched onClick={onAddOff}>{t('wh_off_add')}</Button>
           </div>
         </div>
       </div>
 
       <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, padding: '12px 16px 20px', backgroundColor: 'var(--tg-theme-secondary-bg-color)', boxShadow: '0 -4px 16px rgba(0,0,0,0.06)' }}>
         <Button size="l" stretched mode="filled" loading={saving} disabled={!dirty && data.uses_schedule} onClick={onSave}>
-          {dirty || !data.uses_schedule ? 'Сохранить график' : 'График сохранён'}
+          {dirty || !data.uses_schedule ? t('wh_save') : t('wh_saved')}
         </Button>
         {!firstWorking && (
           <Text style={{ display: 'block', textAlign: 'center', fontSize: 12, color: 'var(--tg-theme-hint-color)', marginTop: 6 }}>
-            Все дни выходные — клиенты не смогут записаться
+            {t('wh_all_off')}
           </Text>
         )}
       </div>

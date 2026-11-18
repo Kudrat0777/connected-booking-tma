@@ -1047,3 +1047,8 @@ export const translations: TranslationsDictionary = {
     reviews_first_to_rate: "Ushbu ustani birinchi bo'lib baholang!"
   }
 };
+// Экраны заведения, команды, ссылок и рабочего графика
+import { businessTranslations } from './translationsBusiness';
+(Object.keys(businessTranslations) as LangCode[]).forEach((code) => {
+  Object.assign(translations[code], businessTranslations[code]);
+});
