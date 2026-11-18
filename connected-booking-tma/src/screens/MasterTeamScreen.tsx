@@ -8,6 +8,7 @@ import { Konnektik } from '../components/Konnektik';
 
 type Props = {
   onBack: () => void;
+  onOpenSchedule?: (memberId: number) => void;
 };
 
 const ROLE_LABEL: Record<string, string> = { owner: 'Владелец', admin: 'Администратор', master: 'Мастер' };
@@ -28,7 +29,7 @@ const card: React.CSSProperties = {
   boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
 };
 
-export const MasterTeamScreen: React.FC<Props> = ({ onBack }) => {
+export const MasterTeamScreen: React.FC<Props> = ({ onBack, onOpenSchedule }) => {
   const tg = (window as any).Telegram?.WebApp;
   const [biz, setBiz] = useState<MyBusiness | null>(null);
   const [error, setError] = useState('');
@@ -144,8 +145,16 @@ export const MasterTeamScreen: React.FC<Props> = ({ onBack }) => {
                 </span>
               </div>
 
+              {canManage && (
+                <div style={{ marginTop: 10 }}>
+                  <Button size="s" mode="plain" onClick={() => { haptic(); onOpenSchedule?.(m.id); }}>
+                    🗓 Рабочий график
+                  </Button>
+                </div>
+              )}
+
               {canManage && m.role !== 'owner' && (
-                <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
                   {isOwner && (
                     <Button size="s" mode="bezeled" disabled={busyId === m.id}
                       onClick={() => act(m, { role: m.role === 'admin' ? 'master' : 'admin' })}>
