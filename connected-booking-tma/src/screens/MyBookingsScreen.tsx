@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Button,
   SegmentedControl,
@@ -12,7 +12,7 @@ import {
   Icon24ClockOutline,
   Icon24CancelOutline
 } from '@vkontakte/icons';
-import lottie from 'lottie-web';
+import { KonnektikSticker } from '../components/Konnektik';
 
 import type { Booking } from '../helpers/api';
 import { fetchMyBookings, cancelBooking } from '../helpers/api';
@@ -21,21 +21,7 @@ import { RateBookingModal } from '../components/RateBookingModal';
 // ИМПОРТИРУЕМ ХУК ЛОКАЛИЗАЦИИ
 import { useLanguage } from '../helpers/LanguageContext';
 
-const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
-  const container = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!container.current) return;
-    const anim = lottie.loadAnimation({
-      container: container.current,
-      renderer: 'svg',
-      loop: true,
-      autoplay: true,
-      path: src,
-    });
-    return () => anim.destroy();
-  }, [src]);
-  return <div ref={container} style={{ width: size, height: size, margin: '0 auto 16px' }} />;
-};
+const LottieIcon = KonnektikSticker;
 
 type Props = {
   telegramId: number;

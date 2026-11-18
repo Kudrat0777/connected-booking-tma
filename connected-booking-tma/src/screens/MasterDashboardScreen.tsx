@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Tabbar,
   Button,
@@ -18,7 +18,7 @@ import {
   Icon28UserCircleOutline,
   Icon28PhoneOutline
 } from '@vkontakte/icons';
-import lottie from 'lottie-web';
+import { KonnektikSticker } from '../components/Konnektik';
 
 import {
   fetchMasterBookings,
@@ -41,23 +41,7 @@ import { MasterCreateServiceScreen } from './MasterCreateServiceScreen';
 // ИМПОРТИРУЕМ ХУК ЛОКАЛИЗАЦИИ
 import { useLanguage } from '../helpers/LanguageContext';
 
-const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
-  const container = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!container.current) return;
-    try {
-      const anim = lottie.loadAnimation({
-        container: container.current,
-        renderer: 'svg',
-        loop: true,
-        autoplay: true,
-        path: src,
-      });
-      return () => anim.destroy();
-    } catch (e) { console.error(e); }
-  }, [src]);
-  return <div ref={container} style={{ width: size, height: size, margin: '0 auto 16px' }} />;
-};
+const LottieIcon = KonnektikSticker;
 
 type Props = {
   telegramId: number;
@@ -68,6 +52,8 @@ type Props = {
   onOpenReviews: () => void;
   onAddService?: () => void;
   onLogout?: () => void;
+  onOpenLinks?: () => void;
+  onOpenTeam?: () => void;
 };
 
 type Tab = 'bookings' | 'services' | 'profile';
@@ -80,7 +66,9 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   onEditProfile,
   onOpenAnalytics,
   onOpenReviews,
-  onLogout
+  onLogout,
+  onOpenLinks,
+  onOpenTeam
 }) => {
   const { t, lang } = useLanguage();
 
@@ -555,6 +543,8 @@ export const MasterDashboardScreen: React.FC<Props> = ({
                 onOpenSchedule={onOpenSchedule}
                 onOpenAnalytics={onOpenAnalytics}
                 onOpenReviews={onOpenReviews}
+                onOpenLinks={onOpenLinks}
+                onOpenTeam={onOpenTeam}
                 onSwitchToClient={onSwitchToClient}
                 onLogoutClick={handleLogoutClick}
                 onDeleteAccount={handleDeleteAccount}

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Tabbar,
   Placeholder,
@@ -17,7 +17,7 @@ import {
   Icon24LocationOutline,
   Icon28ChevronRightOutline
 } from '@vkontakte/icons';
-import lottie from 'lottie-web';
+import { KonnektikSticker } from '../components/Konnektik';
 
 import { fetchMasters, getFullImageUrl } from '../helpers/api';
 import type { MasterPublicProfile, Booking } from '../helpers/api';
@@ -25,23 +25,7 @@ import type { MasterPublicProfile, Booking } from '../helpers/api';
 // ИМПОРТИРУЕМ ХУК ЛОКАЛИЗАЦИИ
 import { useLanguage } from '../helpers/LanguageContext';
 
-const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
-  const container = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!container.current) return;
-    try {
-      const anim = lottie.loadAnimation({
-        container: container.current,
-        renderer: 'svg',
-        loop: true,
-        autoplay: true,
-        path: src,
-      });
-      return () => anim.destroy();
-    } catch (e) { console.error(e); }
-  }, [src]);
-  return <div ref={container} style={{ width: size, height: size, margin: '0 auto 16px' }} />;
-};
+const LottieIcon = KonnektikSticker;
 
 type MainTab = 'bookings' | 'masters' | 'settings';
 

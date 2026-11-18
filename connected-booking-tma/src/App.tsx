@@ -26,9 +26,13 @@ import { MasterCreateServiceScreen } from './screens/MasterCreateServiceScreen';
 import { PortfolioViewerScreen } from './screens/PortfolioViewerScreen';
 import { MasterPublicProfileScreen } from './screens/MasterPublicProfileScreen';
 import { MasterRegistrationScreen } from './screens/MasterRegistrationScreen';
+import { MasterLinksScreen } from './screens/MasterLinksScreen';
+import { MasterTeamScreen } from './screens/MasterTeamScreen';
+import { BusinessPublicScreen } from './screens/BusinessPublicScreen';
 
 import type { Service, Slot, Booking } from './helpers/api';
-import { checkClientProfile, registerClient } from './helpers/api';
+import { checkClientProfile, registerClient, fetchCurrentMaster, fetchMasterBySlug, trackVisit } from './helpers/api';
+import { parseStartParam, rememberSource } from './helpers/links';
 import { getUserFromQuery, getStartParam } from './helpers/telegramQueryUser';
 
 const originalFetch = window.fetch;
@@ -48,6 +52,20 @@ window.fetch = async function () {
 
     config.headers['Accept'] = 'application/json';
 
+    // Кто делает запрос: подписанные Telegram данные (initData). Бэкенд проверяет подпись
+    // и больше не верит telegram_id из параметров запроса.
+    const isApiCall = url.startsWith(API_BASE) || url.includes('/api/');
+    if (isApiCall) {
+        const initData = (window as any).Telegram?.WebApp?.initData;
+        if (initData) {
+            config.headers['Authorization'] = `tma ${initData}`;
+        } else if (import.meta.env.DEV) {
+            // Разработка в обычном браузере: бэкенд примет этот заголовок только при TMA_DEV_AUTH=1
+            const devId = new URLSearchParams(window.location.search).get('uid');
+            if (devId) config.headers['X-Dev-Telegram-Id'] = devId;
+        }
+    }
+
     return await originalFetch(resource, config);
 };
 
@@ -59,7 +77,8 @@ type Screen =
   | 'master_welcome' | 'master_login' | 'master_registration' | 'master_dashboard'
   | 'master_schedule' | 'master_edit_profile' | 'master_analytics'
   | 'master_reviews' | 'master_create_service' | 'client_portfolio'
-  | 'client_registration' | 'client_master_profile';
+  | 'client_registration' | 'client_master_profile'
+  | 'master_links' | 'master_team' | 'client_business';
 
 type MainTab = 'bookings' | 'masters' | 'settings';
 
@@ -139,6 +158,10 @@ const AppContent: React.FC = () => {
 
   // СОСТОЯНИЕ ДЛЯ ХРАНЕНИЯ ЦЕЛЕВОГО МАСТЕРА ИЗ ДИПЛИНКА
   const [targetMasterIdForNewClient, setTargetMasterIdForNewClient] = useState<number | null>(null);
+  // Заведение из таргет-ссылки b_<slug> и код приглашения join_<код>
+  const [businessSlug, setBusinessSlug] = useState<string | null>(null);
+  const [targetBusinessForNewClient, setTargetBusinessForNewClient] = useState<string | null>(null);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
 
   const pushScreen = (newScreen: Screen) => {
       setHistory(prev => [...prev, screen]);
@@ -163,16 +186,31 @@ const AppContent: React.FC = () => {
       setScreenState(newScreen);
   };
 
-  const loadCurrentMaster = async (uid: number) => {
+  const loadCurrentMaster = async (_uid?: number) => {
       try {
-        const res = await fetch(`${API_BASE}/masters/me/?telegram_id=${uid}`);
-        if (res.ok) {
-           const data = await res.json();
+        const data = await fetchCurrentMaster();
+        if (data) {
            setCurrentMaster(data);
            return true;
         }
       } catch (e) { console.error('Failed to load master', e); }
       return false;
+  };
+
+  // Куда вести клиента после входа: заведение или мастер из ссылки, иначе — главная
+  const openClientTarget = (masterId: number | null, bizSlug: string | null) => {
+      if (bizSlug) {
+          setBusinessSlug(bizSlug);
+          setHistory(['profile']);
+          setScreenState('client_business');
+      } else if (masterId) {
+          setSelectedMasterId(masterId);
+          setHistory(['profile']);
+          setScreenState('client_master_profile');
+      } else {
+          setMainTab('bookings');
+          resetScreen('profile');
+      }
   };
 
   // === ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ===
@@ -186,15 +224,21 @@ const AppContent: React.FC = () => {
        try {
            const uid = user?.id || (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id;
 
-           // 1. Проверяем диплинк (startapp=master_XXX)
+           // 1. Разбираем ссылку: b_<заведение>__<метка>, m_<мастер>__<метка>, join_<код>, master_<id>
            let dipLinkMasterId: number | null = null;
-           const startParam = getStartParam();
-           if (startParam && startParam.startsWith('master_')) {
-              const idStr = startParam.replace('master_', '');
-              const parsedId = parseInt(idStr);
-              if (!isNaN(parsedId)) {
-                 dipLinkMasterId = parsedId;
-              }
+           let dipLinkBusiness: string | null = null;
+           const target = parseStartParam(getStartParam());
+           if (target?.kind === 'legacy_master') {
+              dipLinkMasterId = target.id;
+           } else if (target?.kind === 'business') {
+              dipLinkBusiness = target.slug;
+              rememberSource(target.source);
+              trackVisit({ business: target.slug, source: target.source });
+           } else if (target?.kind === 'master') {
+              rememberSource(target.source);
+              trackVisit({ master: target.slug, source: target.source });
+              const m = await fetchMasterBySlug(target.slug).catch(() => null);
+              if (m) dipLinkMasterId = m.id;
            }
 
            // ЕСЛИ НЕТ ПОЛЬЗОВАТЕЛЯ -> Экран приветствия
@@ -206,30 +250,23 @@ const AppContent: React.FC = () => {
                return;
            }
 
-           // 2. ПРОВЕРКА РОЛИ МАСТЕРА
+           // 2. ПАНЕЛЬ МАСТЕРА. Вход — через Telegram: если мастер уже зарегистрирован, сразу в кабинет.
            const params = new URLSearchParams(window.location.search);
-           if (params.get('role') === 'master') {
-               // Строго проверяем флаг сессии в localStorage
-               const isLoggedIn = localStorage.getItem('is_master_logged_in') === 'true';
-
-               if (isLoggedIn) {
-                   const isMasterLoaded = await loadCurrentMaster(uid);
+           if (params.get('role') === 'master' || target?.kind === 'join') {
+               if (target?.kind === 'join') {
+                   // Приглашение в команду: сразу на регистрацию в заведение
                    if (isMounted) {
-                       if (isMasterLoaded) {
-                           resetScreen('master_dashboard');
-                       } else {
-                           // Если мастера удалили из базы, сбрасываем сессию
-                           localStorage.removeItem('is_master_logged_in');
-                           resetScreen('master_welcome');
-                       }
+                       setInviteCode(target.code);
+                       resetScreen('master_registration');
                        setIsAppLoading(false);
                    }
-               } else {
-                   // Если флаг отсутствует (пользователь вышел), строго показываем приветствие
-                   if (isMounted) {
-                       resetScreen('master_welcome');
-                       setIsAppLoading(false);
-                   }
+                   return;
+               }
+               const loggedOut = localStorage.getItem('is_master_logged_out') === 'true';
+               const isMasterLoaded = !loggedOut && await loadCurrentMaster();
+               if (isMounted) {
+                   resetScreen(isMasterLoaded ? 'master_dashboard' : 'master_welcome');
+                   setIsAppLoading(false);
                }
                return;
            }
@@ -248,20 +285,16 @@ const AppContent: React.FC = () => {
                // Клиент существует в базе
                localStorage.setItem('is_client_logged_in', 'true');
 
-               if (dipLinkMasterId) {
-                   setSelectedMasterId(dipLinkMasterId);
-                   setHistory(['profile']); // Чтобы кнопка "назад" возвращала в меню
-                   setScreenState('client_master_profile');
-               } else {
-                   setMainTab('bookings');
-                   resetScreen('profile');
-               }
+               openClientTarget(dipLinkMasterId, dipLinkBusiness);
            } else {
                // Новый клиент
                localStorage.removeItem('is_client_logged_in');
 
                if (dipLinkMasterId) {
                    setTargetMasterIdForNewClient(dipLinkMasterId);
+               }
+               if (dipLinkBusiness) {
+                   setTargetBusinessForNewClient(dipLinkBusiness);
                }
                resetScreen('welcome');
            }
@@ -311,15 +344,9 @@ const AppContent: React.FC = () => {
 
       localStorage.setItem('is_client_logged_in', 'true');
 
-      if (targetMasterIdForNewClient) {
-          setSelectedMasterId(targetMasterIdForNewClient);
-          setTargetMasterIdForNewClient(null);
-          setHistory(['profile']);
-          setScreenState('client_master_profile');
-      } else {
-          setMainTab('bookings');
-          resetScreen('profile');
-      }
+      openClientTarget(targetMasterIdForNewClient, targetBusinessForNewClient);
+      setTargetMasterIdForNewClient(null);
+      setTargetBusinessForNewClient(null);
     } catch (e) {
       console.error("Login/Registration error:", e);
       alert("Произошла ошибка при соединении с сервером.");
@@ -329,7 +356,7 @@ const AppContent: React.FC = () => {
   };
 
   const handleMasterLogout = () => {
-    localStorage.removeItem('is_master_logged_in');
+    localStorage.setItem('is_master_logged_out', 'true');
     setCurrentMaster(null);
     setSelectedMasterId(null);
     setSelectedMasterName(null);
@@ -484,8 +511,16 @@ const AppContent: React.FC = () => {
       {screen === 'master_welcome' && (
         <MasterWelcomeScreen
           onStart={() => {}}
-          onLogin={() => pushScreen('master_login')}
-          onRegister={() => pushScreen('master_registration')} // <-- ДОБАВИЛИ
+          onLogin={async () => {
+              localStorage.removeItem('is_master_logged_out');
+              if (await loadCurrentMaster()) resetScreen('master_dashboard');
+              else pushScreen('master_login');
+          }}
+          onRegister={async () => {
+              localStorage.removeItem('is_master_logged_out');
+              if (await loadCurrentMaster()) resetScreen('master_dashboard');
+              else pushScreen('master_registration');
+          }}
         />
       )}
 
@@ -493,9 +528,11 @@ const AppContent: React.FC = () => {
       {screen === 'master_registration' && user && (
         <MasterRegistrationScreen
           telegramId={user.id}
-          onBack={() => goBack('master_welcome')}
+          inviteCode={inviteCode}
+          onBack={() => { setInviteCode(null); goBack('master_welcome'); }}
           onComplete={() => {
-              localStorage.setItem('is_master_logged_in', 'true');
+              localStorage.removeItem('is_master_logged_out');
+              setInviteCode(null);
               loadCurrentMaster(user.id);
               resetScreen('master_dashboard');
           }}
@@ -507,6 +544,7 @@ const AppContent: React.FC = () => {
           telegramId={user.id}
           onBack={() => goBack('master_welcome')}
           onComplete={() => {
+              localStorage.removeItem('is_master_logged_out');
               loadCurrentMaster(user.id);
               resetScreen('master_dashboard');
           }}
@@ -523,6 +561,31 @@ const AppContent: React.FC = () => {
           onOpenReviews={() => pushScreen('master_reviews')}
           onAddService={() => pushScreen('master_create_service')}
           onLogout={handleMasterLogout}
+          onOpenLinks={() => pushScreen('master_links')}
+          onOpenTeam={() => pushScreen('master_team')}
+        />
+      )}
+
+      {screen === 'master_links' && (
+        <MasterLinksScreen
+          onBack={() => goBack('master_dashboard')}
+          onOpenAnalytics={() => pushScreen('master_analytics')}
+        />
+      )}
+
+      {screen === 'master_team' && (
+        <MasterTeamScreen onBack={() => goBack('master_dashboard')} />
+      )}
+
+      {screen === 'client_business' && businessSlug && (
+        <BusinessPublicScreen
+          slug={businessSlug}
+          onBack={() => goBack('profile')}
+          onOpenMaster={(masterId, masterName) => {
+            setSelectedMasterId(masterId);
+            setSelectedMasterName(masterName);
+            pushScreen('client_master_profile');
+          }}
         />
       )}
 

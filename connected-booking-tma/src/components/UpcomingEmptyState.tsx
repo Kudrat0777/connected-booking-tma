@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import lottie, { AnimationItem } from 'lottie-web';
+import React from 'react';
+import { KonnektikSticker } from './Konnektik';
 import { Button } from '@telegram-apps/telegram-ui';
 
 type Props = {
@@ -15,31 +15,6 @@ export const UpcomingEmptyState: React.FC<Props> = ({
   stickerPath = '/stickers/skeleton.json',
   onGoToServices,
 }) => {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const instanceRef = useRef<AnimationItem | null>(null);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    if (instanceRef.current) {
-      instanceRef.current.destroy();
-      instanceRef.current = null;
-    }
-
-    const anim = lottie.loadAnimation({
-      container: containerRef.current,
-      renderer: 'svg',
-      loop: true,
-      autoplay: true,
-      path: stickerPath,
-    });
-
-    instanceRef.current = anim;
-
-    return () => {
-      anim.destroy();
-    };
-  }, [stickerPath]);
 
   return (
     <div
@@ -53,11 +28,7 @@ export const UpcomingEmptyState: React.FC<Props> = ({
         gap: 12,
       }}
     >
-      <div
-        ref={containerRef}
-        style={{ width: 160, height: 160 }}
-        aria-hidden="true"
-      />
+      <KonnektikSticker src={stickerPath} size={160} />
 
       <div
         style={{
