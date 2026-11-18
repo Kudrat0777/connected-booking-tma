@@ -827,3 +827,41 @@ export async function deleteTimeOff(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/masters/time_off/${id}/`, { method: 'DELETE' });
   if (!res.ok && res.status !== 204) throw new Error('Не удалось удалить');
 }
+
+// --------- КАЛЕНДАРЬ САЛОНА ---------
+
+export type SalonBooking = {
+  id: number;
+  start: number; // минуты от полуночи по местному времени
+  end: number;
+  service: string;
+  service_id: number;
+  client_name: string;
+  client_phone: string; // пусто, если нет прав видеть телефон
+  status: 'pending' | 'confirmed';
+  source: string;
+};
+
+export type SalonColumn = {
+  id: number;
+  name: string;
+  role: MasterRole;
+  avatar_url: string;
+  schedule: 'auto' | 'manual';
+  day_off: boolean;
+  working: { start: number; end: number; break_start: number | null; break_end: number | null } | null;
+  bookings: SalonBooking[];
+};
+
+export type SalonDay = {
+  date: string;
+  business: string;
+  can_manage: boolean;
+  my_master_id: number;
+  masters: SalonColumn[];
+  summary: { total: number; pending: number };
+};
+
+export async function fetchSalonDay(date: string): Promise<SalonDay> {
+  return jsonOrThrow(await fetch(`${API_BASE}/businesses/day/?date=${date}`), 'Не удалось загрузить календарь');
+}
