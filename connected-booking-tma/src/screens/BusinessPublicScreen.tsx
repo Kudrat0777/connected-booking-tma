@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Title, Text, Spinner } from '@telegram-apps/telegram-ui';
 
-import { fetchBusinessBySlug, BusinessPublic, useTunnelImage } from '../helpers/api';
+import { fetchBusinessBySlug, fetchSalonServices, BusinessPublic, useTunnelImage } from '../helpers/api';
 import { Konnektik } from '../components/Konnektik';
 import { useLanguage } from '../helpers/LanguageContext';
 
@@ -9,6 +9,7 @@ type Props = {
   slug: string;
   onBack: () => void;
   onOpenMaster: (masterId: number, masterName: string) => void;
+  onAnyMaster?: (businessName: string) => void;
 };
 
 const MasterAvatar: React.FC<{ src?: string; name: string }> = ({ src, name }) => {
@@ -23,7 +24,7 @@ const MasterAvatar: React.FC<{ src?: string; name: string }> = ({ src, name }) =
 };
 
 /** Страница заведения для клиента: кто работает, рейтинг, переход к записи к конкретному мастеру. */
-export const BusinessPublicScreen: React.FC<Props> = ({ slug, onBack, onOpenMaster }) => {
+export const BusinessPublicScreen: React.FC<Props> = ({ slug, onBack, onOpenMaster, onAnyMaster }) => {
   const tg = (window as any).Telegram?.WebApp;
   const { t } = useLanguage();
   const [biz, setBiz] = useState<BusinessPublic | null>(null);
@@ -39,8 +40,12 @@ export const BusinessPublicScreen: React.FC<Props> = ({ slug, onBack, onOpenMast
     return () => tg.BackButton.offClick(h);
   }, [tg]);
 
+  // Есть ли услуги, на которые можно записаться к любому свободному мастеру
+  const [anyAvailable, setAnyAvailable] = useState(false);
+
   useEffect(() => {
     fetchBusinessBySlug(slug).then((b) => { setBiz(b); setState(b ? 'ok' : 'missing'); });
+    fetchSalonServices(slug).then((list) => setAnyAvailable(list.length > 0));
   }, [slug]);
 
   if (state === 'loading') {
@@ -73,6 +78,22 @@ export const BusinessPublicScreen: React.FC<Props> = ({ slug, onBack, onOpenMast
 
       {biz.description && (
         <Text style={{ display: 'block', padding: '0 20px 12px', fontSize: 15, lineHeight: 1.4 }}>{biz.description}</Text>
+      )}
+
+      {anyAvailable && onAnyMaster && biz.masters.length > 1 && (
+        <div style={{ padding: '0 16px 12px' }}>
+          <button
+            type="button"
+            onClick={() => { tg?.HapticFeedback?.impactOccurred('light'); onAnyMaster(biz.name); }}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: 16, borderRadius: 16, border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', backgroundColor: 'var(--tg-theme-button-color)', color: 'var(--tg-theme-button-text-color)', boxShadow: '0 6px 18px rgba(0,0,0,0.12)' }}
+          >
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: 17 }}>{t('biz_any_title')}</div>
+              <div style={{ fontSize: 13, opacity: 0.85, marginTop: 2 }}>{t('biz_any_desc')}</div>
+            </div>
+            <span style={{ fontSize: 22 }}>→</span>
+          </button>
+        </div>
       )}
 
       <div style={{ padding: '0 16px' }}>

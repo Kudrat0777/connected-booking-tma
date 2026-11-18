@@ -865,3 +865,35 @@ export type SalonDay = {
 export async function fetchSalonDay(date: string): Promise<SalonDay> {
   return jsonOrThrow(await fetch(`${API_BASE}/businesses/day/?date=${date}`), 'Не удалось загрузить календарь');
 }
+
+// --------- ЗАПИСЬ К ЛЮБОМУ СВОБОДНОМУ МАСТЕРУ ---------
+
+export type SalonService = {
+  key: string;
+  name: string;
+  masters_count: number;
+  price_min: number | null;
+  price_max: number | null;
+  duration_min: number;
+  duration_max: number;
+};
+
+export async function fetchSalonServices(slug: string): Promise<SalonService[]> {
+  const res = await fetch(`${API_BASE}/businesses/by_slug/${encodeURIComponent(slug)}/services/`);
+  return res.ok ? res.json() : [];
+}
+
+export async function fetchAnyMasterTimes(slug: string, serviceKey: string, days = 14): Promise<{ time: string; masters: number }[]> {
+  const q = new URLSearchParams({ service: serviceKey, days: String(days) });
+  const res = await fetch(`${API_BASE}/businesses/by_slug/${encodeURIComponent(slug)}/any_times/?${q}`);
+  return res.ok ? res.json() : [];
+}
+
+export async function bookAnyMaster(slug: string, serviceKey: string, time: string, username?: string | null) {
+  const res = await fetch(`${API_BASE}/businesses/by_slug/${encodeURIComponent(slug)}/book_any/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ service: serviceKey, time, source: currentSource(), username: username ?? null }),
+  });
+  return jsonOrThrow(res, 'Не удалось записаться') as Promise<Booking & { master: { id: number; name: string; slug: string } }>;
+}
