@@ -441,11 +441,13 @@ export async function fetchMasterSlots(telegramId: number, date: string): Promis
   return [];
 }
 
-// slot: готовый слот (id) или время по графику ({ serviceId, time })
+// slot: готовый слот (id) или время по графику ({ serviceId, time });
+// clientKey — «Записать снова» из базы клиентов (имя и телефон берутся из истории)
 export async function createManualBooking(
   slot: number | { serviceId: number; time: string },
   clientName: string,
   phone: string,
+  clientKey?: string,
 ) {
   const target = typeof slot === 'number'
     ? { slot_id: slot }
@@ -453,7 +455,7 @@ export async function createManualBooking(
   const res = await fetch(`${API_BASE}/bookings/manual_create/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...target, client_name: clientName, phone: phone }),
+    body: JSON.stringify({ ...target, client_name: clientName, phone: phone, client_key: clientKey }),
   });
 
   if (!res.ok) {
@@ -896,4 +898,54 @@ export async function bookAnyMaster(slug: string, serviceKey: string, time: stri
     body: JSON.stringify({ service: serviceKey, time, source: currentSource(), username: username ?? null }),
   });
   return jsonOrThrow(res, 'Не удалось записаться') as Promise<Booking & { master: { id: number; name: string; slug: string } }>;
+}
+
+
+// --------- БАЗА КЛИЕНТОВ ---------
+
+export type Customer = {
+  key: string;            // t<telegram_id> или p<телефон>
+  name: string;
+  phone: string;
+  telegram_id: number | null;
+  username: string;
+  visits: number;
+  cancelled: number;
+  upcoming: number;
+  spent: number;
+  first_visit: string | null;
+  last_visit: string | null;
+  next_visit: string | null;
+  last_service: string;
+  last_service_id: number | null;
+  last_master: string;
+  last_master_id: number | null;
+  note: string;
+};
+
+export type CustomerDetail = Customer & {
+  history: { id: number; time: string; service: string; master: string; price: number | null; status: string; source: string }[];
+};
+
+export type CustomerSort = 'recent' | 'visits' | 'spent' | 'lost';
+
+export async function fetchCustomers(params: { q?: string; sort?: CustomerSort; scope?: 'team' | '' }): Promise<Customer[]> {
+  const q = new URLSearchParams();
+  if (params.q) q.set('q', params.q);
+  if (params.sort) q.set('sort', params.sort);
+  if (params.scope) q.set('scope', params.scope);
+  return jsonOrThrow(await fetch(`${API_BASE}/customers/?${q}`), 'Не удалось загрузить клиентов');
+}
+
+export async function fetchCustomer(key: string): Promise<CustomerDetail> {
+  return jsonOrThrow(await fetch(`${API_BASE}/customers/${encodeURIComponent(key)}/`), 'Клиент не найден');
+}
+
+export async function saveCustomerNote(key: string, text: string): Promise<{ note: string }> {
+  const res = await fetch(`${API_BASE}/customers/${encodeURIComponent(key)}/note/`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  });
+  return jsonOrThrow(res, 'Не удалось сохранить заметку');
 }
