@@ -26,7 +26,6 @@ import { MasterClientDetailScreen } from './screens/MasterClientDetailScreen';
 import { MasterEditProfileScreen } from './screens/MasterEditProfileScreen';
 import { MasterAnalyticsScreen } from './screens/MasterAnalyticsScreen';
 import { MasterReviewsScreen } from './screens/MasterReviewsScreen';
-import { MasterCreateServiceScreen } from './screens/MasterCreateServiceScreen';
 import { PortfolioViewerScreen } from './screens/PortfolioViewerScreen';
 import { MasterPublicProfileScreen } from './screens/MasterPublicProfileScreen';
 import { MasterRegistrationScreen } from './screens/MasterRegistrationScreen';
