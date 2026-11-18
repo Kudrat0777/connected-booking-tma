@@ -1,23 +1,10 @@
+import { BRAND } from '../helpers/brand';
 import React, { useState, useEffect } from 'react';
-import {
-  Spinner,
-  Avatar,
-  Title,
-  Text,
-  Section,
-  Cell,
-  List,
-  Button,
-  Placeholder
-} from '@telegram-apps/telegram-ui';
-import {
-  Icon28FavoriteOutline,
-  Icon28WorkOutline,
-  Icon24LocationOutline,
-  Icon28PhoneOutline,
-  Icon28ChevronRightOutline
-} from '@vkontakte/icons';
+import { Spinner, Button, Placeholder } from '@telegram-apps/telegram-ui';
 import { KonnektikSticker } from '../components/Konnektik';
+import { Avatar as UiAvatar, Badge, PrimaryButton, card, money } from '../components/ui';
+import { useWhen } from './ClientHomeScreen';
+import { fill } from '../helpers/translationsBusiness';
 
 import { fetchMasterProfile, fetchMasterById, fetchPortfolio, fetchServices, getFullImageUrl } from '../helpers/api';
 import type { MasterPublicProfile, PortfolioItem, Service } from '../helpers/api';
@@ -38,6 +25,7 @@ type Props = {
 export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, onBook, onServiceClick }) => {
   // ПОДКЛЮЧАЕМ ПЕРЕВОДЫ
   const { t } = useLanguage();
+  const when = useWhen();
 
   const [master, setMaster] = useState<MasterPublicProfile | null>(null);
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
@@ -124,19 +112,19 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
 
     const handleBook = () => {
       if (tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
-      onBook(master.name);
+      startBooking();
     };
 
     tg.BackButton.onClick(handleBack);
     tg.BackButton.show();
 
-    if (isReviewsModalOpen || selectedImage) {
+    if (isReviewsModalOpen || selectedImage || !inTelegram) {
         tg.MainButton.hide();
     } else {
         tg.MainButton.setParams({
             text: t('btn_online_booking'), // ПЕРЕВОД КНОПКИ
-            color: tg.themeParams?.button_color || '#3390ec',
-            text_color: tg.themeParams?.button_text_color || '#ffffff',
+            color: BRAND.accent,
+            text_color: BRAND.onAccent,
             is_active: true,
             is_visible: true
         });
@@ -150,7 +138,16 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
       tg.MainButton.offClick(handleBook);
       tg.MainButton.hide();
     };
-  }, [loading, master, error, onBack, onBook, isReviewsModalOpen, selectedImage, t]);
+  }, [loading, master, error, onBack, onBook, isReviewsModalOpen, selectedImage, t, services]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // В Telegram запись — нативной кнопкой внизу, в браузере — своей кнопкой на странице
+  const inTelegram = ((window as any).Telegram?.WebApp?.platform || 'unknown') !== 'unknown';
+
+  function startBooking() {
+    if (services.length === 1 && onServiceClick) { onServiceClick(services[0]); return; }
+    if (services.length === 0 && master) { onBook(master.name); return; }
+    document.getElementById('services')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
   if (loading) {
     return (
@@ -175,8 +172,20 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
   }
 
   const isAddressLink = master.address && master.address.includes('http');
-  const currentHour = new Date().getHours();
-  const isOpen = currentHour >= 10 && currentHour < 20;
+  const today = master.today;
+  const CATS = ['Барбершоп', 'Салон красоты', 'Массаж', 'Маникюр / Педикюр', 'Брови и Ресницы',
+    'Медицина', 'Спорт / Фитнес', 'Автосервис', 'Другое'];
+  const catIndex = CATS.indexOf(master.category || '');
+  const category = catIndex >= 0 ? t(`cat_${catIndex}`) : (master.category || '');
+
+  // Статус «работает сейчас» — только по настоящему графику мастера
+  const statusChip = (() => {
+    if (!today || today.state === 'unknown') return null;
+    if (today.state === 'open') return <Badge tone="ok">● {fill(t('mp_open_until'), { time: today.closes || '' })}</Badge>;
+    if (today.state === 'later') return <Badge tone="wait">{fill(t('mp_opens_at'), { time: today.opens || '' })}</Badge>;
+    if (today.state === 'closed') return <Badge tone="off">{t('mp_closed_today')}</Badge>;
+    return <Badge tone="off">{t('mp_day_off')}</Badge>;
+  })();
 
   const triggerHaptic = (type: 'light' | 'selection' = 'selection') => {
     const tg = (window as any).Telegram?.WebApp;
@@ -187,164 +196,115 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
   };
 
   return (
-    <div style={{
-        paddingBottom: 80,
-        backgroundColor: 'var(--tg-theme-secondary-bg-color)',
-        minHeight: '100vh'
-    }}>
-      <div style={{
-          backgroundColor: 'var(--tg-theme-bg-color)',
-          padding: '32px 16px 24px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          borderBottom: '1px solid var(--tg-theme-secondary-bg-color)'
-      }}>
-        <Avatar
-            size={100}
-            src={getFullImageUrl(master.avatar_url)}
-            style={{ marginBottom: 16, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
-        />
-        <Title level="1" weight="2" style={{ marginBottom: 6, color: 'var(--tg-theme-text-color)' }}>{master.name}</Title>
-
-        <Text style={{ color: 'var(--tg-theme-hint-color)', fontSize: 15, marginBottom: 10, textAlign: 'center', padding: '0 16px' }}>
-            {master.city || t('city_not_specified')}
-            {master.address && !isAddressLink ? `, ${master.address}` : ''}
-        </Text>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 500, backgroundColor: 'var(--tg-theme-secondary-bg-color)', padding: '6px 12px', borderRadius: 20 }}>
-             <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: isOpen ? '#34C759' : '#FF3B30' }} />
-             <span style={{ color: isOpen ? '#34C759' : '#FF3B30' }}>{isOpen ? t('open') : t('closed')}</span>
-             <span style={{ color: 'var(--tg-theme-hint-color)', fontWeight: 400 }}>• {isOpen ? `${t('until')} 20:00` : `${t('opens_at')} 10:00`}</span>
+    <div style={{ paddingBottom: inTelegram ? 40 : 110, backgroundColor: 'var(--tg-theme-secondary-bg-color)', minHeight: '100vh', color: 'var(--tg-theme-text-color)' }}>
+      {/* Шапка */}
+      <div style={{ backgroundColor: 'var(--tg-theme-bg-color)', padding: '28px 16px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', borderRadius: '0 0 24px 24px' }}>
+        <UiAvatar src={master.avatar_url} name={master.name} size={96} radius={30} />
+        <div style={{ fontSize: 24, fontWeight: 800, marginTop: 14 }}>{master.name}</div>
+        <div style={{ fontSize: 15, color: 'var(--tg-theme-hint-color)', marginTop: 4 }}>
+          {[category, master.business?.kind === 'team' ? master.business.name : ''].filter(Boolean).join(' · ')}
         </div>
 
-        <div style={{
-            display: 'flex',
-            justifyContent: 'space-around',
-            width: '100%',
-            marginTop: 24,
-            padding: '16px 0',
-            backgroundColor: 'var(--tg-theme-secondary-bg-color)',
-            borderRadius: 16
-        }}>
-          <div
-              onClick={() => {
-                  triggerHaptic('selection');
-                  setIsReviewsModalOpen(true);
-              }}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', flex: 1 }}
-          >
-              <Icon28FavoriteOutline style={{ color: '#FFB703', marginBottom: 4 }} width={24} height={24} />
-              <span style={{ fontWeight: 'bold', fontSize: 16, color: 'var(--tg-theme-text-color)' }}>
-                  {master.rating > 0 ? master.rating.toFixed(1) : '5.0'}
-              </span>
-              <span style={{ fontSize: 13, color: 'var(--tg-theme-link-color)', marginTop: '2px', fontWeight: 500 }}>
-                  {master.reviews_count} {t('reviews')} ›
-              </span>
-          </div>
-
-          <div style={{ width: 1, backgroundColor: 'var(--tg-theme-bg-color)', opacity: 0.5 }} />
-
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-              <Icon28WorkOutline style={{ color: 'var(--tg-theme-button-color)', marginBottom: 4 }} width={24} height={24} />
-              <span style={{ fontWeight: 'bold', fontSize: 16, color: 'var(--tg-theme-text-color)' }}>
-                  {formatExperience((master as any).experience_years)}
-              </span>
-              <span style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)', marginTop: '2px' }}>{t('experience')}</span>
-          </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 6, marginTop: 12 }}>
+          {statusChip}
+          {master.reviews_count > 0 ? (
+            <button type="button" onClick={() => { triggerHaptic(); setIsReviewsModalOpen(true); }}
+              style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <Badge tone="brand">★ {master.rating.toFixed(1)} · {master.reviews_count} {t('reviews')} ›</Badge>
+            </button>
+          ) : (
+            <Badge tone="brand">{t('mp_new_master')}</Badge>
+          )}
+          {(master as any).experience_years > 0 && <Badge tone="off">{formatExperience((master as any).experience_years)}</Badge>}
         </div>
+
+        {master.next_free && (
+          <div style={{ marginTop: 16, width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: 14, backgroundColor: 'var(--brand-soft)', color: 'var(--brand-ink)', fontWeight: 600, fontSize: 15 }}>
+            🕐 {fill(t('mp_nearest'), { when: when(master.next_free) })}
+          </div>
+        )}
       </div>
 
-      <List style={{ padding: '0 16px', marginTop: 16, marginBottom: 16 }}>
-        {(master.phone || master.address) && (
-             <Section header={t('contacts_header')}>
-                {master.phone && (
-                    <Cell
-                       before={<div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(0, 122, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon28PhoneOutline width={24} height={24} style={{ color: '#007AFF' }} /></div>}
-                       onClick={() => { triggerHaptic('selection'); window.location.href=`tel:${master.phone}`; }}
-                       description={t('click_to_call')}
-                    >
-                       <span style={{ fontWeight: 500 }}>{master.phone}</span>
-                    </Cell>
-                )}
-                {master.address && (
-                    isAddressLink ? (
-                       <Cell
-                          before={<div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(52, 199, 89, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon24LocationOutline width={24} height={24} style={{ color: '#34C759' }} /></div>}
-                          onClick={() => { triggerHaptic('selection'); window.open(master.address, '_blank'); }}
-                       >
-                          <span style={{ color: 'var(--tg-theme-link-color)', fontWeight: 500 }}>{t('open_in_map')}</span>
-                       </Cell>
-                    ) : (
-                       <Cell
-                          before={<div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'rgba(255, 149, 0, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon24LocationOutline width={24} height={24} style={{ color: '#FF9500' }} /></div>}
-                          multiline
-                       >
-                          <span style={{ fontWeight: 500 }}>{master.address}</span>
-                       </Cell>
-                    )
-                )}
-             </Section>
-        )}
-
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '16px 16px 0' }}>
+        {/* Услуги */}
         {services.length > 0 && (
-            <Section header={t('services_and_prices')}>
-               {services.map(s => (
-                  <Cell
-                     key={s.id}
-                     onClick={() => {
-                        triggerHaptic('selection');
-                        onServiceClick?.(s);
-                     }}
-                     subtitle={s.description ? `${s.duration} ${t('min')} • ${s.description}` : `${s.duration} ${t('min')}`}
-                     after={
-                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                         <span style={{ fontWeight: 600, color: 'var(--tg-theme-text-color)' }}>
-                           {s.price ? `${s.price.toLocaleString('ru-RU')} UZS` : ''}
-                         </span>
-                         <Icon28ChevronRightOutline width={20} height={20} style={{ color: 'var(--tg-theme-hint-color)' }} />
-                       </div>
-                     }
-                     multiline
-                  >
-                     <span style={{ fontWeight: 500 }}>{s.name}</span>
-                  </Cell>
-               ))}
-            </Section>
+          <div id="services">
+            <div style={{ fontSize: 18, fontWeight: 700, margin: '4px 4px 10px' }}>{t('services_and_prices')}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {services.map((s) => (
+                <button key={s.id} type="button" onClick={() => { triggerHaptic(); onServiceClick?.(s); }}
+                  style={{ ...card, display: 'flex', alignItems: 'center', gap: 12, border: 'none', cursor: 'pointer', textAlign: 'left', color: 'var(--tg-theme-text-color)', fontFamily: 'inherit', width: '100%' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 16 }}>{s.name}</div>
+                    <div style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)', marginTop: 2 }}>
+                      {s.duration ? `${s.duration} ${t('min')}` : ''}{s.description ? ` · ${s.description}` : ''}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right', flex: '0 0 auto' }}>
+                    <div style={{ fontWeight: 700 }}>{money(s.price)}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--brand-ink)', marginTop: 2 }}>{t('mp_choose')} ›</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
         )}
 
+        {/* О мастере */}
         {master.bio && (
-            <Section header={t('about_me')}>
-                <div style={{ padding: '12px 16px', backgroundColor: 'var(--tg-theme-bg-color)' }}>
-                    <Text style={{ lineHeight: '1.5', color: 'var(--tg-theme-text-color)', fontSize: 15 }}>
-                        {master.bio}
-                    </Text>
-                </div>
-            </Section>
+          <div style={card}>
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>{t('about_me')}</div>
+            <div style={{ fontSize: 15, lineHeight: 1.5 }}>{master.bio}</div>
+          </div>
         )}
 
+        {/* Работы */}
         {portfolio.length > 0 && (
-            <Section header={t('portfolio_header')}>
-                <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, backgroundColor: 'var(--tg-theme-bg-color)' }}>
-                    {portfolio.slice(0, 6).map(item => {
-                        const imgUrl = getFullImageUrl(item.image_url);
-                        return (
-                            <div
-                                key={item.id}
-                                onClick={() => {
-                                    triggerHaptic('light');
-                                    setSelectedImage(imgUrl);
-                                }}
-                                style={{ position: 'relative', aspectRatio: '1/1', borderRadius: 8, overflow: 'hidden', backgroundColor: 'var(--tg-theme-secondary-bg-color)', cursor: 'pointer' }}
-                            >
-                                <img src={imgUrl} alt="work" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            </div>
-                        );
-                    })}
-                </div>
-            </Section>
+          <div style={card}>
+            <div style={{ fontWeight: 700, marginBottom: 10 }}>{t('portfolio_header')}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+              {portfolio.slice(0, 9).map((item) => {
+                const imgUrl = getFullImageUrl(item.image_url);
+                return (
+                  <button key={item.id} type="button" onClick={() => { triggerHaptic('light'); setSelectedImage(imgUrl || null); }}
+                    style={{ aspectRatio: '1/1', borderRadius: 10, overflow: 'hidden', border: 'none', padding: 0, cursor: 'pointer', backgroundColor: 'var(--tg-theme-secondary-bg-color)' }}>
+                    <img src={imgUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         )}
-      </List>
+
+        {/* Как найти */}
+        {(master.phone || master.address) && (
+          <div style={card}>
+            <div style={{ fontWeight: 700, marginBottom: 8 }}>{t('contacts_header')}</div>
+            {master.address && (
+              isAddressLink ? (
+                <button type="button" onClick={() => window.open(master.address, '_blank')}
+                  style={{ border: 'none', background: 'none', padding: '6px 0', cursor: 'pointer', color: 'var(--brand-ink)', fontWeight: 600, fontSize: 15, fontFamily: 'inherit' }}>
+                  📍 {t('open_in_map')}
+                </button>
+              ) : (
+                <div style={{ fontSize: 15, padding: '6px 0' }}>📍 {[master.city, master.address].filter(Boolean).join(', ')}</div>
+              )
+            )}
+            {master.phone && (
+              <a href={`tel:${master.phone}`} style={{ display: 'block', padding: '6px 0', fontSize: 15, fontWeight: 600, color: 'var(--brand-ink)', textDecoration: 'none' }}>
+                📞 {master.phone}
+              </a>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Кнопка записи в браузере (в Telegram — нативная кнопка снизу) */}
+      {!inTelegram && services.length > 0 && (
+        <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, padding: '12px 16px 20px', backgroundColor: 'var(--tg-theme-secondary-bg-color)', boxShadow: '0 -4px 16px rgba(0,0,0,0.06)', zIndex: 20 }}>
+          <PrimaryButton onClick={startBooking}>{t('btn_online_booking')}</PrimaryButton>
+        </div>
+      )}
 
       <ReviewsListScreen
           masterId={master.id}
