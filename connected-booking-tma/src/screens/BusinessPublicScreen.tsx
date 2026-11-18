@@ -3,6 +3,7 @@ import { Title, Text, Spinner } from '@telegram-apps/telegram-ui';
 
 import { fetchBusinessBySlug, fetchSalonServices, BusinessPublic, useTunnelImage } from '../helpers/api';
 import { Konnektik } from '../components/Konnektik';
+import { Avatar as UiAvatar } from '../components/ui';
 import { useLanguage } from '../helpers/LanguageContext';
 
 type Props = {
@@ -64,7 +65,7 @@ export const BusinessPublicScreen: React.FC<Props> = ({ slug, onBack, onOpenMast
   return (
     <div style={{ backgroundColor: 'var(--tg-theme-secondary-bg-color)', minHeight: '100vh', paddingBottom: 40, color: 'var(--tg-theme-text-color)' }}>
       <div style={{ padding: '24px 20px 16px', display: 'flex', gap: 14, alignItems: 'center' }}>
-        <Konnektik mood="hello" size={88} />
+        {biz.logo_url ? <UiAvatar src={biz.logo_url} name={biz.name} size={80} radius={24} /> : <Konnektik mood="hello" size={88} />}
         <div style={{ minWidth: 0 }}>
           <Title level="1" weight="1" style={{ marginBottom: 4 }}>{biz.name}</Title>
           <Text style={{ color: 'var(--tg-theme-hint-color)', fontSize: 14 }}>
