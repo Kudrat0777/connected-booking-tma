@@ -11,6 +11,9 @@ export type Service = {
   duration: number | null;
   description: string;
   master_name: string;
+  /** Через сколько дней звать клиента снова: null — по категории (rebook_default), 0 — не звать */
+  rebook_days?: number | null;
+  rebook_default?: number;
 };
 
 export async function fetchServices(masterId?: number): Promise<Service[]> {
@@ -176,12 +179,13 @@ export async function createServiceByMaster(
   name: string,
   price: number,
   duration: number,
-  description?: string
+  description?: string,
+  rebook_days?: number | null,
 ) {
   const res = await fetch(`${API_BASE}/services/create_by_master/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ telegram_id, name, price, duration, description }),
+    body: JSON.stringify({ telegram_id, name, price, duration, description, rebook_days }),
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
@@ -988,7 +992,7 @@ export async function saveCustomerNote(key: string, text: string): Promise<{ not
 
 export async function updateService(
   id: number,
-  data: { name?: string; price?: number | null; duration?: number | null; description?: string },
+  data: { name?: string; price?: number | null; duration?: number | null; description?: string; rebook_days?: number | null },
 ): Promise<Service> {
   const res = await fetch(`${API_BASE}/services/${id}/`, {
     method: 'PATCH',

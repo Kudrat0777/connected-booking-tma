@@ -90,7 +90,7 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onLogout }) => {
 
   const fillFromTelegram = async () => {
     haptic();
-    const p = await requestTelegramPhone();
+    const p = await requestTelegramPhone(telegramId);
     if (p) { set('phone', p); setPhoneTouched(true); haptic('success'); }
   };
 

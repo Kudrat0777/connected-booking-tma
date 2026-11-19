@@ -5,7 +5,7 @@ import { Spinner } from '@telegram-apps/telegram-ui';
 import { fetchMasterAnalytics, AnalyticsData } from '../helpers/api';
 import { useLanguage } from '../helpers/LanguageContext';
 import { fill, pluralize } from '../helpers/translationsBusiness';
-import { LINK_SOURCES, sourceLabel } from '../helpers/links';
+import { LINK_SOURCES, REBOOK_SOURCE, sourceLabel } from '../helpers/links';
 import { Konnektik } from '../components/Konnektik';
 import { Chip, PrimaryButton, card, localeFor, page } from '../components/ui';
 
@@ -61,7 +61,7 @@ export const MasterAnalyticsScreen: React.FC<Props> = ({ telegramId, onBack }) =
 
   const topMax = Math.max(1, ...top.map((s) => s.revenue));
   const srcMax = Math.max(1, ...sources.map((s) => Math.max(s.visits, s.bookings)));
-  const srcEmoji = (id: string) => LINK_SOURCES.find((s) => s.id === id)?.emoji ?? (id === 'manual' ? '✍️' : '🔗');
+  const srcEmoji = (id: string) => LINK_SOURCES.find((s) => s.id === id)?.emoji ?? (id === 'manual' ? '✍️' : id === REBOOK_SOURCE ? '🗓' : '🔗');
 
   const tile = (label: string, value: string, hint?: string, tone?: 'warn') => (
     <div style={{ ...card, padding: 14 }}>
