@@ -248,7 +248,7 @@ export const SlotsScreen: React.FC<Props> = ({
 
                         return (
                             <div
-                                key={slot.id}
+                                key={slot.id ?? slot.time}
                                 onClick={() => handleSlotClick(slot)}
                                 style={{
                                     backgroundColor: 'var(--tg-theme-bg-color)',

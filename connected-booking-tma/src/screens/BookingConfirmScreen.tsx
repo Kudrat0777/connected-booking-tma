@@ -63,6 +63,8 @@ export const BookingConfirmScreen: React.FC<Props> = ({
         const booking = await createBooking({
           name: service.name,
           slot_id: slot.id,
+          service_id: service.id,
+          time: slot.time,
           telegram_id: user?.id,
           username: user?.username,
           photo_url: user?.photo_url,

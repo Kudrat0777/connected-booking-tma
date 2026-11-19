@@ -18,7 +18,7 @@ import { ClientRegistrationScreen } from './screens/ClientRegistrationScreen';
 import { MasterWelcomeScreen } from './screens/MasterWelcomeScreen';
 import { MasterLoginScreen } from './screens/MasterLoginScreen';
 import { MasterDashboardScreen } from './screens/MasterDashboardScreen';
-import { MasterScheduleScreen } from './screens/MasterScheduleScreen';
+import { MasterWorkHoursScreen } from './screens/MasterWorkHoursScreen';
 import { MasterEditProfileScreen } from './screens/MasterEditProfileScreen';
 import { MasterAnalyticsScreen } from './screens/MasterAnalyticsScreen';
 import { MasterReviewsScreen } from './screens/MasterReviewsScreen';
@@ -78,7 +78,7 @@ type Screen =
   | 'master_schedule' | 'master_edit_profile' | 'master_analytics'
   | 'master_reviews' | 'master_create_service' | 'client_portfolio'
   | 'client_registration' | 'client_master_profile'
-  | 'master_links' | 'master_team' | 'client_business';
+  | 'master_links' | 'master_team' | 'client_business' | 'master_member_schedule';
 
 type MainTab = 'bookings' | 'masters' | 'settings';
 
@@ -162,6 +162,8 @@ const AppContent: React.FC = () => {
   const [businessSlug, setBusinessSlug] = useState<string | null>(null);
   const [targetBusinessForNewClient, setTargetBusinessForNewClient] = useState<string | null>(null);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
+  // Владелец/админ редактирует график мастера своей команды
+  const [scheduleMasterId, setScheduleMasterId] = useState<number | null>(null);
 
   const pushScreen = (newScreen: Screen) => {
       setHistory(prev => [...prev, screen]);
@@ -574,7 +576,14 @@ const AppContent: React.FC = () => {
       )}
 
       {screen === 'master_team' && (
-        <MasterTeamScreen onBack={() => goBack('master_dashboard')} />
+        <MasterTeamScreen
+          onBack={() => goBack('master_dashboard')}
+          onOpenSchedule={(memberId) => { setScheduleMasterId(memberId); pushScreen('master_member_schedule'); }}
+        />
+      )}
+
+      {screen === 'master_member_schedule' && scheduleMasterId && (
+        <MasterWorkHoursScreen masterId={scheduleMasterId} onBack={() => goBack('master_team')} />
       )}
 
       {screen === 'client_business' && businessSlug && (
@@ -590,7 +599,7 @@ const AppContent: React.FC = () => {
       )}
 
       {screen === 'master_schedule' && user && (
-        <MasterScheduleScreen telegramId={user.id} onBack={() => goBack('master_dashboard')} />
+        <MasterWorkHoursScreen onBack={() => goBack('master_dashboard')} />
       )}
 
       {screen === 'master_edit_profile' && user && (

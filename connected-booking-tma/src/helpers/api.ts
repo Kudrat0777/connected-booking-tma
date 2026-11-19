@@ -30,7 +30,7 @@ export async function fetchServices(masterId?: number): Promise<Service[]> {
 // --------- СЛОТЫ ---------
 
 export type Slot = {
-  id: number;
+  id: number | null; // null — время рассчитано по рабочему графику, слота в базе ещё нет
   time: string; // ISO
   is_booked: boolean;
   service: {
@@ -75,7 +75,9 @@ export type Booking = {
 
 export type CreateBookingPayload = {
   name: string;
-  slot_id: number;
+  slot_id: number | null;
+  service_id?: number; // запись по графику: услуга + время
+  time?: string;
   telegram_id?: number | null;
   username?: string | null;
   photo_url?: string | null;
@@ -91,7 +93,9 @@ export async function createBooking(
     },
     body: JSON.stringify({
       name: payload.name,
-      slot_id: payload.slot_id,
+      ...(payload.slot_id != null
+        ? { slot_id: payload.slot_id }
+        : { service_id: payload.service_id, time: payload.time }),
       telegram_id: payload.telegram_id ?? null,
       username: payload.username ?? null,
       photo_url: payload.photo_url ?? null,
@@ -100,10 +104,8 @@ export async function createBooking(
   });
 
   if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(
-      `Failed to create booking: ${res.status} ${res.statusText} ${text}`,
-    );
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || `Failed to create booking: ${res.status}`);
   }
 
   return res.json();
@@ -439,11 +441,19 @@ export async function fetchMasterSlots(telegramId: number, date: string): Promis
   return [];
 }
 
-export async function createManualBooking(slotId: number, clientName: string, phone: string) {
+// slot: готовый слот (id) или время по графику ({ serviceId, time })
+export async function createManualBooking(
+  slot: number | { serviceId: number; time: string },
+  clientName: string,
+  phone: string,
+) {
+  const target = typeof slot === 'number'
+    ? { slot_id: slot }
+    : { service_id: slot.serviceId, time: slot.time };
   const res = await fetch(`${API_BASE}/bookings/manual_create/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ slot_id: slotId, clientName: clientName, phone: phone }),
+    body: JSON.stringify({ ...target, client_name: clientName, phone: phone }),
   });
 
   if (!res.ok) {
@@ -756,3 +766,64 @@ export function trackVisit(data: { business?: string; master?: string; source?: 
 }
 
 export type SourceStat = { source: string; visits: number; bookings: number };
+
+
+// --------- РАБОЧИЙ ГРАФИК ---------
+
+export type ScheduleDay = {
+  weekday: number; // 0 = Пн … 6 = Вс
+  is_working: boolean;
+  start: string;   // "10:00"
+  end: string;
+  break_start: string;
+  break_end: string;
+};
+
+export type TimeOffItem = { id: number; start_date: string; end_date: string; note: string };
+
+export type MasterSchedule = {
+  master_id: number;
+  master_name: string;
+  uses_schedule: boolean;
+  slot_step: number;
+  booking_horizon_days: number;
+  min_lead_minutes: number;
+  days: ScheduleDay[];
+  time_off: TimeOffItem[];
+  clashing_bookings?: number;
+};
+
+const scheduleQuery = (masterId?: number | null) => (masterId ? `?master_id=${masterId}` : '');
+
+export async function fetchSchedule(masterId?: number | null): Promise<MasterSchedule> {
+  return jsonOrThrow(await fetch(`${API_BASE}/masters/schedule/${scheduleQuery(masterId)}`), 'Не удалось загрузить график');
+}
+
+export async function saveSchedule(
+  data: Pick<MasterSchedule, 'slot_step' | 'booking_horizon_days' | 'min_lead_minutes' | 'days'>,
+  masterId?: number | null,
+): Promise<MasterSchedule> {
+  const res = await fetch(`${API_BASE}/masters/schedule/${scheduleQuery(masterId)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return jsonOrThrow(res, 'Не удалось сохранить график');
+}
+
+export async function addTimeOff(
+  data: { start_date: string; end_date: string; note?: string },
+  masterId?: number | null,
+): Promise<MasterSchedule> {
+  const res = await fetch(`${API_BASE}/masters/time_off/${scheduleQuery(masterId)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return jsonOrThrow(res, 'Не удалось добавить выходные');
+}
+
+export async function deleteTimeOff(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/masters/time_off/${id}/`, { method: 'DELETE' });
+  if (!res.ok && res.status !== 204) throw new Error('Не удалось удалить');
+}

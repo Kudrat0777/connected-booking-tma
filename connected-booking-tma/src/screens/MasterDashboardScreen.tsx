@@ -261,7 +261,11 @@ export const MasterDashboardScreen: React.FC<Props> = ({
 
     setIsCreatingManual(true);
     try {
-      const response = await createManualBooking(Number(selectedNewSlotId), newClientName, newClientPhone);
+      // Значение «t:<время>» — время по рабочему графику, иначе id готового слота
+      const slotRef = selectedNewSlotId.startsWith('t:')
+        ? { serviceId: Number(selectedNewServiceId), time: selectedNewSlotId.slice(2) }
+        : Number(selectedNewSlotId);
+      const response = await createManualBooking(slotRef, newClientName, newClientPhone);
       handleCloseCreateModal();
       loadBookings();
       triggerHaptic('success');
@@ -595,7 +599,8 @@ export const MasterDashboardScreen: React.FC<Props> = ({
               const d = new Date(s.time);
               const dateStr = d.toLocaleDateString(localeForDate, { day: '2-digit', month: '2-digit' });
               const timeStr = d.toLocaleTimeString(localeForDate, { hour: '2-digit', minute: '2-digit', hour12: false });
-              return <option key={s.id} value={s.id}>{dateStr} {t('at_time') || 'в'} {timeStr}</option>;
+              const value = s.id != null ? String(s.id) : `t:${s.time}`;
+              return <option key={value} value={value}>{dateStr} {t('at_time') || 'в'} {timeStr}</option>;
             })}
           </Select>
 
