@@ -114,7 +114,7 @@ export const LeaveReviewScreen: React.FC<Props> = ({ booking, onBack, onDone }) 
             {tagOptions.map((tag) => {
               const on = tags.includes(tag);
               return (
-                <Chip key={tag} active={on} onClick={() => { haptic(); setTags((x) => (on ? x.filter((y) => y !== tag) : [...x, tag])); }}>
+                <Chip onCard key={tag} active={on} onClick={() => { haptic(); setTags((x) => (on ? x.filter((y) => y !== tag) : [...x, tag])); }}>
                   {tag}
                 </Chip>
               );

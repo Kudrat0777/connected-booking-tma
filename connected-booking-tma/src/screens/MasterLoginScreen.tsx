@@ -1,11 +1,12 @@
-import { BRAND } from '../helpers/brand';
-import React, { useState, useEffect, useRef } from 'react';
-import { List, Section, Input, Text, Title } from '@telegram-apps/telegram-ui';
-import { KonnektikSticker } from '../components/Konnektik';
-import { loginMasterWithPhone } from '../helpers/api';
+// Вход мастера по телефону и паролю: для аккаунтов, которые создал администратор.
+// После входа аккаунт привязывается к текущему Telegram.
+import React, { useEffect, useRef, useState } from 'react';
 
-// Компонент для анимированного стикера
-const LottieIcon = KonnektikSticker;
+import { loginMasterWithPhone } from '../helpers/api';
+import { useLanguage } from '../helpers/LanguageContext';
+import { PHONE_PLACEHOLDER, formatPhone, normalizePhone } from '../helpers/phone';
+import { Konnektik } from '../components/Konnektik';
+import { PrimaryButton, card, fieldLabel, inputStyle, page } from '../components/ui';
 
 type Props = {
   telegramId: number;
@@ -13,142 +14,91 @@ type Props = {
   onComplete: () => void; // Переход в личный кабинет мастера
 };
 
+const haptic = (kind: 'success' | 'error') => (window as any).Telegram?.WebApp?.HapticFeedback?.notificationOccurred(kind);
+
 export const MasterLoginScreen: React.FC<Props> = ({ telegramId, onBack, onComplete }) => {
+  const { t } = useLanguage();
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Используем Ref для актуальных значений в замыкании нативной кнопки
-  const phoneRef = useRef(phone);
-  const passwordRef = useRef(password);
-
-  useEffect(() => {
-      phoneRef.current = phone;
-      passwordRef.current = password;
-  }, [phone, password]);
-
-  // Настраиваем нативные кнопки Telegram
+  const backRef = useRef(onBack);
+  backRef.current = onBack;
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
-    if (!tg) return;
-
-    tg.BackButton.onClick(onBack);
+    if (!tg?.BackButton) return;
+    const h = () => backRef.current();
     tg.BackButton.show();
+    tg.BackButton.onClick(h);
+    tg.MainButton?.hide();
+    return () => tg.BackButton.offClick(h);
+  }, []);
 
-    const handleMainClick = async () => {
-        if (loading) return;
-
-        const currentPhone = phoneRef.current;
-        const currentPassword = passwordRef.current;
-
-        if (!currentPhone.trim() || !currentPassword.trim()) {
-            setError('Введите телефон и пароль');
-            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-            return;
-        }
-
-        setLoading(true);
-        setError(null);
-        tg.MainButton.showProgress();
-        tg.MainButton.disable();
-
-        try {
-            await loginMasterWithPhone(currentPhone, currentPassword, telegramId);
-            localStorage.setItem('is_master_logged_in', 'true');
-
-            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-            tg.MainButton.hideProgress();
-
-            onComplete();
-        } catch (e: any) {
-            setError(e.message || 'Ошибка входа. Проверьте данные.');
-            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-
-            tg.MainButton.hideProgress();
-            tg.MainButton.enable();
-            setLoading(false);
-        }
-    };
-
-    tg.MainButton.setParams({
-        text: 'ВОЙТИ',
-        color: BRAND.accent,
-        text_color: BRAND.onAccent,
-        is_active: true,
-        is_visible: true
-    });
-    tg.MainButton.onClick(handleMainClick);
-
-    return () => {
-        tg.BackButton.offClick(onBack);
-        tg.BackButton.hide();
-        tg.MainButton.offClick(handleMainClick);
-        tg.MainButton.hide();
-    };
-  }, [onBack, onComplete, telegramId, loading]);
-
-  const triggerHaptic = () => {
-    const tg = (window as any).Telegram?.WebApp;
-    if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
+  const submit = async () => {
+    if (loading) return;
+    if (normalizePhone(phone).length < 8 || !password) { haptic('error'); setError(t('ml_err_empty')); return; }
+    setLoading(true);
+    setError(null);
+    try {
+      await loginMasterWithPhone(normalizePhone(phone), password, telegramId);
+      localStorage.setItem('is_master_logged_in', 'true');
+      haptic('success');
+      onComplete();
+    } catch (e: any) {
+      haptic('error');
+      // Сервер отвечает по-русски — показываем свой перевод, кроме понятного конфликта аккаунтов
+      const msg = String(e?.message || '');
+      setError(msg.includes('Telegram') ? msg : t('ml_err'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div style={{
-        backgroundColor: 'var(--tg-theme-secondary-bg-color)',
-        minHeight: '100vh',
-        paddingBottom: 40
-    }}>
-
-      {/* ШАПКА ЭКРАНА С АНИМАЦИЕЙ */}
-      <div style={{ padding: '40px 20px 24px', textAlign: 'center' }}>
-
-         <LottieIcon src="/stickers/duck_SECURITY.json" size={140} />
-
-         <Title level="1" weight="1" style={{ marginBottom: 8, color: 'var(--tg-theme-text-color)' }}>
-             Вход для мастера
-         </Title>
-         <Text style={{ color: 'var(--tg-theme-hint-color)', fontSize: 15, lineHeight: '1.4' }}>
-             Введите номер телефона и пароль, выданные вам администратором сервиса.
-         </Text>
+    <div style={{ ...page, padding: '24px 16px 110px' }}>
+      <div style={{ textAlign: 'center' }}>
+        <Konnektik mood="explain" size={110} />
+        <div style={{ fontSize: 26, fontWeight: 800, marginTop: 6 }}>{t('ml_title')}</div>
+        <div style={{ fontSize: 15, color: 'var(--tg-theme-hint-color)', marginTop: 6, lineHeight: 1.4, maxWidth: 340, marginInline: 'auto' }}>
+          {t('ml_desc')}
+        </div>
       </div>
 
-      {/* ФОРМА ВВОДА */}
-      <List style={{ padding: '0 16px' }}>
-        <Section>
-          <Input
-            header="Номер телефона"
-            placeholder="+998 90 000 00 00"
-            value={phone}
-            onChange={(e) => {
-                setPhone(e.target.value);
-                if (error) setError(null);
-            }}
-            onFocus={triggerHaptic}
-            type="tel"
-          />
-          <Input
-            header="Пароль"
-            placeholder="Ваш пароль"
-            type="password"
-            value={password}
-            onChange={(e) => {
-                setPassword(e.target.value);
-                if (error) setError(null);
-            }}
-            onFocus={triggerHaptic}
-          />
-        </Section>
-      </List>
+      <form onSubmit={(e) => { e.preventDefault(); submit(); }} style={{ ...card, marginTop: 18, padding: '2px 14px 14px' }}>
+        <div style={fieldLabel}>{t('cp_phone')}</div>
+        <input style={inputStyle} type="tel" inputMode="tel" autoComplete="tel" value={phone} placeholder={PHONE_PLACEHOLDER}
+          aria-label={t('cp_phone')}
+          onFocus={() => { if (!phone) setPhone('+998 '); }}
+          onChange={(e) => { setPhone(formatPhone(e.target.value)); setError(null); }} />
 
-      {/* ВЫВОД ОШИБКИ */}
+        <div style={fieldLabel}>{t('ml_password')}</div>
+        <div style={{ position: 'relative' }}>
+          <input style={{ ...inputStyle, paddingRight: 96 }} type={showPassword ? 'text' : 'password'} autoComplete="current-password"
+            value={password} aria-label={t('ml_password')}
+            onChange={(e) => { setPassword(e.target.value); setError(null); }} />
+          <button type="button" onClick={() => setShowPassword((v) => !v)} style={{
+            position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none',
+            cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: 'var(--brand-ink)', padding: '6px 8px',
+          }}>{showPassword ? t('ml_hide') : t('ml_show')}</button>
+        </div>
+        {/* Enter на клавиатуре отправляет форму */}
+        <button type="submit" hidden aria-hidden="true" tabIndex={-1} />
+      </form>
+
       {error && (
-        <div style={{ padding: '16px', textAlign: 'center' }}>
-            <Text style={{ color: 'var(--tg-theme-destructive-text-color)', fontWeight: 500, fontSize: 14 }}>
-              {error}
-            </Text>
+        <div role="alert" style={{ marginTop: 12, padding: '10px 14px', borderRadius: 12, fontSize: 14, fontWeight: 600, color: '#E0533D', backgroundColor: 'rgba(224, 83, 61, 0.1)' }}>
+          {error}
         </div>
       )}
+
+      <div style={{
+        position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 20, padding: '10px 16px calc(10px + env(safe-area-inset-bottom))',
+        backgroundColor: 'var(--tg-theme-secondary-bg-color)', boxShadow: '0 -6px 16px rgba(0,0,0,0.06)',
+      }}>
+        <PrimaryButton onClick={submit} loading={loading}>{t('ml_submit')}</PrimaryButton>
+      </div>
     </div>
   );
 };

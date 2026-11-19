@@ -60,13 +60,14 @@ export const Avatar: React.FC<{ src?: string | null; name: string; size?: number
   );
 };
 
-export const Chip: React.FC<{ active?: boolean; onClick?: () => void; children: React.ReactNode }> = ({ active, onClick, children }) => (
-  <button type="button" onClick={onClick} style={{
+/** onCard — чип лежит на белой карточке: неактивный тогда серый, иначе сливается с фоном. */
+export const Chip: React.FC<{ active?: boolean; onClick?: () => void; onCard?: boolean; children: React.ReactNode }> = ({ active, onClick, onCard, children }) => (
+  <button type="button" onClick={onClick} aria-pressed={!!active} style={{
     flex: '0 0 auto', padding: '8px 14px', borderRadius: 999, border: 'none', cursor: 'pointer',
     fontSize: 14, fontWeight: 600, fontFamily: 'inherit', whiteSpace: 'nowrap',
-    backgroundColor: active ? 'var(--brand-accent, #50C878)' : 'var(--tg-theme-bg-color)',
+    backgroundColor: active ? 'var(--brand-accent, #50C878)' : onCard ? 'var(--tg-theme-secondary-bg-color)' : 'var(--tg-theme-bg-color)',
     color: active ? 'var(--brand-on-accent, #14261B)' : 'var(--tg-theme-text-color)',
-    boxShadow: active ? 'none' : '0 1px 2px rgba(0,0,0,0.05)',
+    boxShadow: active || onCard ? 'none' : '0 1px 2px rgba(0,0,0,0.05)',
   }}>
     {children}
   </button>

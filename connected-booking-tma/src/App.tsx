@@ -5,14 +5,10 @@ import { LanguageProvider, useLanguage } from './helpers/LanguageContext';
 
 // Client Screens
 import { WelcomeScreen } from './screens/WelcomeScreen';
-import { ServicesScreen } from './screens/ServicesScreen';
 import { SlotsScreen } from './screens/SlotsScreen';
-import { BookingConfirmScreen } from './screens/BookingConfirmScreen';
 import { BookingSuccessScreen } from './screens/BookingSuccessScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { LeaveReviewScreen } from './screens/LeaveReviewScreen';
-import { ReviewsListScreen } from './screens/ReviewsListScreen';
-import { ClientRegistrationScreen } from './screens/ClientRegistrationScreen';
 
 // Master Screens
 import { MasterWelcomeScreen } from './screens/MasterWelcomeScreen';
@@ -26,14 +22,13 @@ import { MasterClientDetailScreen } from './screens/MasterClientDetailScreen';
 import { MasterEditProfileScreen } from './screens/MasterEditProfileScreen';
 import { MasterAnalyticsScreen } from './screens/MasterAnalyticsScreen';
 import { MasterReviewsScreen } from './screens/MasterReviewsScreen';
-import { PortfolioViewerScreen } from './screens/PortfolioViewerScreen';
 import { MasterPublicProfileScreen } from './screens/MasterPublicProfileScreen';
 import { MasterRegistrationScreen } from './screens/MasterRegistrationScreen';
 import { MasterLinksScreen } from './screens/MasterLinksScreen';
 import { MasterTeamScreen } from './screens/MasterTeamScreen';
 import { BusinessPublicScreen } from './screens/BusinessPublicScreen';
 
-import type { Service, Slot, Booking } from './helpers/api';
+import type { Service, Booking } from './helpers/api';
 import { checkClientProfile, registerClient, fetchCurrentMaster, fetchMasterBySlug, fetchBooking, trackVisit } from './helpers/api';
 import { parseStartParam, rememberSource } from './helpers/links';
 import { applyBrand } from './helpers/brand';
@@ -76,12 +71,11 @@ window.fetch = async function () {
 const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
 type Screen =
-  | 'welcome' | 'services' | 'slots' | 'bookingConfirm' | 'bookingDone'
-  | 'profile' | 'leave_review' | 'client_reviews_list'
+  | 'welcome' | 'slots' | 'bookingDone'
+  | 'profile' | 'leave_review'
   | 'master_welcome' | 'master_login' | 'master_registration' | 'master_dashboard'
   | 'master_schedule' | 'master_edit_profile' | 'master_analytics'
-  | 'master_reviews' | 'master_create_service' | 'client_portfolio'
-  | 'client_registration' | 'client_master_profile'
+  | 'master_reviews' | 'client_master_profile'
   | 'master_links' | 'master_team' | 'client_business' | 'master_member_schedule'
   | 'salon_calendar' | 'client_any_master' | 'master_clients' | 'master_client_detail';
 
@@ -154,15 +148,11 @@ const AppContent: React.FC = () => {
   const [mainTab, setMainTab] = useState<MainTab>('masters');
 
   const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
-  const [selectedMasterName, setSelectedMasterName] = useState<string | null>(null);
   const [selectedMasterId, setSelectedMasterId] = useState<number | null>(null);
 
   const [reviewBooking, setReviewBooking] = useState<Booking | null>(null);
   const [currentMaster, setCurrentMaster] = useState<any>(null);
-  const [reviewsMasterId, setReviewsMasterId] = useState<number | null>(null);
-  const [portfolioMaster, setPortfolioMaster] = useState<{id: number, name: string} | null>(null);
 
   // СОСТОЯНИЕ ДЛЯ ХРАНЕНИЯ ЦЕЛЕВОГО МАСТЕРА ИЗ ДИПЛИНКА
   const [targetMasterIdForNewClient, setTargetMasterIdForNewClient] = useState<number | null>(null);
@@ -396,7 +386,6 @@ const AppContent: React.FC = () => {
     localStorage.setItem('is_master_logged_out', 'true');
     setCurrentMaster(null);
     setSelectedMasterId(null);
-    setSelectedMasterName(null);
     resetScreen('master_welcome');
   };
 
@@ -407,9 +396,7 @@ const AppContent: React.FC = () => {
 
   const resetToStart = () => {
     setSelectedService(null);
-    setSelectedSlot(null);
     setCreatedBooking(null);
-    setSelectedMasterName(null);
     setSelectedMasterId(null);
 
     if (localStorage.getItem('is_client_logged_in') === 'true') {
@@ -441,50 +428,12 @@ const AppContent: React.FC = () => {
         <WelcomeScreen onContinue={(tgUser) => handleClientLogin(tgUser)} />
       )}
 
-      {screen === 'client_registration' && user && (
-        <ClientRegistrationScreen
-          telegramId={user.id}
-          onBack={() => goBack('welcome')}
-          onComplete={() => {
-            localStorage.setItem('is_client_logged_in', 'true');
-            if (targetMasterIdForNewClient) {
-                setSelectedMasterId(targetMasterIdForNewClient);
-                setTargetMasterIdForNewClient(null);
-                setHistory(['profile']);
-                setScreenState('client_master_profile');
-            } else {
-                setMainTab('masters');
-                resetScreen('profile');
-            }
-          }}
-        />
-      )}
-
-      {screen === 'services' && (
-        <ServicesScreen
-          onBack={() => goBack('profile')}
-          onServiceSelected={(service) => { setSelectedService(service); pushScreen('slots'); }}
-          selectedMasterName={selectedMasterName}
-          masterId={selectedMasterId}
-        />
-      )}
-
       {screen === 'slots' && selectedService && (
         <SlotsScreen
           service={selectedService}
-          onBack={() => goBack('services')}
+          onBack={() => goBack('profile')}
           user={user}
           onBooked={(booking) => { setCreatedBooking(booking); resetScreen('bookingDone'); }}
-        />
-      )}
-
-      {screen === 'bookingConfirm' && selectedService && selectedSlot && (
-        <BookingConfirmScreen
-          service={selectedService}
-          slot={selectedSlot}
-          onBack={() => goBack('slots')}
-          onSuccess={(booking) => { setCreatedBooking(booking); pushScreen('bookingDone'); }}
-          user={user}
         />
       )}
 
@@ -496,14 +445,6 @@ const AppContent: React.FC = () => {
         />
       )}
 
-      {screen === 'client_reviews_list' && reviewsMasterId && (
-        <ReviewsListScreen masterId={reviewsMasterId} isOpen={true} onClose={() => goBack('profile')} />
-      )}
-
-      {screen === 'client_portfolio' && portfolioMaster && (
-        <PortfolioViewerScreen masterId={portfolioMaster.id} masterName={portfolioMaster.name} onBack={() => goBack('profile')} />
-      )}
-
       {screen === 'profile' && user && (
         <ProfileScreen
           telegramId={user.id}
@@ -513,22 +454,13 @@ const AppContent: React.FC = () => {
              if (tgInst?.close) tgInst.close();
           }}
           onLogout={handleClientLogout}
-          onOpenMasterProfile={(masterId, masterName) => {
+          onOpenMasterProfile={(masterId) => {
             setSelectedMasterId(masterId);
-            setSelectedMasterName(masterName || null);
             pushScreen('client_master_profile');
           }}
           onReview={(booking) => {
               setReviewBooking(booking);
               pushScreen('leave_review');
-          }}
-          onOpenMasterReviews={(id) => {
-            setReviewsMasterId(id);
-            pushScreen('client_reviews_list');
-          }}
-          onOpenPortfolio={(id, name) => {
-            setPortfolioMaster({ id, name });
-            pushScreen('client_portfolio');
           }}
         />
       )}
@@ -593,7 +525,6 @@ const AppContent: React.FC = () => {
           onEditProfile={() => { loadCurrentMaster(user.id); pushScreen('master_edit_profile'); }}
           onOpenAnalytics={() => pushScreen('master_analytics')}
           onOpenReviews={() => pushScreen('master_reviews')}
-          onAddService={() => pushScreen('master_create_service')}
           onLogout={handleMasterLogout}
           onOpenLinks={() => pushScreen('master_links')}
           onOpenTeam={() => pushScreen('master_team')}
@@ -639,9 +570,8 @@ const AppContent: React.FC = () => {
         <BusinessPublicScreen
           slug={businessSlug}
           onBack={() => goBack('profile')}
-          onOpenMaster={(masterId, masterName) => {
+          onOpenMaster={(masterId) => {
             setSelectedMasterId(masterId);
-            setSelectedMasterName(masterName);
             pushScreen('client_master_profile');
           }}
           onAnyMaster={(name) => { setBusinessName(name); pushScreen('client_any_master'); }}
@@ -691,10 +621,6 @@ const AppContent: React.FC = () => {
         <MasterPublicProfileScreen
           masterId={selectedMasterId}
           onBack={() => goBack('profile')}
-          onBook={(name) => {
-            setSelectedMasterName(name);
-            pushScreen('services');
-          }}
           onServiceClick={(service) => {
             setSelectedService(service);
             pushScreen('slots');

@@ -22,7 +22,6 @@ type Props = {
   onEditProfile: () => void;
   onOpenAnalytics: () => void;
   onOpenReviews: () => void;
-  onAddService?: () => void;
   onLogout?: () => void;
   onOpenLinks?: () => void;
   onOpenTeam?: () => void;

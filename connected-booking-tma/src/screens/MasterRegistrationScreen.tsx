@@ -1,18 +1,21 @@
+// Регистрация мастера: шаг 1 — как вы работаете (сам или салон), шаг 2 — данные.
+// По ссылке-приглашению сразу второй шаг: вступление в команду заведения.
 import React, { useEffect, useRef, useState } from 'react';
-import { Title, Text, Input, Button, Select, Section, List, Spinner } from '@telegram-apps/telegram-ui';
+import { Spinner } from '@telegram-apps/telegram-ui';
 
 import { onboardMaster, fetchInviteInfo, BusinessShort } from '../helpers/api';
 import { useLanguage } from '../helpers/LanguageContext';
 import { fill } from '../helpers/translationsBusiness';
+import { PHONE_PLACEHOLDER, formatPhone, isValidPhone, normalizePhone } from '../helpers/phone';
 import { Konnektik } from '../components/Konnektik';
+import { Chip, PrimaryButton, card, fieldLabel, inputStyle, page, tgAlert } from '../components/ui';
 
+// Значения хранятся в базе по-русски (по ним работает поиск), подписи — на языке пользователя
 const CATEGORIES = [
   'Барбершоп', 'Салон красоты', 'Массаж',
   'Маникюр / Педикюр', 'Брови и Ресницы',
-  'Медицина', 'Спорт / Фитнес', 'Автосервис', 'Другое'
+  'Медицина', 'Спорт / Фитнес', 'Автосервис', 'Другое',
 ];
-
-// Значения хранятся в базе по-русски (по ним работает поиск), подписи — на языке пользователя
 const CITIES = ['Ургенч', 'Ташкент', 'Самарканд', 'Бухара', 'Хива'];
 const CITY_KEYS = ['city_urgench', 'city_tashkent', 'city_samarkand', 'city_bukhara', 'city_khiva'];
 
@@ -27,23 +30,17 @@ type Props = {
   onComplete: () => void;
 };
 
-const cardStyle = (active: boolean): React.CSSProperties => ({
-  display: 'flex',
-  alignItems: 'center',
-  gap: 14,
-  padding: 16,
-  borderRadius: 16,
-  backgroundColor: 'var(--tg-theme-bg-color)',
-  border: `2px solid ${active ? 'var(--tg-theme-button-color)' : 'transparent'}`,
-  boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
-  cursor: 'pointer',
-  transition: 'border-color .15s ease, transform .15s ease',
-  transform: active ? 'scale(1.01)' : 'none',
-  textAlign: 'left',
-  width: '100%',
-  color: 'var(--tg-theme-text-color)',
-  font: 'inherit',
-});
+const haptic = (type: 'select' | 'success' | 'error' = 'select') => {
+  const h = (window as any).Telegram?.WebApp?.HapticFeedback;
+  if (!h) return;
+  if (type === 'select') h.selectionChanged();
+  else h.notificationOccurred(type);
+};
+
+const stickyBar: React.CSSProperties = {
+  position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 20, padding: '10px 16px calc(10px + env(safe-area-inset-bottom))',
+  backgroundColor: 'var(--tg-theme-secondary-bg-color)', boxShadow: '0 -6px 16px rgba(0,0,0,0.06)',
+};
 
 export const MasterRegistrationScreen: React.FC<Props> = ({ inviteCode, onBack, onComplete }) => {
   const { lang, t } = useLanguage();
@@ -59,11 +56,12 @@ export const MasterRegistrationScreen: React.FC<Props> = ({ inviteCode, onBack, 
 
   const [name, setName] = useState([tgUser?.first_name, tgUser?.last_name].filter(Boolean).join(' '));
   const [phone, setPhone] = useState('');
+  const [phoneTouched, setPhoneTouched] = useState(false);
   const [businessName, setBusinessName] = useState('');
   const [address, setAddress] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [city, setCity] = useState(CITIES[0]);
-  const [experience, setExperience] = useState('');
+  const [experience, setExperience] = useState(0);
 
   useEffect(() => {
     if (!inviteCode) return;
@@ -71,10 +69,10 @@ export const MasterRegistrationScreen: React.FC<Props> = ({ inviteCode, onBack, 
       setInvite(b);
       setInviteState(b ? 'ok' : 'bad');
       if (b) { setCategory(CATEGORIES.includes(b.category) ? b.category : CATEGORIES[0]); setCity(b.city || CITIES[0]); }
-    });
+    }).catch(() => setInviteState('bad'));
   }, [inviteCode]);
 
-  // Кнопка «Назад» Telegram: на шаге деталей возвращаемся к выбору режима
+  // Кнопка «Назад» Telegram: на шаге данных возвращаемся к выбору режима
   const backRef = useRef<() => void>(() => {});
   backRef.current = () => {
     if (step === 'details' && !inviteCode) setStep('mode');
@@ -85,30 +83,26 @@ export const MasterRegistrationScreen: React.FC<Props> = ({ inviteCode, onBack, 
     const handler = () => backRef.current();
     tg.BackButton.show();
     tg.BackButton.onClick(handler);
+    tg.MainButton?.hide();
     return () => tg.BackButton.offClick(handler);
   }, [tg]);
 
-  const haptic = (type: 'light' | 'success' | 'error' = 'light') => {
-    if (!tg?.HapticFeedback) return;
-    if (type === 'light') tg.HapticFeedback.impactOccurred('light');
-    else tg.HapticFeedback.notificationOccurred(type);
-  };
-
-  const alertMsg = (msg: string) => (tg?.showAlert ? tg.showAlert(msg) : alert(msg));
+  const phoneOk = isValidPhone(phone);
 
   const submit = async () => {
-    if (!name.trim() || !phone.trim()) { haptic('error'); alertMsg(t('reg_err_name_phone')); return; }
-    if (mode === 'team' && !businessName.trim()) { haptic('error'); alertMsg(t('reg_err_business')); return; }
+    if (!name.trim() || !normalizePhone(phone)) { haptic('error'); setPhoneTouched(true); tgAlert(t('reg_err_name_phone')); return; }
+    if (!phoneOk) { haptic('error'); setPhoneTouched(true); return; }
+    if (mode === 'team' && !businessName.trim()) { haptic('error'); tgAlert(t('reg_err_business')); return; }
 
     setLoading(true);
     try {
       await onboardMaster({
         mode,
         name: name.trim(),
-        phone: phone.trim(),
+        phone: normalizePhone(phone),
         category,
         city,
-        experience_years: parseInt(experience, 10) || 0,
+        experience_years: experience,
         business_name: mode === 'team' ? businessName.trim() : undefined,
         address: mode === 'team' ? address.trim() : undefined,
         invite_code: mode === 'join' ? inviteCode || undefined : undefined,
@@ -118,130 +112,152 @@ export const MasterRegistrationScreen: React.FC<Props> = ({ inviteCode, onBack, 
       onComplete();
     } catch (e: any) {
       haptic('error');
-      alertMsg(e.message || t('reg_err_generic'));
+      tgAlert(e.message || t('reg_err_generic'));
     } finally {
       setLoading(false);
     }
   };
 
-  const page: React.CSSProperties = {
-    backgroundColor: 'var(--tg-theme-secondary-bg-color)',
-    minHeight: '100vh',
-    paddingBottom: 40,
-    color: 'var(--tg-theme-text-color)',
-  };
-
   // ---------- Шаг 1: как вы работаете ----------
   if (step === 'mode') {
+    const option = (m: Mode, emoji: string, title: string, desc: string) => {
+      const on = mode === m;
+      return (
+        <button type="button" role="radio" aria-checked={on} onClick={() => { haptic(); setMode(m); }} style={{
+          ...card, display: 'flex', alignItems: 'center', gap: 14, padding: 16, width: '100%', textAlign: 'left', cursor: 'pointer',
+          fontFamily: 'inherit', color: 'var(--tg-theme-text-color)',
+          border: `2px solid ${on ? 'var(--brand-accent, #50C878)' : 'transparent'}`,
+          backgroundColor: on ? 'var(--brand-soft, #E9F7EF)' : 'var(--tg-theme-bg-color)', transition: 'background-color .15s, border-color .15s',
+        }}>
+          <div aria-hidden="true" style={{ fontSize: 30, flex: '0 0 auto' }}>{emoji}</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 800, fontSize: 17 }}>{title}</div>
+            <div style={{ fontSize: 14, color: 'var(--tg-theme-hint-color)', lineHeight: 1.35, marginTop: 3 }}>{desc}</div>
+          </div>
+          <span aria-hidden="true" style={{
+            width: 22, height: 22, borderRadius: 11, flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800,
+            border: on ? 'none' : '2px solid var(--tg-theme-hint-color)', opacity: on ? 1 : 0.4,
+            backgroundColor: on ? 'var(--brand-accent, #50C878)' : 'transparent', color: 'var(--brand-on-accent, #14261B)',
+          }}>{on ? '✓' : ''}</span>
+        </button>
+      );
+    };
+
     return (
-      <div style={page}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '28px 20px 8px', textAlign: 'center' }}>
-          <Konnektik mood="hello" size={150} />
-          <Title level="1" weight="1" style={{ marginTop: 16, marginBottom: 8 }}>{t('reg_how_title')}</Title>
-          <Text style={{ color: 'var(--tg-theme-hint-color)' }}>
-            {t('reg_how_desc')}
-          </Text>
+      <div style={{ ...page, padding: '24px 16px 110px' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--tg-theme-hint-color)' }}>{fill(t('reg_step'), { n: 1 })}</div>
+          <Konnektik mood="hello" size={120} />
+          <div style={{ fontSize: 26, fontWeight: 800, marginTop: 6 }}>{t('reg_how_title')}</div>
+          <div style={{ fontSize: 15, color: 'var(--tg-theme-hint-color)', marginTop: 6, lineHeight: 1.4 }}>{t('reg_how_desc')}</div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '20px 16px' }}>
-          <button type="button" style={cardStyle(mode === 'solo')} onClick={() => { haptic(); setMode('solo'); }}>
-            <div style={{ fontSize: 32 }}>✂️</div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 17, marginBottom: 4 }}>{t('reg_solo_title')}</div>
-              <div style={{ fontSize: 14, color: 'var(--tg-theme-hint-color)', lineHeight: 1.35 }}>
-                {t('reg_solo_desc')}
-              </div>
-            </div>
-          </button>
-
-          <button type="button" style={cardStyle(mode === 'team')} onClick={() => { haptic(); setMode('team'); }}>
-            <div style={{ fontSize: 32 }}>🏠</div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 17, marginBottom: 4 }}>{t('reg_team_title')}</div>
-              <div style={{ fontSize: 14, color: 'var(--tg-theme-hint-color)', lineHeight: 1.35 }}>
-                {t('reg_team_desc')}
-              </div>
-            </div>
-          </button>
+        <div role="radiogroup" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 20 }}>
+          {option('solo', '✂️', t('reg_solo_title'), t('reg_solo_desc'))}
+          {option('team', '🏠', t('reg_team_title'), t('reg_team_desc'))}
         </div>
 
-        <div style={{ padding: '8px 16px' }}>
-          <Button size="l" stretched mode="filled" onClick={() => { haptic(); setStep('details'); }}>
-            {t('btn_next')}
-          </Button>
-        </div>
-        <Text style={{ display: 'block', textAlign: 'center', color: 'var(--tg-theme-hint-color)', fontSize: 13, padding: '8px 24px' }}>
+        <div style={{ textAlign: 'center', color: 'var(--tg-theme-hint-color)', fontSize: 13, padding: '16px 12px 0', lineHeight: 1.4 }}>
           {t('reg_invite_hint')}
-        </Text>
+        </div>
+
+        <div style={stickyBar}>
+          <PrimaryButton onClick={() => { haptic(); setStep('details'); }}>{t('btn_next')}</PrimaryButton>
+        </div>
       </div>
     );
   }
 
-  // ---------- Приглашение недействительно ----------
+  // ---------- Приглашение ----------
+  if (mode === 'join' && inviteState === 'loading') {
+    return <div style={{ ...page, display: 'flex', justifyContent: 'center', paddingTop: 120 }}><Spinner size="l" /></div>;
+  }
   if (mode === 'join' && inviteState === 'bad') {
     return (
       <div style={{ ...page, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, textAlign: 'center' }}>
-        <Konnektik mood="think" size={150} />
-        <Title level="2" weight="1" style={{ marginTop: 16, marginBottom: 8 }}>{t('reg_invite_bad_title')}</Title>
-        <Text style={{ color: 'var(--tg-theme-hint-color)', marginBottom: 24 }}>
-          {t('reg_invite_bad_desc')}
-        </Text>
-        <Button size="l" mode="bezeled" onClick={() => { setMode('solo'); setStep('mode'); }}>
-          {t('reg_register_self')}
-        </Button>
+        <Konnektik mood="think" size={130} />
+        <div style={{ fontSize: 22, fontWeight: 800, marginTop: 12 }}>{t('reg_invite_bad_title')}</div>
+        <div style={{ fontSize: 15, color: 'var(--tg-theme-hint-color)', marginTop: 6, marginBottom: 20, lineHeight: 1.4 }}>{t('reg_invite_bad_desc')}</div>
+        <div style={{ width: '100%', maxWidth: 320 }}>
+          <PrimaryButton variant="soft" onClick={() => { setMode('solo'); setStep('mode'); }}>{t('reg_register_self')}</PrimaryButton>
+        </div>
       </div>
     );
-  }
-
-  if (mode === 'join' && inviteState === 'loading') {
-    return <div style={{ ...page, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spinner size="l" /></div>;
   }
 
   // ---------- Шаг 2: данные ----------
   const heading = mode === 'join' ? fill(t('reg_join_heading'), { name: invite?.name ?? '' })
     : mode === 'team' ? t('reg_team_heading') : t('reg_solo_heading');
   const subheading = mode === 'join' ? t('reg_join_sub') : mode === 'team' ? t('reg_team_sub') : t('reg_solo_sub');
+  const showPhoneError = phoneTouched && !!normalizePhone(phone) && !phoneOk;
+
+  const section = (title: string, body: React.ReactNode) => (
+    <div style={{ ...card, marginTop: 12, padding: '4px 14px 14px' }}>
+      <div style={{ fontSize: 17, fontWeight: 700, margin: '12px 2px 0' }}>{title}</div>
+      {body}
+    </div>
+  );
 
   return (
-    <div style={page}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '24px 20px 12px' }}>
-        <Konnektik mood={mode === 'join' ? 'happy' : 'explain'} size={92} />
-        <div>
-          <Title level="2" weight="1" style={{ marginBottom: 6 }}>{heading}</Title>
-          <Text style={{ color: 'var(--tg-theme-hint-color)', fontSize: 14, lineHeight: 1.35 }}>{subheading}</Text>
+    <div style={{ ...page, padding: '20px 16px 110px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <Konnektik mood={mode === 'join' ? 'happy' : 'explain'} size={84} />
+        <div style={{ minWidth: 0 }}>
+          {!inviteCode && <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--tg-theme-hint-color)' }}>{fill(t('reg_step'), { n: 2 })}</div>}
+          <div style={{ fontSize: 22, fontWeight: 800, marginTop: 2 }}>{heading}</div>
+          <div style={{ fontSize: 14, color: 'var(--tg-theme-hint-color)', marginTop: 4, lineHeight: 1.35 }}>{subheading}</div>
         </div>
       </div>
 
-      <List style={{ padding: '0 16px' }}>
-        {mode === 'team' && (
-          <Section header={t('reg_section_business')}>
-            <Input header={t('reg_business_name')} placeholder={t('reg_business_name_ph')} value={businessName} onChange={(e) => setBusinessName(e.target.value)} />
-            <Input header={t('reg_address')} placeholder={t('reg_address_ph')} value={address} onChange={(e) => setAddress(e.target.value)} />
-          </Section>
-        )}
+      {mode === 'team' && section(t('reg_section_business'), <>
+        <div style={fieldLabel}>{t('reg_business_name')}</div>
+        <input style={inputStyle} value={businessName} maxLength={120} placeholder={t('reg_business_name_ph')}
+          aria-label={t('reg_business_name')} onChange={(e) => setBusinessName(e.target.value)} />
+        <div style={fieldLabel}>{t('reg_address')}</div>
+        <input style={inputStyle} value={address} placeholder={t('reg_address_ph')}
+          aria-label={t('reg_address')} onChange={(e) => setAddress(e.target.value)} />
+      </>)}
 
-        <Section header={mode === 'team' ? t('reg_section_owner') : t('reg_section_about')}>
-          <Input header={t('reg_name')} placeholder={t('reg_name_ph')} value={name} onChange={(e) => setName(e.target.value)} />
-          <Input header={t('reg_phone')} placeholder="+998 90 000 00 00" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
-          <Input header={t('reg_experience')} placeholder={t('reg_experience_ph')} type="number" inputMode="numeric" value={experience} onChange={(e) => setExperience(e.target.value)} />
-        </Section>
+      {section(mode === 'team' ? t('reg_section_owner') : t('reg_section_about'), <>
+        <div style={fieldLabel}>{t('reg_name')}</div>
+        <input style={inputStyle} value={name} maxLength={100} placeholder={t('reg_name_ph')} autoComplete="name"
+          aria-label={t('reg_name')} onChange={(e) => setName(e.target.value)} />
 
-        {mode !== 'join' && (
-          <Section header={t('reg_section_sphere')}>
-            <Select header={t('reg_category')} value={category} onChange={(e) => setCategory(e.target.value)}>
-              {CATEGORIES.map((c, i) => <option key={c} value={c}>{t(`cat_${i}`)}</option>)}
-            </Select>
-            <Select header={t('reg_city')} value={city} onChange={(e) => setCity(e.target.value)}>
-              {CITIES.map((c, i) => <option key={c} value={c}>{t(CITY_KEYS[i])}</option>)}
-            </Select>
-          </Section>
-        )}
-      </List>
+        <div style={fieldLabel}>{t('reg_phone')}</div>
+        <input style={{ ...inputStyle, boxShadow: showPhoneError ? 'inset 0 0 0 1.5px #E0533D' : 'none' }}
+          type="tel" inputMode="tel" autoComplete="tel" value={phone} placeholder={PHONE_PLACEHOLDER}
+          aria-label={t('reg_phone')} aria-invalid={showPhoneError}
+          onFocus={() => { if (!phone) setPhone('+998 '); }}
+          onBlur={() => { setPhoneTouched(true); if (normalizePhone(phone) === '+998') setPhone(''); }}
+          onChange={(e) => setPhone(formatPhone(e.target.value))} />
+        {showPhoneError && <div style={{ fontSize: 13, color: '#E0533D', marginTop: 6 }}>{t('cp_phone_bad')}</div>}
 
-      <div style={{ padding: '24px 16px' }}>
-        <Button size="l" stretched mode="filled" onClick={submit} loading={loading}>
-          {mode === 'join' ? t('reg_btn_join') : t('reg_btn_create')}
-        </Button>
+        <div style={fieldLabel}>{t('reg_experience')}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {[-1, 1].map((d) => (
+            <button key={d} type="button" aria-label={d < 0 ? '−' : '+'} onClick={() => { haptic(); setExperience((x) => Math.min(60, Math.max(0, x + d))); }}
+              style={{ width: 44, height: 44, borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: 22, fontWeight: 700, fontFamily: 'inherit',
+                backgroundColor: 'var(--brand-soft)', color: 'var(--brand-ink)', order: d < 0 ? 0 : 2 }}>
+              {d < 0 ? '−' : '+'}
+            </button>
+          ))}
+          <div style={{ order: 1, minWidth: 48, textAlign: 'center', fontSize: 22, fontWeight: 800 }}>{experience}</div>
+        </div>
+      </>)}
+
+      {mode !== 'join' && section(t('reg_section_sphere'), <>
+        <div style={fieldLabel}>{t('reg_category')}</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {CATEGORIES.map((c, i) => <Chip onCard key={c} active={category === c} onClick={() => { haptic(); setCategory(c); }}>{t(`cat_${i}`)}</Chip>)}
+        </div>
+        <div style={fieldLabel}>{t('reg_city')}</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {CITIES.map((c, i) => <Chip onCard key={c} active={city === c} onClick={() => { haptic(); setCity(c); }}>{t(CITY_KEYS[i])}</Chip>)}
+        </div>
+      </>)}
+
+      <div style={stickyBar}>
+        <PrimaryButton onClick={submit} loading={loading}>{mode === 'join' ? t('reg_btn_join') : t('reg_btn_create')}</PrimaryButton>
       </div>
     </div>
   );
