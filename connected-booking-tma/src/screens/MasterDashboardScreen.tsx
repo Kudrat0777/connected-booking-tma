@@ -108,7 +108,7 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
     if (!(await confirmAsk(t('md_delete_1')))) return;
     if (!(await confirmAsk(t('md_delete_2')))) return;
     try {
-      await deleteAccount(telegramId);
+      await deleteAccount(telegramId, 'master');
       say(t('m_delete_account_success'));
       onLogout?.();
     } catch { say(t('m_delete_account_error')); }

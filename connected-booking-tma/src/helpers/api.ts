@@ -522,9 +522,10 @@ export const updateUserProfile = async (telegramId: number, data: { first_name?:
     return response.json();
 };
 
-export const deleteAccount = async (telegramId: number) => {
+/** role: удалить только профиль клиента или только кабинет мастера (без role сервер удалит оба). */
+export const deleteAccount = async (telegramId: number, role?: 'client' | 'master') => {
   try {
-    const response = await fetch(`${API_BASE}/users/${telegramId}/`, {
+    const response = await fetch(`${API_BASE}/users/${telegramId}/${role ? `?role=${role}` : ''}`, {
       method: 'DELETE',
     });
     if (response.status === 204 || response.status === 404) {
