@@ -383,7 +383,20 @@ export type Review = {
   rating: number;
   text: string;
   created_at: string;
+  /** Публичный ответ мастера под отзывом */
+  reply_text?: string;
+  reply_at?: string | null;
 };
+
+/** Ответ мастера на отзыв. Пустой текст удаляет ответ. О первом ответе клиенту придёт сообщение. */
+export async function replyToReview(reviewId: number, text: string): Promise<Review> {
+  const res = await fetch(`${API_BASE}/reviews/${reviewId}/reply/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  });
+  return jsonOrThrow(res, 'Не удалось сохранить ответ');
+}
 
 /** Оценить визит. Тот же визит можно оценить снова — отзыв обновится, а не задвоится. */
 export async function addReview(data: {
