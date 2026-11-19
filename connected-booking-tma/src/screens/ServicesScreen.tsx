@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   List,
   Section,
@@ -8,27 +8,11 @@ import {
 } from '@telegram-apps/telegram-ui';
 import { fetchServices, Service } from '../helpers/api';
 import { Icon24Search, Icon28ChevronRightOutline } from '@vkontakte/icons';
-import lottie from 'lottie-web';
+import { KonnektikSticker } from '../components/Konnektik';
 
 import { useLanguage } from '../helpers/LanguageContext';
 
-const LottieIcon: React.FC<{ src: string; size?: number }> = ({ src, size = 120 }) => {
-  const container = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!container.current) return;
-    try {
-      const anim = lottie.loadAnimation({
-        container: container.current,
-        renderer: 'svg',
-        loop: true,
-        autoplay: true,
-        path: src,
-      });
-      return () => anim.destroy();
-    } catch (e) { console.error(e); }
-  }, [src]);
-  return <div ref={container} style={{ width: size, height: size, margin: '0 auto 16px' }} />;
-};
+const LottieIcon = KonnektikSticker;
 
 type Props = {
   onBack: () => void;

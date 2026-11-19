@@ -1,38 +1,16 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { Placeholder } from '@telegram-apps/telegram-ui';
-import lottie from 'lottie-web';
+import { Konnektik } from '../components/Konnektik';
 import { Booking } from '../helpers/api';
 
 // ИМПОРТИРУЕМ ХУК ЛОКАЛИЗАЦИИ
 import { useLanguage } from '../helpers/LanguageContext';
 
-const LottieSuccess: React.FC<{ size?: number }> = ({ size = 140 }) => {
-  const container = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!container.current) return;
-
-    try {
-      const anim = lottie.loadAnimation({
-        container: container.current,
-        renderer: 'svg',
-        loop: true,
-        autoplay: true,
-        path: '/stickers/duck_small.json',
-      });
-      return () => anim.destroy();
-    } catch (e) {
-      console.error(e);
-    }
-  }, []);
-
-  return (
-    <div
-        ref={container}
-        style={{ width: size, height: size, margin: '0 auto 24px' }}
-    />
-  );
-};
+const LottieSuccess: React.FC<{ size?: number }> = ({ size = 140 }) => (
+  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
+    <Konnektik mood="happy" size={size} />
+  </div>
+);
 
 type Props = {
   booking: Booking;

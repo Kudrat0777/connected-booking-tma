@@ -1,5 +1,5 @@
-import React from 'react';
-import { List, Section, Cell, Title, Text, Button, Select } from '@telegram-apps/telegram-ui';
+import React, { useEffect, useState } from 'react';
+import { List, Section, Cell, Title, Text, Select } from '@telegram-apps/telegram-ui';
 import {
   Icon28EditOutline,
   Icon28CalendarOutline,
@@ -9,8 +9,9 @@ import {
   Icon28ArrowRightSquareOutline,
   Icon28DeleteOutline,
   Icon28ShareOutline,
-  Icon28CopyOutline
+  Icon28UsersOutline
 } from '@vkontakte/icons';
+import { fetchCurrentMaster, CurrentMaster } from '../helpers/api';
 
 // ИМПОРТИРУЕМ ХУК ЛОКАЛИЗАЦИИ
 import { useLanguage } from '../helpers/LanguageContext';
@@ -22,14 +23,14 @@ type Props = {
   onOpenSchedule: () => void;
   onOpenAnalytics: () => void;
   onOpenReviews: () => void;
+  onOpenLinks?: () => void;
+  onOpenTeam?: () => void;
   onSwitchToClient: () => void;
   onLogoutClick: () => void;
   onDeleteAccount: () => void;
   triggerHaptic: (type?: 'light' | 'selection' | 'success' | 'warning') => void;
 };
 
-const BOT_USERNAME = 'ConnectedTimeBot';
-const APP_SHORT_NAME = 'booking';
 
 export const MasterProfileTab: React.FC<Props> = ({
   telegramId,
@@ -37,6 +38,8 @@ export const MasterProfileTab: React.FC<Props> = ({
   onOpenSchedule,
   onOpenAnalytics,
   onOpenReviews,
+  onOpenLinks,
+  onOpenTeam,
   onSwitchToClient,
   onLogoutClick,
   onDeleteAccount,
@@ -47,63 +50,16 @@ export const MasterProfileTab: React.FC<Props> = ({
   const { lang, setLang, t } = useLanguage();
 
   const tg = (window as any).Telegram?.WebApp;
-  const currentMasterId = telegramId || tg?.initDataUnsafe?.user?.id;
+  void telegramId;
 
-  const shareLink = `https://t.me/${BOT_USERNAME}/${APP_SHORT_NAME}?startapp=master_${currentMasterId}`;
+  const [me, setMe] = useState<CurrentMaster | null>(null);
+  useEffect(() => { fetchCurrentMaster().then(setMe).catch(() => {}); }, []);
+  const isTeam = me?.business?.kind === 'team';
+  const canManageTeam = me?.role === 'owner' || me?.role === 'admin';
 
-  const handleCopyLink = () => {
-    triggerHaptic('light');
-    if (!currentMasterId) {
-        if (tg?.showAlert) tg.showAlert(t('m_copy_error'));
-        else alert(t('m_copy_error'));
-        return;
-    }
-
-    if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(shareLink).then(() => {
-            triggerHaptic('success');
-            if (tg?.showAlert) {
-                tg.showAlert(t('m_copy_success_alert'));
-            } else {
-                alert(t('m_copy_success'));
-            }
-        }).catch(() => fallbackCopyTextToClipboard(shareLink));
-    } else {
-        fallbackCopyTextToClipboard(shareLink);
-    }
-  };
-
-  const fallbackCopyTextToClipboard = (text: string) => {
-    const textArea = document.createElement("textarea");
-    textArea.value = text;
-    textArea.style.position = "fixed";
-    textArea.style.left = "-999999px";
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    try {
-      document.execCommand('copy');
-      triggerHaptic('success');
-      if (tg?.showAlert) tg.showAlert(t('m_copy_success_alert'));
-      else alert(t('m_copy_success'));
-    } catch (err) {
-      console.error('Copy fallback failed', err);
-      prompt(t('m_copy_fallback'), text);
-    }
-    document.body.removeChild(textArea);
-  };
-
-  const handleShareLink = () => {
-    triggerHaptic('light');
-    const text = t('m_share_text');
-    const fullShareUrl = `https://t.me/share/url?url=${encodeURIComponent(shareLink)}&text=${encodeURIComponent(text)}`;
-
-    if (tg?.openTelegramLink) {
-        tg.openTelegramLink(fullShareUrl);
-    } else {
-        window.open(fullShareUrl, '_blank');
-    }
-  };
+  const iconBox = (bg: string, icon: React.ReactNode) => (
+    <div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{icon}</div>
+  );
 
   return (
     <div style={{ minHeight: '100%', paddingBottom: 100 }}>
@@ -138,23 +94,35 @@ export const MasterProfileTab: React.FC<Props> = ({
                </Select>
            </Section>
 
-           <Section header={t('m_client_acquisition')}>
-               <div style={{ padding: '16px', backgroundColor: 'var(--tg-theme-bg-color)', borderRadius: 12, marginBottom: 4, boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
-                   <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--tg-theme-text-color)', marginBottom: 8 }}>
-                       {t('m_your_link')}
-                   </div>
-                   <div style={{ fontSize: 13, color: 'var(--tg-theme-link-color)', wordBreak: 'break-all', backgroundColor: 'var(--tg-theme-secondary-bg-color)', padding: '10px 12px', borderRadius: 8, marginBottom: 16 }}>
-                       {shareLink}
-                   </div>
-                   <div style={{ display: 'flex', gap: 8 }}>
-                       <Button size="m" mode="bezeled" stretched before={<Icon28CopyOutline width={20} height={20}/>} onClick={handleCopyLink}>
-                           {t('m_btn_copy')}
-                       </Button>
-                       <Button size="m" mode="filled" stretched before={<Icon28ShareOutline width={20} height={20}/>} onClick={handleShareLink}>
-                           {t('m_btn_forward')}
-                       </Button>
+           {me?.business && (
+               <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', marginBottom: 8, borderRadius: 12, backgroundColor: 'var(--tg-theme-bg-color)' }}>
+                   <span style={{ fontSize: 22 }}>{isTeam ? '🏠' : '✂️'}</span>
+                   <div style={{ minWidth: 0 }}>
+                       <div style={{ fontWeight: 600, color: 'var(--tg-theme-text-color)' }}>{me.business.name}</div>
+                       <div style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)' }}>
+                           {isTeam ? ({ owner: 'Владелец', admin: 'Администратор', master: 'Мастер' } as Record<string, string>)[me.role] : 'Частный мастер'}
+                       </div>
                    </div>
                </div>
+           )}
+
+           <Section header={t('m_client_acquisition')}>
+               <Cell
+                   before={iconBox('rgba(80, 200, 120, 0.15)', <Icon28ShareOutline width={24} height={24} style={{ color: '#50C878' }} />)}
+                   onClick={() => { triggerHaptic('selection'); onOpenLinks?.(); }}
+                   description="Ссылки для Instagram, Telegram, QR-код и статистика переходов"
+               >
+                   Ссылки и QR-код
+               </Cell>
+               {(isTeam || canManageTeam) && (
+                   <Cell
+                       before={iconBox('rgba(88, 86, 214, 0.12)', <Icon28UsersOutline width={24} height={24} style={{ color: '#5856D6' }} />)}
+                       onClick={() => { triggerHaptic('selection'); onOpenTeam?.(); }}
+                       description={canManageTeam ? 'Пригласить мастеров, роли, видимость' : 'Кто работает с вами'}
+                   >
+                       Команда
+                   </Cell>
+               )}
            </Section>
 
            <Section header={t('m_management')}>

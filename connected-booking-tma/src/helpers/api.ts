@@ -1,6 +1,7 @@
 const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
 import { useState, useEffect } from 'react';
+import { currentSource } from './links';
 
 export type Service = {
   id: number;
@@ -94,6 +95,7 @@ export async function createBooking(
       telegram_id: payload.telegram_id ?? null,
       username: payload.username ?? null,
       photo_url: payload.photo_url ?? null,
+      source: currentSource(),
     }),
   });
 
@@ -319,6 +321,7 @@ export type AnalyticsData = {
   unique_clients?: number;
   average_check?: number;
   top_services?: { slot__service__name: string; count: number; revenue: number }[];
+  sources?: { source: string; visits: number; bookings: number }[];
 
   // Старые поля (на всякий случай, чтобы не было белого экрана)
   revenue_month?: number;
@@ -603,3 +606,153 @@ export const useTunnelImage = (src?: string | null) => {
 
   return blobUrl;
 };
+
+// --------- ЗАВЕДЕНИЯ, КОМАНДА, ТАРГЕТ-ССЫЛКИ ---------
+
+export type BusinessShort = {
+  id: number;
+  name: string;
+  slug: string;
+  kind: 'solo' | 'team';
+  category: string;
+  city: string;
+  address: string;
+  logo_url: string;
+};
+
+export type MasterRole = 'owner' | 'admin' | 'master';
+
+export type TeamMember = {
+  id: number;
+  name: string;
+  slug: string;
+  role: MasterRole;
+  avatar_url: string;
+  category: string;
+  phone: string;
+  is_active: boolean;
+  services_count: number;
+  upcoming_bookings: number;
+};
+
+export type MyBusiness = BusinessShort & {
+  description: string;
+  phone: string;
+  latitude: number | null;
+  longitude: number | null;
+  invite_code?: string;      // только владельцу и администратору
+  members?: TeamMember[];    // только владельцу и администратору
+  masters?: MasterPublicProfile[];
+  my_role: MasterRole;
+};
+
+export type CurrentMaster = MasterPublicProfile & {
+  telegram_id: number;
+  slug: string;
+  role: MasterRole;
+  category: string;
+  experience_years: number;
+  business: BusinessShort | null;
+};
+
+async function jsonOrThrow(res: Response, fallback: string) {
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || data.error || fallback);
+  }
+  return res.json();
+}
+
+export type OnboardPayload = {
+  mode: 'solo' | 'team' | 'join';
+  name: string;
+  phone: string;
+  category?: string;
+  city?: string;
+  experience_years?: number;
+  business_name?: string;
+  address?: string;
+  invite_code?: string;
+  language?: string;
+};
+
+export async function onboardMaster(data: OnboardPayload): Promise<CurrentMaster> {
+  const res = await fetch(`${API_BASE}/masters/onboard/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return jsonOrThrow(res, 'Ошибка регистрации');
+}
+
+export async function fetchCurrentMaster(): Promise<CurrentMaster | null> {
+  const res = await fetch(`${API_BASE}/masters/me/`);
+  if (res.status === 404 || res.status === 401) return null;
+  return jsonOrThrow(res, 'Не удалось загрузить профиль');
+}
+
+export async function fetchInviteInfo(code: string): Promise<BusinessShort | null> {
+  const res = await fetch(`${API_BASE}/businesses/invite_info/?code=${encodeURIComponent(code)}`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function fetchMyBusiness(): Promise<MyBusiness> {
+  return jsonOrThrow(await fetch(`${API_BASE}/businesses/mine/`), 'Не удалось загрузить заведение');
+}
+
+export async function updateMyBusiness(data: Partial<Pick<MyBusiness,
+  'name' | 'category' | 'description' | 'phone' | 'city' | 'address'>>): Promise<MyBusiness> {
+  const res = await fetch(`${API_BASE}/businesses/mine/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return jsonOrThrow(res, 'Не удалось сохранить');
+}
+
+export async function regenerateInvite(): Promise<{ invite_code: string }> {
+  return jsonOrThrow(await fetch(`${API_BASE}/businesses/regenerate_invite/`, { method: 'POST' }),
+    'Не удалось обновить ссылку');
+}
+
+export async function updateTeamMember(
+  memberId: number,
+  data: { role?: 'admin' | 'master'; is_active?: boolean; action?: 'remove' },
+) {
+  const res = await fetch(`${API_BASE}/businesses/members/${memberId}/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return jsonOrThrow(res, 'Не удалось изменить мастера');
+}
+
+export type BusinessPublic = BusinessShort & {
+  description: string;
+  phone: string;
+  latitude: number | null;
+  longitude: number | null;
+  masters: (MasterPublicProfile & { slug: string; role: MasterRole; category: string })[];
+};
+
+export async function fetchBusinessBySlug(slug: string): Promise<BusinessPublic | null> {
+  const res = await fetch(`${API_BASE}/businesses/by_slug/${encodeURIComponent(slug)}/`);
+  return res.ok ? res.json() : null;
+}
+
+export async function fetchMasterBySlug(slug: string): Promise<(MasterPublicProfile & { slug: string }) | null> {
+  const res = await fetch(`${API_BASE}/masters/by_slug/${encodeURIComponent(slug)}/`);
+  return res.ok ? res.json() : null;
+}
+
+export function trackVisit(data: { business?: string; master?: string; source?: string }) {
+  // Аналитика не должна мешать приложению: ошибки игнорируем
+  fetch(`${API_BASE}/track/visit/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }).catch(() => {});
+}
+
+export type SourceStat = { source: string; visits: number; bookings: number };

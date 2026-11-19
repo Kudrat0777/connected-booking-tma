@@ -28,5 +28,6 @@ export function getStartParam(): string | null {
   }
 
   const params = new URLSearchParams(window.location.search);
-  return params.get('tgWebAppStartParam') || params.get('start_param');
+  // sp — параметр, который бот кладёт в ссылку кнопки после /start <параметр>
+  return params.get('tgWebAppStartParam') || params.get('start_param') || params.get('sp');
 }

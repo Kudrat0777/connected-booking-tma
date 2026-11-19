@@ -9,7 +9,7 @@ import {
   Title,
   Text,
 } from '@telegram-apps/telegram-ui';
-import lottie, { AnimationItem } from 'lottie-web';
+import { Konnektik, moodForSticker } from '../components/Konnektik';
 
 // ИМПОРТИРУЕМ ХУК ЛОКАЛИЗАЦИИ
 import { useLanguage } from '../helpers/LanguageContext';
@@ -62,8 +62,6 @@ export const MasterWelcomeScreen: React.FC<Props> = ({
   const [index, setIndex] = useState(0);
   const slide = SLIDES[index];
 
-  const lottieContainerRef = useRef<HTMLDivElement | null>(null);
-  const lottieInstanceRef = useRef<AnimationItem | null>(null);
   const swipeStartXRef = useRef<number | null>(null);
   const [swipeDeltaX, setSwipeDeltaX] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -82,34 +80,6 @@ export const MasterWelcomeScreen: React.FC<Props> = ({
     }
   }, [tg]);
 
-  // --- LOTTIE SETUP ---
-  useEffect(() => {
-    const cleanup = () => {
-      if (lottieInstanceRef.current) {
-        lottieInstanceRef.current.destroy();
-        lottieInstanceRef.current = null;
-      }
-    };
-
-    cleanup();
-
-    if (!slide.lottieSrc || !lottieContainerRef.current) return;
-
-    try {
-        const anim = lottie.loadAnimation({
-          container: lottieContainerRef.current,
-          renderer: 'svg',
-          loop: true,
-          autoplay: true,
-          path: slide.lottieSrc,
-        });
-        lottieInstanceRef.current = anim;
-    } catch(e) {
-      console.error("Lottie load error:", e);
-    }
-
-    return cleanup;
-  }, [slide.lottieSrc]);
 
   // --- SLIDER LOGIC ---
   const changeSlide = (newIndex: number) => {
@@ -194,10 +164,9 @@ export const MasterWelcomeScreen: React.FC<Props> = ({
         onTouchMove={(e) => handleMove(e.touches[0].clientX)}
         onTouchEnd={handleEnd}
       >
-        <div
-            ref={lottieContainerRef}
-            style={{ width: 260, height: 260, marginBottom: 24 }}
-        />
+        <div style={{ height: 260, marginBottom: 24, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+            <Konnektik key={index} mood={moodForSticker(slide.lottieSrc)} size={230} />
+        </div>
 
         <Title level="1" weight="1" style={{ textAlign: 'center', marginBottom: 12, fontSize: 28 }}>
             {slide.title}
