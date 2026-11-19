@@ -20,6 +20,7 @@ import { MasterLoginScreen } from './screens/MasterLoginScreen';
 import { MasterDashboardScreen } from './screens/MasterDashboardScreen';
 import { MasterWorkHoursScreen } from './screens/MasterWorkHoursScreen';
 import { SalonCalendarScreen } from './screens/SalonCalendarScreen';
+import { AnyMasterScreen } from './screens/AnyMasterScreen';
 import { MasterEditProfileScreen } from './screens/MasterEditProfileScreen';
 import { MasterAnalyticsScreen } from './screens/MasterAnalyticsScreen';
 import { MasterReviewsScreen } from './screens/MasterReviewsScreen';
@@ -80,7 +81,7 @@ type Screen =
   | 'master_reviews' | 'master_create_service' | 'client_portfolio'
   | 'client_registration' | 'client_master_profile'
   | 'master_links' | 'master_team' | 'client_business' | 'master_member_schedule'
-  | 'salon_calendar';
+  | 'salon_calendar' | 'client_any_master';
 
 type MainTab = 'bookings' | 'masters' | 'settings';
 
@@ -162,6 +163,7 @@ const AppContent: React.FC = () => {
   const [targetMasterIdForNewClient, setTargetMasterIdForNewClient] = useState<number | null>(null);
   // Заведение из таргет-ссылки b_<slug> и код приглашения join_<код>
   const [businessSlug, setBusinessSlug] = useState<string | null>(null);
+  const [businessName, setBusinessName] = useState('');
   const [targetBusinessForNewClient, setTargetBusinessForNewClient] = useState<string | null>(null);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   // Владелец/админ редактирует график мастера своей команды
@@ -602,6 +604,16 @@ const AppContent: React.FC = () => {
             setSelectedMasterName(masterName);
             pushScreen('client_master_profile');
           }}
+          onAnyMaster={(name) => { setBusinessName(name); pushScreen('client_any_master'); }}
+        />
+      )}
+
+      {screen === 'client_any_master' && businessSlug && (
+        <AnyMasterScreen
+          slug={businessSlug}
+          businessName={businessName}
+          onBack={() => goBack('client_business')}
+          onDone={() => { setMainTab('bookings'); resetScreen('profile'); }}
         />
       )}
 
