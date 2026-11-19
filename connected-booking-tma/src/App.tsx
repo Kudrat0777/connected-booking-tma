@@ -19,6 +19,7 @@ import { MasterWelcomeScreen } from './screens/MasterWelcomeScreen';
 import { MasterLoginScreen } from './screens/MasterLoginScreen';
 import { MasterDashboardScreen } from './screens/MasterDashboardScreen';
 import { MasterWorkHoursScreen } from './screens/MasterWorkHoursScreen';
+import { SalonCalendarScreen } from './screens/SalonCalendarScreen';
 import { MasterEditProfileScreen } from './screens/MasterEditProfileScreen';
 import { MasterAnalyticsScreen } from './screens/MasterAnalyticsScreen';
 import { MasterReviewsScreen } from './screens/MasterReviewsScreen';
@@ -78,7 +79,8 @@ type Screen =
   | 'master_schedule' | 'master_edit_profile' | 'master_analytics'
   | 'master_reviews' | 'master_create_service' | 'client_portfolio'
   | 'client_registration' | 'client_master_profile'
-  | 'master_links' | 'master_team' | 'client_business' | 'master_member_schedule';
+  | 'master_links' | 'master_team' | 'client_business' | 'master_member_schedule'
+  | 'salon_calendar';
 
 type MainTab = 'bookings' | 'masters' | 'settings';
 
@@ -565,7 +567,12 @@ const AppContent: React.FC = () => {
           onLogout={handleMasterLogout}
           onOpenLinks={() => pushScreen('master_links')}
           onOpenTeam={() => pushScreen('master_team')}
+          onOpenSalonCalendar={() => pushScreen('salon_calendar')}
         />
+      )}
+
+      {screen === 'salon_calendar' && (
+        <SalonCalendarScreen onBack={() => goBack('master_dashboard')} />
       )}
 
       {screen === 'master_links' && (

@@ -9,7 +9,8 @@ import {
   Icon28ArrowRightSquareOutline,
   Icon28DeleteOutline,
   Icon28ShareOutline,
-  Icon28UsersOutline
+  Icon28UsersOutline,
+  Icon28CalendarCheckOutline
 } from '@vkontakte/icons';
 import { fetchCurrentMaster, CurrentMaster } from '../helpers/api';
 
@@ -25,6 +26,7 @@ type Props = {
   onOpenReviews: () => void;
   onOpenLinks?: () => void;
   onOpenTeam?: () => void;
+  onOpenSalonCalendar?: () => void;
   onSwitchToClient: () => void;
   onLogoutClick: () => void;
   onDeleteAccount: () => void;
@@ -40,6 +42,7 @@ export const MasterProfileTab: React.FC<Props> = ({
   onOpenReviews,
   onOpenLinks,
   onOpenTeam,
+  onOpenSalonCalendar,
   onSwitchToClient,
   onLogoutClick,
   onDeleteAccount,
@@ -104,6 +107,18 @@ export const MasterProfileTab: React.FC<Props> = ({
                        </div>
                    </div>
                </div>
+           )}
+
+           {isTeam && (
+               <Section>
+                   <Cell
+                       before={iconBox('rgba(255, 149, 0, 0.12)', <Icon28CalendarCheckOutline width={24} height={24} style={{ color: '#FF9500' }} />)}
+                       onClick={() => { triggerHaptic('selection'); onOpenSalonCalendar?.(); }}
+                       description={t('prof_calendar_desc')}
+                   >
+                       {t('prof_calendar')}
+                   </Cell>
+               </Section>
            )}
 
            <Section header={t('m_client_acquisition')}>
