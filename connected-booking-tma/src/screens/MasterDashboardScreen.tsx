@@ -143,7 +143,8 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Avatar src={b.photo_url} name={name} size={32} />
             <span style={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>{name}</span>
-            {b.status === 'pending' ? <Badge tone="wait">{t('status_pending')}</Badge> : <Badge tone="ok">✓</Badge>}
+            {b.status === 'pending' ? <Badge tone="wait">{t('status_pending')}</Badge>
+              : b.client_confirmed_at ? <Badge tone="brand">✅ {t('md_will_come')}</Badge> : <Badge tone="ok">✓</Badge>}
           </div>
           <div style={{ fontSize: 14, color: 'var(--tg-theme-hint-color)', marginTop: 6 }}>
             {svc.name}{svc.price ? ` · ${money(svc.price)}` : ''}
