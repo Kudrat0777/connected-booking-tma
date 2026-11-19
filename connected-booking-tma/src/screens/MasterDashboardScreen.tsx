@@ -331,7 +331,7 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
       )}
 
       {serviceSheet && (
-        <ServiceSheet telegramId={telegramId} service={serviceSheet === 'new' ? null : serviceSheet}
+        <ServiceSheet telegramId={telegramId} service={serviceSheet === 'new' ? null : serviceSheet} category={me?.category}
           onClose={() => setServiceSheet(null)} onSaved={() => { setServiceSheet(null); loadServices(); }} />
       )}
 

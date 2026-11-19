@@ -1,3 +1,5 @@
+import { fetchUserProfile } from './api';
+
 // Телефоны: по умолчанию узбекский формат +998 XX XXX XX XX, но иностранный номер (+7, +1…) тоже можно ввести.
 
 const UZ = '998';
@@ -36,14 +38,35 @@ export function isValidPhone(raw: string): boolean {
 
 export const PHONE_PLACEHOLDER = '+998 90 123 45 67';
 
-/** Номер из Telegram (кнопка «Поделиться контактом»). Возвращает отформатированный номер или null. */
-export function requestTelegramPhone(): Promise<string | null> {
+/** Номер из Telegram (кнопка «Поделиться контактом»). Возвращает отформатированный номер или null.
+ *
+ * Telegram отдаёт номер приложению отдельным запросом с тайм-аутом, и на медленной связи он может не дойти.
+ * Но контакт всегда приходит и в чат с ботом — бот сохраняет его в профиль (booking/contacts.py).
+ * Поэтому, если номер не пришёл напрямую, пару секунд ждём его в профиле клиента.
+ */
+export async function requestTelegramPhone(telegramId?: number): Promise<string | null> {
   const tg = (window as any).Telegram?.WebApp;
-  return new Promise((resolve) => {
-    if (!tg?.requestContact) return resolve(null);
-    tg.requestContact((ok: boolean, result: any) => {
-      const p = result?.response?.contact?.phone_number || result?.contact?.phone_number;
-      resolve(ok && p ? formatPhone(String(p).startsWith('+') ? p : '+' + p) : null);
-    });
+  if (!tg?.requestContact) return null;
+  const direct = await new Promise<{ shared: boolean; phone: string | null }>((resolve) => {
+    try {
+      tg.requestContact((ok: boolean, result: any) => {
+        // Номер — в responseUnsafe.contact; в response — та же информация строкой «contact=%7B...%7D&...»
+        let p = result?.responseUnsafe?.contact?.phone_number || result?.contact?.phone_number;
+        if (!p && typeof result?.response === 'string') {
+          try { p = JSON.parse(new URLSearchParams(result.response).get('contact') || '{}').phone_number; } catch { /* нет номера */ }
+        }
+        resolve({ shared: !!ok, phone: p ? formatPhone(String(p).startsWith('+') ? p : '+' + p) : null });
+      });
+    } catch {
+      resolve({ shared: false, phone: null }); // старая версия Telegram или запрос уже открыт
+    }
   });
+  if (direct.phone || !direct.shared || !telegramId) return direct.phone;
+
+  for (let i = 0; i < 5; i++) {
+    await new Promise((r) => setTimeout(r, 800));
+    const profile = await fetchUserProfile(telegramId).catch(() => null);
+    if (profile?.phone) return formatPhone(profile.phone);
+  }
+  return null;
 }

@@ -30,7 +30,7 @@ import { BusinessPublicScreen } from './screens/BusinessPublicScreen';
 
 import type { Service, Booking } from './helpers/api';
 import { checkClientProfile, registerClient, fetchCurrentMaster, fetchMasterBySlug, fetchBooking, trackVisit } from './helpers/api';
-import { parseStartParam, rememberSource } from './helpers/links';
+import { REBOOK_SOURCE, parseStartParam, rememberSource } from './helpers/links';
 import { applyBrand } from './helpers/brand';
 import { getUserFromQuery, getStartParam } from './helpers/telegramQueryUser';
 
@@ -225,6 +225,19 @@ const AppContent: React.FC = () => {
       setScreenState('leave_review');
   };
 
+  // «Записаться снова» из сообщения бота: сразу выбор времени на ту же услугу
+  const openRebookTarget = async (bookingId: number) => {
+      const bk = await fetchBooking(bookingId).catch(() => null);
+      // В записи услуга приходит целиком (с мастером) — её и отдаём экрану выбора времени
+      const service = bk?.slot?.service as unknown as Service | undefined;
+      setMainTab('masters');
+      if (!service?.id) { resetScreen('profile'); return; }
+      rememberSource(REBOOK_SOURCE); // в аналитике мастера запись будет видна как «напоминание»
+      setSelectedService(service);
+      setHistory(['profile']);
+      setScreenState('slots');
+  };
+
   // === ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ===
   useEffect(() => {
     // Используем флаг isMounted, чтобы избежать ошибок если компонент размонтируется
@@ -298,6 +311,7 @@ const AppContent: React.FC = () => {
                localStorage.setItem('is_client_logged_in', 'true');
 
                if (target?.kind === 'review') await openReviewTarget(target.bookingId);
+               else if (target?.kind === 'rebook') await openRebookTarget(target.bookingId);
                else openClientTarget(dipLinkMasterId, dipLinkBusiness);
            } else {
                // Новый клиент: Telegram уже знает, кто это, — регистрируем молча и сразу
@@ -314,6 +328,7 @@ const AppContent: React.FC = () => {
                    localStorage.setItem('is_client_logged_in', 'true');
                    if (isMounted) {
                        if (target?.kind === 'review') await openReviewTarget(target.bookingId);
+                       else if (target?.kind === 'rebook') await openRebookTarget(target.bookingId);
                        else openClientTarget(dipLinkMasterId, dipLinkBusiness);
                    }
                } catch (e) {

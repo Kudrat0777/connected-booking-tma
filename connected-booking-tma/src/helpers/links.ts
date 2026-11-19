@@ -20,9 +20,13 @@ export const LINK_SOURCES: LinkSource[] = [
   { id: 'gm', labelKey: 'src_gm', emoji: '📍' },
 ];
 
+/** Запись по кнопке из сообщения бота «Пора снова?» */
+export const REBOOK_SOURCE = 'rebook';
+
 export function sourceLabel(id: string, t: (key: string) => string): string {
   if (!id || id === 'direct') return t('src_direct');
   if (id === 'manual') return t('src_manual');
+  if (id === REBOOK_SOURCE) return t('src_rebook');
   const known = LINK_SOURCES.find((s) => s.id === id);
   return known ? t(known.labelKey) : id;
 }
@@ -42,6 +46,7 @@ export type StartTarget =
   | { kind: 'legacy_master'; id: number }
   | { kind: 'join'; code: string }
   | { kind: 'review'; bookingId: number }
+  | { kind: 'rebook'; bookingId: number }
   | null;
 
 export function parseStartParam(raw: string | null | undefined): StartTarget {
@@ -54,6 +59,11 @@ export function parseStartParam(raw: string | null | undefined): StartTarget {
     // Кнопка «Написать отзыв» из бота после визита
     const id = parseInt(raw.slice('review_'.length), 10);
     return Number.isFinite(id) ? { kind: 'review', bookingId: id } : null;
+  }
+  if (raw.startsWith('rebook_')) {
+    // Кнопка «Записаться снова» из сообщения бота «Пора снова?»
+    const id = parseInt(raw.slice('rebook_'.length), 10);
+    return Number.isFinite(id) ? { kind: 'rebook', bookingId: id } : null;
   }
   if (raw.startsWith('join_')) {
     const code = raw.slice('join_'.length);

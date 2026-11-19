@@ -115,17 +115,28 @@ export const ManualBookingSheet: React.FC<{
 
 // ---------- Услуга: создать или изменить ----------
 
+// Срок «пора снова» по категории — как в booking/rebook.py (для новой услуги, пока сервер его не прислал)
+const REBOOK_DEFAULTS: Record<string, number> = {
+  'Барбершоп': 28, 'Салон красоты': 42, 'Массаж': 14, 'Маникюр / Педикюр': 21, 'Брови и Ресницы': 28,
+};
+const REBOOK_OPTIONS = [0, 14, 21, 28, 42, 56];
+
 export const ServiceSheet: React.FC<{
   telegramId: number;
   service: Service | null;       // null — новая услуга
+  category?: string;             // категория мастера: от неё срок «пора снова» по умолчанию
   onClose: () => void;
   onSaved: () => void;
-}> = ({ telegramId, service, onClose, onSaved }) => {
+}> = ({ telegramId, service, category, onClose, onSaved }) => {
   const { t } = useLanguage();
   const [name, setName] = useState(service?.name ?? '');
   const [price, setPrice] = useState(service?.price != null ? String(service.price) : '');
   const [duration, setDuration] = useState(service?.duration != null ? String(service.duration) : '60');
   const [description, setDescription] = useState(service?.description ?? '');
+  const defaultRebook = service?.rebook_default ?? REBOOK_DEFAULTS[category || ''] ?? 0;
+  // null — мастер не выбирал: действует срок по категории
+  const [rebook, setRebook] = useState<number | null>(service?.rebook_days ?? null);
+  const shownRebook = rebook ?? defaultRebook;
   const [busy, setBusy] = useState(false);
 
   const DURATIONS = [15, 30, 45, 60, 90, 120, 180];
@@ -139,8 +150,8 @@ export const ServiceSheet: React.FC<{
     }
     setBusy(true);
     try {
-      if (service) await updateService(service.id, { name: name.trim(), price: p, duration: d, description: description.trim() });
-      else await createServiceByMaster(telegramId, name.trim(), p ?? 0, d ?? 60, description.trim());
+      if (service) await updateService(service.id, { name: name.trim(), price: p, duration: d, description: description.trim(), rebook_days: rebook });
+      else await createServiceByMaster(telegramId, name.trim(), p ?? 0, d ?? 60, description.trim(), rebook);
       tg()?.HapticFeedback?.notificationOccurred('success');
       onSaved();
     } catch (e: any) { say(e.message); } finally { setBusy(false); }
@@ -176,6 +187,16 @@ export const ServiceSheet: React.FC<{
       <div style={label}>{t('ms_description')}</div>
       <textarea style={{ ...field, resize: 'vertical' }} rows={2} value={description} onChange={(e) => setDescription(e.target.value)}
         placeholder={t('ms_description_ph')} aria-label={t('ms_description')} />
+
+      <div style={label}>{t('ms_rebook')}</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        {REBOOK_OPTIONS.map((days) => (
+          <Chip onCard key={days} active={shownRebook === days} onClick={() => setRebook(days)}>
+            {days ? fill(t('ms_weeks_short'), { n: days / 7 }) : t('ms_rebook_off')}
+          </Chip>
+        ))}
+      </div>
+      <div style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)', margin: '6px 2px 0', lineHeight: 1.35 }}>{t('ms_rebook_hint')}</div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 18 }}>
         <PrimaryButton loading={busy} onClick={save}>{t('ms_save')}</PrimaryButton>

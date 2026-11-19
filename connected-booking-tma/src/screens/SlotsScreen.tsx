@@ -217,7 +217,7 @@ export const SlotsScreen: React.FC<Props> = ({ service, onBack, onBooked, user }
                 {phoneError ? t('cp_phone_bad') : t('sl_phone_hint')}
               </div>
               {canAskContact && (
-                <button type="button" onClick={async () => { const p = await requestTelegramPhone(); if (p) { setPhone(p); setPhoneError(false); } }}
+                <button type="button" onClick={async () => { const p = await requestTelegramPhone(user?.id); if (p) { setPhone(p); setPhoneError(false); } }}
                   style={{ marginTop: 8, padding: '7px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, backgroundColor: 'var(--brand-soft, #E9F7EF)', color: 'var(--brand-ink, #1D7A46)' }}>
                   📱 {t('cp_phone_tg')}
                 </button>
