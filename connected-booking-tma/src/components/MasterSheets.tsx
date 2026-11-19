@@ -8,20 +8,13 @@ import {
 } from '../helpers/api';
 import { useLanguage } from '../helpers/LanguageContext';
 import { fill } from '../helpers/translationsBusiness';
-import { Chip, PrimaryButton, Sheet, localeFor, money, tashkent } from './ui';
+import { Chip, PrimaryButton, Sheet, fieldLabel, inputStyle, localeFor, money, tashkent, tgAlert, tgConfirm } from './ui';
 
 const tg = () => (window as any).Telegram?.WebApp;
-const say = (m: string) => (tg()?.showAlert ? tg().showAlert(m) : alert(m));
-const confirmAsk = (m: string) => new Promise<boolean>((resolve) => {
-  if (tg()?.showConfirm) tg().showConfirm(m, (ok: boolean) => resolve(ok));
-  else resolve(window.confirm(m));
-});
-
-const field: React.CSSProperties = {
-  width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: 12, border: 'none', fontSize: 16,
-  backgroundColor: 'var(--tg-theme-secondary-bg-color)', color: 'var(--tg-theme-text-color)', fontFamily: 'inherit',
-};
-const label: React.CSSProperties = { fontSize: 13, fontWeight: 600, color: 'var(--tg-theme-hint-color)', margin: '14px 2px 6px' };
+const say = tgAlert;
+const confirmAsk = tgConfirm;
+const field = inputStyle;
+const label = fieldLabel;
 
 // ---------- Ручная запись: услуга → день → время → клиент ----------
 

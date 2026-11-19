@@ -313,7 +313,10 @@ export async function fetchMasterProfile(telegramId: number): Promise<MasterPubl
 }
 
 // ДОБАВЛЕНО ПОЛЕ language
-export async function updateMasterProfile(telegramId: number, data: { name?: string; bio?: string; phone?: string; city?: string; address?: string; language?: string }) {
+export async function updateMasterProfile(telegramId: number, data: {
+  name?: string; bio?: string; phone?: string; city?: string; address?: string; language?: string;
+  category?: string; experience_years?: number;
+}) {
   const res = await fetch(`${API_BASE}/masters/me_update/`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
