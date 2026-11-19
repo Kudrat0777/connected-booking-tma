@@ -5,22 +5,15 @@ import { Icon28CopyOutline, Icon28ShareOutline } from '@vkontakte/icons';
 import { fetchMyBusiness, regenerateInvite, updateTeamMember, MyBusiness, TeamMember } from '../helpers/api';
 import { copyText, inviteLink, shareToTelegram } from '../helpers/links';
 import { Konnektik } from '../components/Konnektik';
+import { useLanguage } from '../helpers/LanguageContext';
+import { fill, pluralize } from '../helpers/translationsBusiness';
 
 type Props = {
   onBack: () => void;
   onOpenSchedule?: (memberId: number) => void;
 };
 
-const ROLE_LABEL: Record<string, string> = { owner: 'Владелец', admin: 'Администратор', master: 'Мастер' };
 const ROLE_COLOR: Record<string, string> = { owner: '#50C878', admin: '#007AFF', master: '#8E8E93' };
-
-// 1 запись, 2 записи, 5 записей
-const plural = (n: number, one: string, few: string, many: string) => {
-  const m10 = n % 10, m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return `${n} ${one}`;
-  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return `${n} ${few}`;
-  return `${n} ${many}`;
-};
 
 const card: React.CSSProperties = {
   backgroundColor: 'var(--tg-theme-bg-color)',
@@ -31,6 +24,7 @@ const card: React.CSSProperties = {
 
 export const MasterTeamScreen: React.FC<Props> = ({ onBack, onOpenSchedule }) => {
   const tg = (window as any).Telegram?.WebApp;
+  const { t, lang } = useLanguage();
   const [biz, setBiz] = useState<MyBusiness | null>(null);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -76,11 +70,11 @@ export const MasterTeamScreen: React.FC<Props> = ({ onBack, onOpenSchedule }) =>
 
   const onCopy = async () => {
     haptic();
-    say((await copyText(link)) ? 'Ссылка-приглашение скопирована' : link);
+    say((await copyText(link)) ? t('team_invite_copied') : link);
   };
 
   const onRegenerate = async () => {
-    if (!(await confirmAsk('Старая ссылка перестанет работать. Создать новую?'))) return;
+    if (!(await confirmAsk(t('team_new_link_confirm')))) return;
     try {
       const { invite_code } = await regenerateInvite();
       setBiz({ ...biz, invite_code });
@@ -98,9 +92,11 @@ export const MasterTeamScreen: React.FC<Props> = ({ onBack, onOpenSchedule }) =>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '24px 20px 8px' }}>
         <Konnektik mood="happy" size={84} />
         <div>
-          <Title level="2" weight="1" style={{ marginBottom: 4 }}>Команда «{biz.name}»</Title>
+          <Title level="2" weight="1" style={{ marginBottom: 4 }}>{fill(t('team_title'), { name: biz.name })}</Title>
           <Text style={{ color: 'var(--tg-theme-hint-color)', fontSize: 14 }}>
-            {members.length ? plural(members.length, 'человек', 'человека', 'человек') + ' в команде' : 'Мастера заведения'}
+            {members.length
+              ? fill(t('team_count'), { count: pluralize(lang, members.length, t('p_people')) })
+              : t('team_fallback')}
           </Text>
         </div>
       </div>
@@ -108,21 +104,21 @@ export const MasterTeamScreen: React.FC<Props> = ({ onBack, onOpenSchedule }) =>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '12px 16px' }}>
         {canManage && link && (
           <div style={card}>
-            <div style={{ fontWeight: 700, marginBottom: 4 }}>Пригласить мастера</div>
+            <div style={{ fontWeight: 700, marginBottom: 4 }}>{t('team_invite_title')}</div>
             <Text style={{ display: 'block', fontSize: 14, color: 'var(--tg-theme-hint-color)', marginBottom: 12 }}>
-              Отправьте ссылку мастеру. Он откроет бота, заполнит профиль и сразу окажется в вашей команде.
+              {t('team_invite_desc')}
             </Text>
             <div style={{ display: 'flex', gap: 8 }}>
               <Button size="m" mode="bezeled" stretched before={<Icon28CopyOutline width={20} height={20} />} onClick={onCopy}>
-                Копировать
+                {t('btn_copy')}
               </Button>
               <Button size="m" mode="filled" stretched before={<Icon28ShareOutline width={20} height={20} />}
-                onClick={() => { haptic(); shareToTelegram(link, `Присоединяйся к команде «${biz.name}» в CTime`); }}>
-                Отправить
+                onClick={() => { haptic(); shareToTelegram(link, fill(t('team_invite_share'), { name: biz.name })); }}>
+                {t('btn_send')}
               </Button>
             </div>
             <div style={{ marginTop: 8 }}>
-              <Button size="s" mode="plain" onClick={onRegenerate}>Создать новую ссылку</Button>
+              <Button size="s" mode="plain" onClick={onRegenerate}>{t('team_new_link')}</Button>
             </div>
           </div>
         )}
@@ -137,18 +133,21 @@ export const MasterTeamScreen: React.FC<Props> = ({ onBack, onOpenSchedule }) =>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name}</div>
                   <div style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)' }}>
-                    {plural(m.services_count, 'услуга', 'услуги', 'услуг')} · {plural(m.upcoming_bookings, 'запись', 'записи', 'записей')} впереди{!m.is_active && ' · скрыт'}
+                    {fill(t('team_member_stats'), {
+                      services: pluralize(lang, m.services_count, t('p_services')),
+                      bookings: pluralize(lang, m.upcoming_bookings, t('p_bookings')),
+                    })}{!m.is_active && ` · ${t('team_hidden')}`}
                   </div>
                 </div>
                 <span style={{ fontSize: 12, fontWeight: 600, color: ROLE_COLOR[m.role], backgroundColor: `${ROLE_COLOR[m.role]}1A`, padding: '4px 8px', borderRadius: 8 }}>
-                  {ROLE_LABEL[m.role]}
+                  {t(`roles_${m.role}`)}
                 </span>
               </div>
 
               {canManage && (
                 <div style={{ marginTop: 10 }}>
                   <Button size="s" mode="plain" onClick={() => { haptic(); onOpenSchedule?.(m.id); }}>
-                    🗓 Рабочий график
+                    {t('team_schedule')}
                   </Button>
                 </div>
               )}
@@ -158,16 +157,16 @@ export const MasterTeamScreen: React.FC<Props> = ({ onBack, onOpenSchedule }) =>
                   {isOwner && (
                     <Button size="s" mode="bezeled" disabled={busyId === m.id}
                       onClick={() => act(m, { role: m.role === 'admin' ? 'master' : 'admin' })}>
-                      {m.role === 'admin' ? 'Сделать мастером' : 'Сделать админом'}
+                      {m.role === 'admin' ? t('team_make_master') : t('team_make_admin')}
                     </Button>
                   )}
                   <Button size="s" mode="bezeled" disabled={busyId === m.id}
                     onClick={() => act(m, { is_active: !m.is_active })}>
-                    {m.is_active ? 'Скрыть от клиентов' : 'Показать клиентам'}
+                    {m.is_active ? t('team_hide') : t('team_show')}
                   </Button>
                   <Button size="s" mode="plain" disabled={busyId === m.id}
-                    onClick={() => act(m, { action: 'remove' }, `Убрать ${m.name} из команды? Его записи сохранятся.`)}>
-                    <span style={{ color: 'var(--tg-theme-destructive-text-color, #FF3B30)' }}>Убрать</span>
+                    onClick={() => act(m, { action: 'remove' }, fill(t('team_remove_confirm'), { name: m.name }))}>
+                    <span style={{ color: 'var(--tg-theme-destructive-text-color, #FF3B30)' }}>{t('team_remove')}</span>
                   </Button>
                 </div>
               )}
@@ -179,7 +178,7 @@ export const MasterTeamScreen: React.FC<Props> = ({ onBack, onOpenSchedule }) =>
           <div style={{ ...card, display: 'flex', alignItems: 'center', gap: 12 }}>
             <Konnektik mood="think" size={70} />
             <Text style={{ fontSize: 14, color: 'var(--tg-theme-hint-color)' }}>
-              Пока в команде только вы. Отправьте ссылку-приглашение мастерам — они появятся здесь.
+              {t('team_alone')}
             </Text>
           </div>
         )}

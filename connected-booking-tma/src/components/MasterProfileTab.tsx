@@ -100,7 +100,7 @@ export const MasterProfileTab: React.FC<Props> = ({
                    <div style={{ minWidth: 0 }}>
                        <div style={{ fontWeight: 600, color: 'var(--tg-theme-text-color)' }}>{me.business.name}</div>
                        <div style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)' }}>
-                           {isTeam ? ({ owner: 'Владелец', admin: 'Администратор', master: 'Мастер' } as Record<string, string>)[me.role] : 'Частный мастер'}
+                           {isTeam ? t(`roles_${me.role}`) : t('solo_master')}
                        </div>
                    </div>
                </div>
@@ -110,17 +110,17 @@ export const MasterProfileTab: React.FC<Props> = ({
                <Cell
                    before={iconBox('rgba(80, 200, 120, 0.15)', <Icon28ShareOutline width={24} height={24} style={{ color: '#50C878' }} />)}
                    onClick={() => { triggerHaptic('selection'); onOpenLinks?.(); }}
-                   description="Ссылки для Instagram, Telegram, QR-код и статистика переходов"
+                   description={t('prof_links_desc')}
                >
-                   Ссылки и QR-код
+                   {t('prof_links')}
                </Cell>
                {(isTeam || canManageTeam) && (
                    <Cell
                        before={iconBox('rgba(88, 86, 214, 0.12)', <Icon28UsersOutline width={24} height={24} style={{ color: '#5856D6' }} />)}
                        onClick={() => { triggerHaptic('selection'); onOpenTeam?.(); }}
-                       description={canManageTeam ? 'Пригласить мастеров, роли, видимость' : 'Кто работает с вами'}
+                       description={canManageTeam ? t('prof_team_desc_manage') : t('prof_team_desc')}
                    >
-                       Команда
+                       {t('prof_team')}
                    </Cell>
                )}
            </Section>

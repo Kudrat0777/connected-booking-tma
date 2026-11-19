@@ -8,22 +8,23 @@
 export const CLIENT_BOT_USERNAME = import.meta.env.VITE_CLIENT_BOT_USERNAME || 'ConnectedTimeBot';
 export const MASTER_BOT_USERNAME = import.meta.env.VITE_MASTER_BOT_USERNAME || 'ConnectedTimeMasterBot';
 
-export type LinkSource = { id: string; label: string; emoji: string };
+export type LinkSource = { id: string; labelKey: string; emoji: string };
 
 // Метки источника: по ним в аналитике видно, откуда пришли клиенты.
 export const LINK_SOURCES: LinkSource[] = [
-  { id: '', label: 'Без метки', emoji: '🔗' },
-  { id: 'ig', label: 'Instagram', emoji: '📸' },
-  { id: 'tg', label: 'Telegram-канал', emoji: '✈️' },
-  { id: 'tt', label: 'TikTok', emoji: '🎵' },
-  { id: 'qr', label: 'QR в салоне', emoji: '🔳' },
-  { id: 'gm', label: 'Карты', emoji: '📍' },
+  { id: '', labelKey: 'src_none', emoji: '🔗' },
+  { id: 'ig', labelKey: 'src_ig', emoji: '📸' },
+  { id: 'tg', labelKey: 'src_tg', emoji: '✈️' },
+  { id: 'tt', labelKey: 'src_tt', emoji: '🎵' },
+  { id: 'qr', labelKey: 'src_qr', emoji: '🔳' },
+  { id: 'gm', labelKey: 'src_gm', emoji: '📍' },
 ];
 
-export function sourceLabel(id: string): string {
-  if (!id || id === 'direct') return 'Напрямую / без метки';
-  if (id === 'manual') return 'Записал мастер';
-  return LINK_SOURCES.find((s) => s.id === id)?.label ?? id;
+export function sourceLabel(id: string, t: (key: string) => string): string {
+  if (!id || id === 'direct') return t('src_direct');
+  if (id === 'manual') return t('src_manual');
+  const known = LINK_SOURCES.find((s) => s.id === id);
+  return known ? t(known.labelKey) : id;
 }
 
 export function clientLink(kind: 'b' | 'm', slug: string, source = ''): string {
