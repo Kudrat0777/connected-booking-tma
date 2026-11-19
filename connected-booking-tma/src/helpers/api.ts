@@ -182,12 +182,15 @@ export async function createServiceByMaster(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ telegram_id, name, price, duration, description }),
   });
-  if (!res.ok) throw new Error('Failed to create service');
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || 'Failed to create service');
+  }
   return res.json();
 }
 
 // Получить список записей для мастера
-export async function fetchMasterBookings(telegram_id: number, period?: 'today' | 'tomorrow' | 'week', status?: string) {
+export async function fetchMasterBookings(telegram_id: number, period?: 'today' | 'tomorrow' | 'week' | 'all', status?: string) {
   const params = new URLSearchParams({ telegram_id: String(telegram_id) });
   if (period) params.append('period', period);
   if (status) params.append('status', status);
@@ -420,7 +423,8 @@ export async function deleteService(serviceId: number): Promise<void> {
     method: 'DELETE',
   });
   if (!res.ok && res.status !== 204) {
-    throw new Error('Failed to delete service');
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || 'Failed to delete service');
   }
 }
 
@@ -585,7 +589,9 @@ export async function checkClientProfile(telegramId: number) {
 export const getFullImageUrl = (path?: string | null): string | undefined => {
   if (!path) return undefined;
 
-  const origin = new URL(API_BASE).origin; // Получаем https://...zrok.io
+  // API_BASE бывает и полным адресом (https://ctime.uz/api), и относительным (/api) —
+  // во втором случае картинки берём с того же адреса, откуда открыто приложение.
+  const origin = new URL(API_BASE, window.location.origin).origin;
 
   // Очищаем путь от любых локальных доменв, если они застряли в базе
   let cleanPath = path;
@@ -973,4 +979,18 @@ export async function saveCustomerNote(key: string, text: string): Promise<{ not
     body: JSON.stringify({ text }),
   });
   return jsonOrThrow(res, 'Не удалось сохранить заметку');
+}
+
+// --------- УСЛУГИ МАСТЕРА: изменение ---------
+
+export async function updateService(
+  id: number,
+  data: { name?: string; price?: number | null; duration?: number | null; description?: string },
+): Promise<Service> {
+  const res = await fetch(`${API_BASE}/services/${id}/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return jsonOrThrow(res, 'Не удалось сохранить услугу');
 }
