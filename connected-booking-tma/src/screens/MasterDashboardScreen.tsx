@@ -55,6 +55,7 @@ type Props = {
   onOpenLinks?: () => void;
   onOpenTeam?: () => void;
   onOpenSalonCalendar?: () => void;
+  onOpenClients?: () => void;
 };
 
 type Tab = 'bookings' | 'services' | 'profile';
@@ -70,7 +71,8 @@ export const MasterDashboardScreen: React.FC<Props> = ({
   onLogout,
   onOpenLinks,
   onOpenTeam,
-  onOpenSalonCalendar
+  onOpenSalonCalendar,
+  onOpenClients
 }) => {
   const { t, lang } = useLanguage();
 
@@ -552,6 +554,7 @@ export const MasterDashboardScreen: React.FC<Props> = ({
                 onOpenLinks={onOpenLinks}
                 onOpenTeam={onOpenTeam}
                 onOpenSalonCalendar={onOpenSalonCalendar}
+                onOpenClients={onOpenClients}
                 onSwitchToClient={onSwitchToClient}
                 onLogoutClick={handleLogoutClick}
                 onDeleteAccount={handleDeleteAccount}
