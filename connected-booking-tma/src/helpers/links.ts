@@ -41,6 +41,7 @@ export type StartTarget =
   | { kind: 'master'; slug: string; source: string }
   | { kind: 'legacy_master'; id: number }
   | { kind: 'join'; code: string }
+  | { kind: 'review'; bookingId: number }
   | null;
 
 export function parseStartParam(raw: string | null | undefined): StartTarget {
@@ -48,6 +49,11 @@ export function parseStartParam(raw: string | null | undefined): StartTarget {
   if (raw.startsWith('master_')) {
     const id = parseInt(raw.slice('master_'.length), 10);
     return Number.isFinite(id) ? { kind: 'legacy_master', id } : null;
+  }
+  if (raw.startsWith('review_')) {
+    // Кнопка «Написать отзыв» из бота после визита
+    const id = parseInt(raw.slice('review_'.length), 10);
+    return Number.isFinite(id) ? { kind: 'review', bookingId: id } : null;
   }
   if (raw.startsWith('join_')) {
     const code = raw.slice('join_'.length);
