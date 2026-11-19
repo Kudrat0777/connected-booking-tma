@@ -661,6 +661,8 @@ const AppContent: React.FC = () => {
              avatarUrl: currentMaster.avatar_url,
              phone: currentMaster.phone,
              address: currentMaster.address,
+             city: currentMaster.city,
+             category: currentMaster.category,
              experience_years: currentMaster.experience_years,
           } : undefined}
           onBack={() => goBack('master_dashboard')}

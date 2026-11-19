@@ -1,98 +1,30 @@
-import { BRAND } from '../helpers/brand';
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  List,
-  Input,
-  Textarea,
-  Section,
-  Avatar,
-  Spinner,
-  Select,
-  Text,
-  Cell
-} from '@telegram-apps/telegram-ui';
-import {
-  Icon28AddCircleOutline,
-  Icon28DeleteOutline,
-  Icon28UserCircleOutline
-} from '@vkontakte/icons';
-
+// Редактирование профиля мастера: фото, основное, контакты, примеры работ.
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Spinner } from '@telegram-apps/telegram-ui';
 import { useTonConnectUI, useTonWallet } from '@tonconnect/ui-react';
 
 import {
-  updateMasterProfile,
-  uploadMasterAvatar,
-  fetchPortfolio,
-  uploadPortfolioPhoto,
-  deletePortfolioPhoto,
-  PortfolioItem,
-  getFullImageUrl
+  updateMasterProfile, uploadMasterAvatar, fetchPortfolio, uploadPortfolioPhoto, deletePortfolioPhoto,
+  PortfolioItem, useTunnelImage,
 } from '../helpers/api';
+import { useLanguage } from '../helpers/LanguageContext';
+import { fill } from '../helpers/translationsBusiness';
+import {
+  Avatar, Badge, Chip, PrimaryButton, card, fieldLabel, inputStyle, page, tgAlert, tgConfirm,
+} from '../components/ui';
 
-const CATEGORIES = [
-  'Барбершоп', 'Салон красоты', 'Массаж',
-  'Маникюр / Педикюр', 'Брови и Ресницы',
-  'Медицина', 'Спорт / Фитнес', 'Автосервис', 'Другое'
+// Значения хранятся в базе по-русски, на экране — переводятся
+const CATEGORIES = ['Барбершоп', 'Салон красоты', 'Массаж', 'Маникюр / Педикюр', 'Брови и Ресницы',
+  'Медицина', 'Спорт / Фитнес', 'Автосервис', 'Другое'];
+const CITIES: { value: string; key: string }[] = [
+  { value: 'Ургенч', key: 'city_urgench' }, { value: 'Ташкент', key: 'city_tashkent' },
+  { value: 'Самарканд', key: 'city_samarkand' }, { value: 'Бухара', key: 'city_bukhara' },
+  { value: 'Хива', key: 'city_khiva' },
 ];
-const CITIES = ['Ургенч', 'Ташкент', 'Самарканд', 'Бухара', 'Хива'];
+const PORTFOLIO_MAX = 10;
+const BIO_MAX = 500;
 
-const SafeAvatar: React.FC<{ path: string, onChange: (e: any) => void, loading?: boolean }> = ({ path, onChange, loading }) => {
-    const [src, setSrc] = useState<string | undefined>(undefined);
-
-    useEffect(() => {
-        if (!path) return;
-        const url = getFullImageUrl(path);
-        if (!url) return;
-        fetch(url).then(res => res.ok ? res.blob() : Promise.reject()).then(blob => setSrc(URL.createObjectURL(blob))).catch(() => {});
-    }, [path]);
-
-    return (
-      <label style={{ position: 'relative', cursor: 'pointer', display: 'block' }}>
-          <Avatar
-             size={100}
-             src={src || undefined}
-             fallbackIcon={<Icon28UserCircleOutline width={50} height={50} style={{ color: 'var(--tg-theme-hint-color)' }} />}
-             style={{ border: '4px solid var(--tg-theme-bg-color)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
-          />
-          {loading ? (
-             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                 <Spinner size="m" />
-             </div>
-          ) : (
-             <div style={{
-                 position: 'absolute', bottom: 0, right: 0, backgroundColor: 'var(--tg-theme-button-color)',
-                 border: '4px solid var(--tg-theme-bg-color)', borderRadius: '50%', width: 34, height: 34,
-                 display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-             }}>
-                 <span style={{ color: 'var(--tg-theme-button-text-color)', fontSize: 24, lineHeight: '24px', marginTop: -2 }}>+</span>
-             </div>
-          )}
-          <input type="file" hidden accept="image/*" onChange={onChange} disabled={loading} />
-      </label>
-    );
-};
-
-const SafePortfolioImage: React.FC<{ path: string }> = ({ path }) => {
-    const [src, setSrc] = useState<string | undefined>(undefined);
-    const [err, setErr] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (!path) return;
-        const url = getFullImageUrl(path);
-        if (!url) return;
-        fetch(url)
-            .then(async (res) => {
-                if (!res.ok) throw new Error(`Ошибка`);
-                const blob = await res.blob();
-                setSrc(URL.createObjectURL(blob));
-            })
-            .catch(e => setErr(e.message));
-    }, [path]);
-
-    if (err) return <div style={{ width: '100%', height: '100%', backgroundColor: 'rgba(255, 59, 48, 0.1)' }} />;
-    if (!src) return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--tg-theme-secondary-bg-color)' }}><Spinner size="m" /></div>;
-    return <img src={src} alt="work" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
-};
+type Form = { name: string; bio: string; phone: string; city: string; address: string; experience: number; category: string };
 
 type Props = {
   telegramId: number;
@@ -104,293 +36,264 @@ type Props = {
     city?: string;
     address?: string;
     experience_years?: number;
-    category?: string; // <-- ДОБАВИЛИ КАТЕГОРИЮ
+    category?: string;
   };
   onBack: () => void;
   onSaved: () => void;
 };
 
+const haptic = (kind: 'select' | 'light' | 'success' | 'error' = 'select') => {
+  const h = (window as any).Telegram?.WebApp?.HapticFeedback;
+  if (!h) return;
+  if (kind === 'select') h.selectionChanged();
+  else if (kind === 'light') h.impactOccurred('light');
+  else h.notificationOccurred(kind);
+};
+
+const PortfolioThumb: React.FC<{ path: string; onDelete: () => void }> = ({ path, onDelete }) => {
+  const src = useTunnelImage(path);
+  return (
+    <div style={{ position: 'relative', aspectRatio: '1 / 1', borderRadius: 12, overflow: 'hidden', backgroundColor: 'var(--tg-theme-secondary-bg-color)' }}>
+      {src ? <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spinner size="s" /></div>}
+      <button type="button" aria-label="×" onClick={onDelete} style={{
+        position: 'absolute', top: 6, right: 6, width: 28, height: 28, borderRadius: 14, border: 'none', cursor: 'pointer',
+        backgroundColor: 'rgba(0,0,0,0.55)', color: '#fff', fontSize: 16, lineHeight: '28px', padding: 0,
+      }}>✕</button>
+    </div>
+  );
+};
+
 export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialData, onBack, onSaved }) => {
-  const [name, setName] = useState(initialData?.name || '');
-  const [bio, setBio] = useState(initialData?.bio || '');
-  const [phone, setPhone] = useState(initialData?.phone || '');
-  const [city, setCity] = useState(initialData?.city || 'Ургенч');
-  const [address, setAddress] = useState(initialData?.address || '');
-  const [experience, setExperience] = useState(initialData?.experience_years !== undefined ? String(initialData.experience_years) : '0');
-  const [category, setCategory] = useState(initialData?.category || CATEGORIES[0]); // <-- СТЕЙТ КАТЕГОРИИ
+  const { t } = useLanguage();
+
+  const initial = useMemo<Form>(() => ({
+    name: initialData?.name || '',
+    bio: initialData?.bio || '',
+    phone: initialData?.phone || '',
+    city: initialData?.city || '',
+    address: initialData?.address || '',
+    experience: initialData?.experience_years ?? 0,
+    category: initialData?.category || '',
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), []);
+  const [form, setForm] = useState<Form>(initial);
+  const [saving, setSaving] = useState(false);
+  const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
+  const dirty = (Object.keys(initial) as (keyof Form)[]).some((k) => initial[k] !== form[k]);
+
   const [avatarUrl, setAvatarUrl] = useState(initialData?.avatarUrl || '');
-
-  const [loading, setLoading] = useState(false);
-  const [avatarLoading, setAvatarLoading] = useState(false);
-
-  const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
-  const [loadingPortfolio, setLoadingPortfolio] = useState(false);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [portfolio, setPortfolio] = useState<PortfolioItem[] | null>(null);
+  const [portfolioBusy, setPortfolioBusy] = useState(false);
 
   const [tonConnectUI] = useTonConnectUI();
   const wallet = useTonWallet();
 
-  const formRef = useRef({ name, bio, phone, city, address, experience, category });
+  // «Назад» в Telegram: не теряем изменения молча
+  const dirtyRef = useRef(dirty);
+  dirtyRef.current = dirty;
+  const backRef = useRef(onBack);
+  backRef.current = onBack;
   useEffect(() => {
-      formRef.current = { name, bio, phone, city, address, experience, category };
-  }, [name, bio, phone, city, address, experience, category]);
+    const tg = (window as any).Telegram?.WebApp;
+    if (!tg?.BackButton) return;
+    const h = async () => {
+      if (dirtyRef.current && !(await tgConfirm(t('ep_leave_confirm')))) return;
+      backRef.current();
+    };
+    tg.MainButton?.hide();
+    tg.BackButton.show();
+    tg.BackButton.onClick(h);
+    return () => tg.BackButton.offClick(h);
+  }, [t]);
 
-  useEffect(() => {
-      const tg = (window as any).Telegram?.WebApp;
-      if (!tg) return;
+  const loadPortfolio = () => fetchPortfolio(undefined, telegramId).then(setPortfolio).catch(() => setPortfolio([]));
+  useEffect(() => { loadPortfolio(); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [telegramId]);
 
-      tg.BackButton.onClick(onBack);
-      tg.BackButton.show();
-
-      const handleMainClick = async () => {
-          if (loading || avatarLoading || loadingPortfolio) return;
-
-          const currentForm = formRef.current;
-          if (!currentForm.name.trim()) {
-              if (tg.showAlert) tg.showAlert('Пожалуйста, укажите ваше имя.');
-              if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-              return;
-          }
-
-          setLoading(true);
-          tg.MainButton.showProgress();
-          tg.MainButton.disable();
-
-          try {
-              await updateMasterProfile(telegramId, {
-                  ...currentForm,
-                  experience_years: Number(currentForm.experience) || 0
-              });
-
-              if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-              onSaved();
-          } catch (e) {
-              if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-              alert('Ошибка при сохранении профиля');
-          } finally {
-              setLoading(false);
-              tg.MainButton.hideProgress();
-              tg.MainButton.enable();
-          }
-      };
-
-      tg.MainButton.setParams({
-          text: 'СОХРАНИТЬ',
-          color: BRAND.accent,
-          text_color: BRAND.onAccent,
-          is_active: true,
-          is_visible: true
+  const save = async () => {
+    if (!form.name.trim()) { haptic('error'); tgAlert(t('ep_name_required')); return; }
+    setSaving(true);
+    try {
+      await updateMasterProfile(telegramId, {
+        name: form.name.trim(), bio: form.bio.trim(), phone: form.phone.trim(), address: form.address.trim(),
+        experience_years: form.experience,
+        // Пустые сфера/город не отправляем, чтобы не стереть то, что уже есть в базе
+        ...(form.city ? { city: form.city } : {}),
+        ...(form.category ? { category: form.category } : {}),
       });
-      tg.MainButton.onClick(handleMainClick);
-
-      return () => {
-          tg.BackButton.offClick(onBack);
-          tg.BackButton.hide();
-          tg.MainButton.offClick(handleMainClick);
-          tg.MainButton.hide();
-      };
-  }, [onBack, onSaved, loading, avatarLoading, loadingPortfolio, telegramId]);
-
-  useEffect(() => {
-      loadPortfolio();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const triggerHaptic = (type: 'light' | 'selection' | 'warning' = 'selection') => {
-      const tg = (window as any).Telegram?.WebApp;
-      if (tg?.HapticFeedback) {
-          if (type === 'warning') tg.HapticFeedback.notificationOccurred('warning');
-          else if (type === 'light') tg.HapticFeedback.impactOccurred('light');
-          else tg.HapticFeedback.selectionChanged();
-      }
+      haptic('success');
+      onSaved();
+    } catch {
+      haptic('error');
+      tgAlert(t('ep_save_error'));
+    } finally { setSaving(false); }
   };
 
-  const loadPortfolio = async () => {
-      setLoadingPortfolio(true);
-      try {
-          const items = await fetchPortfolio(undefined, telegramId);
-          setPortfolio(items);
-      } catch (e) { console.error(e); }
-      finally { setLoadingPortfolio(false); }
+  const pickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = ''; // чтобы можно было выбрать тот же файл ещё раз
+    return f;
   };
 
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      triggerHaptic('light');
-      setAvatarLoading(true);
-      try {
-        const res = await uploadMasterAvatar(telegramId, e.target.files[0]);
-        setAvatarUrl(res.avatar_url);
-      } catch (err) { alert('Ошибка загрузки аватара'); }
-      finally { setAvatarLoading(false); }
-    }
+  const changeAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = pickFile(e);
+    if (!f) return;
+    haptic('light');
+    setAvatarBusy(true);
+    try { setAvatarUrl((await uploadMasterAvatar(telegramId, f)).avatar_url); }
+    catch { tgAlert(t('ep_upload_error')); }
+    finally { setAvatarBusy(false); }
   };
 
-  const handlePortfolioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.files && e.target.files[0]) {
-          triggerHaptic('light');
-          setLoadingPortfolio(true);
-          try {
-              await uploadPortfolioPhoto(telegramId, e.target.files[0]);
-              await loadPortfolio();
-          } catch (err) { alert('Ошибка загрузки фото'); }
-          finally { setLoadingPortfolio(false); }
-      }
+  const addPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = pickFile(e);
+    if (!f) return;
+    if ((portfolio?.length ?? 0) >= PORTFOLIO_MAX) { tgAlert(fill(t('ep_portfolio_full'), { max: PORTFOLIO_MAX })); return; }
+    haptic('light');
+    setPortfolioBusy(true);
+    try { await uploadPortfolioPhoto(telegramId, f); await loadPortfolio(); }
+    catch { tgAlert(t('ep_upload_error')); }
+    finally { setPortfolioBusy(false); }
   };
 
-  const handleDeletePhoto = async (id: number) => {
-      triggerHaptic('warning');
-      if(!window.confirm('Удалить это фото из портфолио?')) return;
-      try {
-          await deletePortfolioPhoto(id);
-          setPortfolio(prev => prev.filter(p => p.id !== id));
-      } catch(e) { alert('Ошибка удаления'); }
+  const removePhoto = async (id: number) => {
+    haptic('light');
+    if (!(await tgConfirm(t('ep_photo_delete_confirm')))) return;
+    try { await deletePortfolioPhoto(id); setPortfolio((p) => (p || []).filter((x) => x.id !== id)); }
+    catch { tgAlert(t('ep_save_error')); }
   };
 
-  const handleWalletClick = () => {
-    triggerHaptic('selection');
-    if (wallet) {
-      tonConnectUI.disconnect();
-    } else {
-      tonConnectUI.openModal();
-    }
-  };
+  // Если в базе значение не из списка (старые данные) — показываем его отдельной кнопкой, чтобы не потерять
+  const categoryOptions = form.category && !CATEGORIES.includes(form.category) ? [...CATEGORIES, form.category] : CATEGORIES;
+  const cityOptions = form.city && !CITIES.some((c) => c.value === form.city) ? [...CITIES, { value: form.city, key: '' }] : CITIES;
+  const catLabel = (c: string) => { const i = CATEGORIES.indexOf(c); return i >= 0 ? t(`cat_${i}`) : c; };
 
-  const formatAddress = (address: string) => {
-      return `${address.slice(0, 4)}...${address.slice(-4)}`;
-  };
+  const section = (title: string, children: React.ReactNode, hint?: React.ReactNode) => (
+    <div style={{ ...card, marginTop: 12, padding: '4px 14px 14px' }}>
+      <div style={{ fontSize: 17, fontWeight: 700, margin: '12px 2px 0' }}>{title}</div>
+      {hint && <div style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)', margin: '4px 2px 0' }}>{hint}</div>}
+      {children}
+    </div>
+  );
+
+  const count = portfolio?.length ?? 0;
 
   return (
-    <div style={{ backgroundColor: 'var(--tg-theme-secondary-bg-color)', minHeight: '100vh', paddingBottom: 80 }}>
-
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 16px 24px', backgroundColor: 'var(--tg-theme-bg-color)', borderBottom: '1px solid var(--tg-theme-secondary-bg-color)' }}>
-        <SafeAvatar path={avatarUrl} onChange={handleAvatarChange} loading={avatarLoading} />
-        <Text style={{ marginTop: 16, color: 'var(--tg-theme-hint-color)', fontSize: 14 }}>
-            Нажмите на фото, чтобы изменить
-        </Text>
+    <div style={{ ...page, padding: '16px 16px 110px' }}>
+      {/* Фото */}
+      <div style={{ ...card, display: 'flex', alignItems: 'center', gap: 16, padding: 16 }}>
+        <label style={{ position: 'relative', cursor: 'pointer', flex: '0 0 auto' }}>
+          <Avatar src={avatarUrl} name={form.name || '…'} size={84} radius={26} />
+          <span style={{
+            position: 'absolute', right: -4, bottom: -4, width: 30, height: 30, borderRadius: 15, display: 'flex',
+            alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--brand-accent, #50C878)',
+            color: 'var(--brand-on-accent, #14261B)', fontSize: 15, border: '3px solid var(--tg-theme-bg-color)',
+          }}>{avatarBusy ? '…' : '📷'}</span>
+          <input type="file" hidden accept="image/*" onChange={changeAvatar} disabled={avatarBusy} />
+        </label>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 20, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis' }}>{form.name || t('ep_title')}</div>
+          <label style={{ display: 'inline-block', marginTop: 4, color: 'var(--brand-ink)', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>
+            {t('ep_photo_change')}
+            <input type="file" hidden accept="image/*" onChange={changeAvatar} disabled={avatarBusy} />
+          </label>
+          <div style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)', marginTop: 2 }}>{t('ep_photo_hint')}</div>
+        </div>
       </div>
 
-      <List style={{ padding: '0 16px', marginTop: 16 }}>
+      {section(t('ep_main'), <>
+        <div style={fieldLabel}>{t('ep_name')}</div>
+        <input style={inputStyle} value={form.name} onChange={(e) => set('name', e.target.value)}
+          placeholder={t('ep_name_ph')} aria-label={t('ep_name')} />
 
-        <Section header="Web3 (TON)" footer="Привяжите кошелек для получения оплаты в крипте в будущем.">
-          <Cell
-             onClick={handleWalletClick}
-             after={
-                 <span style={{
-                     color: wallet ? 'var(--tg-theme-hint-color)' : 'var(--tg-theme-link-color)',
-                     fontWeight: 500,
-                     fontSize: 15
-                 }}>
-                     {wallet ? formatAddress(wallet.account.address) : 'Подключить'}
-                 </span>
-             }
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 28, height: 28, backgroundColor: '#0098EA', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="white"/>
-                        <path d="M2 17L12 22L22 17M2 12L12 17L22 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontWeight: 500, color: 'var(--tg-theme-text-color)' }}>TON Кошелек</span>
-                    <span style={{ backgroundColor: 'rgba(255, 171, 0, 0.15)', color: '#FFAB00', fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 4, textTransform: 'uppercase' }}>Скоро</span>
-                </div>
-            </div>
-          </Cell>
-        </Section>
+        <div style={fieldLabel}>{t('ep_category')}</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {categoryOptions.map((c) => (
+            <Chip key={c} active={form.category === c} onClick={() => { haptic(); set('category', c); }}>{catLabel(c)}</Chip>
+          ))}
+        </div>
 
-        <Section header="Специализация и опыт">
-          {/* НОВЫЙ SELECT ДЛЯ КАТЕГОРИЙ */}
-          <Select header="Сфера деятельности" value={category} onChange={(e) => { triggerHaptic('selection'); setCategory(e.target.value); }}>
-             {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-          </Select>
-          <Input
-             header="Опыт работы (лет)"
-             placeholder="Например: 5"
-             type="number"
-             inputMode="numeric"
-             value={experience}
-             onChange={(e) => setExperience(e.target.value)}
-             onFocus={() => triggerHaptic('selection')}
-          />
-        </Section>
+        <div style={fieldLabel}>{t('ep_experience')}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {[-1, 1].map((d) => (
+            <button key={d} type="button" aria-label={d < 0 ? '−' : '+'} onClick={() => { haptic(); set('experience', Math.min(60, Math.max(0, form.experience + d))); }}
+              style={{ width: 44, height: 44, borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: 22, fontWeight: 700,
+                backgroundColor: 'var(--brand-soft)', color: 'var(--brand-ink)', order: d < 0 ? 0 : 2 }}>
+              {d < 0 ? '−' : '+'}
+            </button>
+          ))}
+          <div style={{ order: 1, minWidth: 48, textAlign: 'center', fontSize: 22, fontWeight: 800 }}>{form.experience}</div>
+        </div>
 
-        <Section header="Личные данные">
-          <Input
-             header="Имя"
-             placeholder="Как вас зовут?"
-             value={name}
-             onChange={(e) => setName(e.target.value)}
-             onFocus={() => triggerHaptic('selection')}
-          />
-          <Textarea
-             header="О себе"
-             placeholder="Расскажите о своем опыте и навыках..."
-             value={bio}
-             onChange={(e) => setBio(e.target.value)}
-             onFocus={() => triggerHaptic('selection')}
-          />
-        </Section>
+        <div style={fieldLabel}>{t('ep_about')}</div>
+        <textarea style={{ ...inputStyle, resize: 'vertical', minHeight: 96, lineHeight: 1.4 }} value={form.bio} maxLength={BIO_MAX}
+          onChange={(e) => set('bio', e.target.value)} placeholder={t('ep_about_ph')} aria-label={t('ep_about')} />
+        <div style={{ fontSize: 12, color: 'var(--tg-theme-hint-color)', textAlign: 'right', marginTop: 4 }}>{form.bio.length} / {BIO_MAX}</div>
+      </>)}
 
-        <Section header="Локация и контакты" footer="Укажите номер телефона и точный адрес или вставьте ссылку на Яндекс/Google карты.">
-          <Input
-             header="Телефон"
-             placeholder="+998 90 000 00 00"
-             type="tel"
-             value={phone}
-             onChange={(e) => setPhone(e.target.value)}
-             onFocus={() => triggerHaptic('selection')}
-          />
-          <Select header="Город" value={city} onChange={(e) => { triggerHaptic('selection'); setCity(e.target.value); }}>
-             {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
-          </Select>
-          <Textarea
-             header="Адрес или ссылка на карту"
-             placeholder="Ул. Амира Темура 10, либо ссылка https://yandex.ru/maps/..."
-             value={address}
-             onChange={(e) => setAddress(e.target.value)}
-             onFocus={() => triggerHaptic('selection')}
-          />
-        </Section>
+      {section(t('ep_contacts'), <>
+        <div style={fieldLabel}>{t('ep_phone')}</div>
+        <input style={inputStyle} type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)}
+          placeholder="+998 90 000 00 00" aria-label={t('ep_phone')} />
 
-        <Section header="Мое портфолио" footer="Загрузите фото ваших лучших работ (до 10 шт).">
-            <div style={{ padding: '16px', backgroundColor: 'var(--tg-theme-bg-color)' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-                    {portfolio.map(item => (
-                        <div key={item.id} style={{ position: 'relative', aspectRatio: '1/1', borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-                            <SafePortfolioImage path={item.image_url} />
-                            <div
-                                onClick={() => handleDeletePhoto(item.id)}
-                                style={{
-                                    position: 'absolute', top: 6, right: 6, backgroundColor: 'rgba(255, 59, 48, 0.9)',
-                                    borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center',
-                                    justifyContent: 'center', cursor: 'pointer', backdropFilter: 'blur(4px)',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                                }}
-                            >
-                                <Icon28DeleteOutline width={18} height={18} style={{ color: '#fff' }} />
-                            </div>
-                        </div>
-                    ))}
+        <div style={fieldLabel}>{t('ep_city')}</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {cityOptions.map((c) => (
+            <Chip key={c.value} active={form.city === c.value} onClick={() => { haptic(); set('city', c.value); }}>{c.key ? t(c.key) : c.value}</Chip>
+          ))}
+        </div>
 
-                    <label style={{
-                        backgroundColor: 'var(--tg-theme-secondary-bg-color)', borderRadius: 12, display: 'flex', flexDirection: 'column',
-                        alignItems: 'center', justifyContent: 'center', cursor: 'pointer', aspectRatio: '1/1',
-                        border: '2px dashed rgba(0,0,0,0.1)', transition: 'background-color 0.2s ease'
-                    }}>
-                        {loadingPortfolio ? <Spinner size="m" /> : (
-                            <>
-                               <Icon28AddCircleOutline width={32} height={32} style={{ color: 'var(--tg-theme-hint-color)', marginBottom: 4 }} />
-                               <span style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)', fontWeight: 500 }}>Добавить</span>
-                            </>
-                        )}
-                        <input type="file" hidden accept="image/*" onChange={handlePortfolioUpload} disabled={loadingPortfolio} />
-                    </label>
-                </div>
-            </div>
-        </Section>
+        <div style={fieldLabel}>{t('ep_address')}</div>
+        <textarea style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.4 }} rows={2} value={form.address}
+          onChange={(e) => set('address', e.target.value)} placeholder={t('ep_address_ph')} aria-label={t('ep_address')} />
+      </>)}
 
-      </List>
+      {section(t('ep_portfolio'), (
+        portfolio === null ? <div style={{ padding: 16, textAlign: 'center' }}><Spinner size="s" /></div> : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12 }}>
+            {portfolio.map((p) => <PortfolioThumb key={p.id} path={p.image_url} onDelete={() => removePhoto(p.id)} />)}
+            {count < PORTFOLIO_MAX && (
+              <label style={{
+                aspectRatio: '1 / 1', borderRadius: 12, cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 4,
+                alignItems: 'center', justifyContent: 'center', border: '2px dashed var(--brand-accent, #50C878)',
+                backgroundColor: 'var(--brand-soft)', color: 'var(--brand-ink)', fontWeight: 700, fontSize: 13,
+              }}>
+                {portfolioBusy ? <Spinner size="s" /> : <><span style={{ fontSize: 26, lineHeight: 1 }}>+</span>{t('ep_portfolio_add')}</>}
+                <input type="file" hidden accept="image/*" onChange={addPhoto} disabled={portfolioBusy} />
+              </label>
+            )}
+          </div>
+        )
+      ), fill(t('ep_portfolio_hint'), { n: count, max: PORTFOLIO_MAX }))}
+
+      {/* TON — пока заготовка на будущее, поэтому внизу и компактно */}
+      <div style={{ ...card, marginTop: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#0098EA', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="white" />
+            <path d="M2 17L12 22L22 17M2 12L12 17L22 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, whiteSpace: 'nowrap' }}>{t('ep_wallet')} <Badge tone="wait">{t('ep_soon')}</Badge></div>
+          <div style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)', marginTop: 2 }}>{t('ep_wallet_hint')}</div>
+        </div>
+        <button type="button" onClick={() => { haptic(); if (wallet) tonConnectUI.disconnect(); else tonConnectUI.openModal(); }}
+          style={{ border: 'none', background: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 15, fontWeight: 700,
+            color: wallet ? 'var(--tg-theme-hint-color)' : 'var(--brand-ink)', padding: 4 }}>
+          {wallet ? `${wallet.account.address.slice(0, 4)}…${wallet.account.address.slice(-4)}` : t('ep_wallet_connect')}
+        </button>
+      </div>
+
+      {/* Сохранение — всегда под рукой */}
+      <div style={{
+        position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 20, padding: '10px 16px calc(10px + env(safe-area-inset-bottom))',
+        backgroundColor: 'var(--tg-theme-secondary-bg-color)', boxShadow: '0 -6px 16px rgba(0,0,0,0.06)',
+      }}>
+        <PrimaryButton onClick={save} loading={saving} disabled={!dirty}>{t('ep_save')}</PrimaryButton>
+      </div>
     </div>
   );
 };

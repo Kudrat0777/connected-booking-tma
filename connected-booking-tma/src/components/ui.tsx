@@ -138,3 +138,23 @@ export const tashkent = {
 export const localeFor = (lang: string) => (lang === 'uz' ? 'uz-UZ' : lang === 'en' ? 'en-GB' : 'ru-RU');
 
 export const money = (n: number | null | undefined) => (n == null ? '' : `${n.toLocaleString('ru-RU')} UZS`);
+
+// ---------- Формы ----------
+
+export const inputStyle: React.CSSProperties = {
+  width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: 12, border: 'none', fontSize: 16,
+  backgroundColor: 'var(--tg-theme-secondary-bg-color)', color: 'var(--tg-theme-text-color)', fontFamily: 'inherit',
+};
+
+export const fieldLabel: React.CSSProperties = { fontSize: 13, fontWeight: 600, color: 'var(--tg-theme-hint-color)', margin: '14px 2px 6px' };
+
+const tgApp = () => (window as any).Telegram?.WebApp;
+
+/** Сообщение: в Telegram — нативное окно, в браузере — alert. */
+export const tgAlert = (message: string) => (tgApp()?.showAlert ? tgApp().showAlert(message) : alert(message));
+
+/** Подтверждение «Да/Нет»: в Telegram — нативное окно, в браузере — confirm. */
+export const tgConfirm = (message: string) => new Promise<boolean>((resolve) => {
+  if (tgApp()?.showConfirm) tgApp().showConfirm(message, (ok: boolean) => resolve(ok));
+  else resolve(window.confirm(message));
+});
