@@ -87,6 +87,8 @@ export type Booking = {
     price: number | null;
   } | null;
   my_review?: { rating: number; text: string } | null;
+  /** Клиент нажал «✅ Приду» под напоминанием за 2 часа */
+  client_confirmed_at?: string | null;
 };
 
 export type CreateBookingPayload = {
