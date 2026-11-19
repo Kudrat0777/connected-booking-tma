@@ -83,6 +83,7 @@ export type Booking = {
     duration: number | null;
     price: number | null;
   } | null;
+  my_review?: { rating: number; text: string } | null;
 };
 
 export type CreateBookingPayload = {
@@ -380,37 +381,35 @@ export type Review = {
   created_at: string;
 };
 
+/** Оценить визит. Тот же визит можно оценить снова — отзыв обновится, а не задвоится. */
 export async function addReview(data: {
-  master_id: number;
-  telegram_id: number;
+  booking_id?: number;
+  master_id?: number; // если визит неизвестен — сервер возьмёт последний неоценённый визит к мастеру
   rating: number;
   text?: string;
   author_name?: string;
-}) {
+}): Promise<Review> {
   const res = await fetch(`${API_BASE}/reviews/add/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
+      booking: data.booking_id,
       master: data.master_id,
-      telegram_id: data.telegram_id,
       rating: data.rating,
       text: data.text,
-      author_name: data.author_name
+      author_name: data.author_name,
     }),
   });
-
-  if (!res.ok) {
-    const txt = await res.text();
-    // Если ошибка 429 (слишком часто) или 403 (нет записи)
-    if (res.status === 429) throw new Error('Вы уже оставили отзыв этому мастеру недавно.');
-    if (res.status === 403) throw new Error('Оставить отзыв можно только после визита.');
-    throw new Error(`Failed to add review: ${txt}`);
-  }
-  return res.json();
+  return jsonOrThrow(res, 'Не удалось отправить отзыв');
 }
 
-export async function fetchReviews(masterId: number): Promise<Review[]> {
-  const res = await fetch(`${API_BASE}/reviews/?master=${masterId}&limit=20`);
+/** Одна запись клиента (для экрана отзыва по ссылке из бота). */
+export async function fetchBooking(id: number): Promise<Booking> {
+  return jsonOrThrow(await fetch(`${API_BASE}/bookings/${id}/`), 'Запись не найдена');
+}
+
+export async function fetchReviews(masterId: number, limit = 20): Promise<Review[]> {
+  const res = await fetch(`${API_BASE}/reviews/?master=${masterId}&limit=${limit}`);
   if (!res.ok) throw new Error('Failed to fetch reviews');
   return res.json();
 }

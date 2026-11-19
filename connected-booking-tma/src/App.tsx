@@ -34,7 +34,7 @@ import { MasterTeamScreen } from './screens/MasterTeamScreen';
 import { BusinessPublicScreen } from './screens/BusinessPublicScreen';
 
 import type { Service, Slot, Booking } from './helpers/api';
-import { checkClientProfile, registerClient, fetchCurrentMaster, fetchMasterBySlug, trackVisit } from './helpers/api';
+import { checkClientProfile, registerClient, fetchCurrentMaster, fetchMasterBySlug, fetchBooking, trackVisit } from './helpers/api';
 import { parseStartParam, rememberSource } from './helpers/links';
 import { applyBrand } from './helpers/brand';
 import { getUserFromQuery, getStartParam } from './helpers/telegramQueryUser';
@@ -159,7 +159,7 @@ const AppContent: React.FC = () => {
   const [selectedMasterName, setSelectedMasterName] = useState<string | null>(null);
   const [selectedMasterId, setSelectedMasterId] = useState<number | null>(null);
 
-  const [reviewMaster, setReviewMaster] = useState<{id: number, name: string} | null>(null);
+  const [reviewBooking, setReviewBooking] = useState<Booking | null>(null);
   const [currentMaster, setCurrentMaster] = useState<any>(null);
   const [reviewsMasterId, setReviewsMasterId] = useState<number | null>(null);
   const [portfolioMaster, setPortfolioMaster] = useState<{id: number, name: string} | null>(null);
@@ -223,6 +223,16 @@ const AppContent: React.FC = () => {
           setMainTab('masters');
           resetScreen('profile');
       }
+  };
+
+  // Кнопка «Написать отзыв» из бота: сразу на экран отзыва об этом визите
+  const openReviewTarget = async (bookingId: number) => {
+      const bk = await fetchBooking(bookingId).catch(() => null);
+      setMainTab('bookings');
+      if (!bk) { resetScreen('profile'); return; }
+      setReviewBooking(bk);
+      setHistory(['profile']);
+      setScreenState('leave_review');
   };
 
   // === ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ===
@@ -297,7 +307,8 @@ const AppContent: React.FC = () => {
                // Клиент существует в базе
                localStorage.setItem('is_client_logged_in', 'true');
 
-               openClientTarget(dipLinkMasterId, dipLinkBusiness);
+               if (target?.kind === 'review') await openReviewTarget(target.bookingId);
+               else openClientTarget(dipLinkMasterId, dipLinkBusiness);
            } else {
                // Новый клиент: Telegram уже знает, кто это, — регистрируем молча и сразу
                // открываем нужный экран, без приветственных слайдов и кнопки «Начать работу»
@@ -311,7 +322,10 @@ const AppContent: React.FC = () => {
                        language: lang,
                    });
                    localStorage.setItem('is_client_logged_in', 'true');
-                   if (isMounted) openClientTarget(dipLinkMasterId, dipLinkBusiness);
+                   if (isMounted) {
+                       if (target?.kind === 'review') await openReviewTarget(target.bookingId);
+                       else openClientTarget(dipLinkMasterId, dipLinkBusiness);
+                   }
                } catch (e) {
                    // Сервер недоступен — показываем приветствие, оттуда можно повторить вход
                    console.error('Auto registration failed', e);
@@ -505,9 +519,7 @@ const AppContent: React.FC = () => {
             pushScreen('client_master_profile');
           }}
           onReview={(booking) => {
-              const masterId = booking.slot.service.master;
-              const masterName = booking.master_name || 'Мастер';
-              setReviewMaster({ id: masterId, name: masterName });
+              setReviewBooking(booking);
               pushScreen('leave_review');
           }}
           onOpenMasterReviews={(id) => {
@@ -521,14 +533,11 @@ const AppContent: React.FC = () => {
         />
       )}
 
-      {screen === 'leave_review' && user && reviewMaster && (
+      {screen === 'leave_review' && user && reviewBooking && (
         <LeaveReviewScreen
-          telegramId={user.id}
-          masterId={reviewMaster.id}
-          masterName={reviewMaster.name}
-          userFirstName={user.first_name}
+          booking={reviewBooking}
           onBack={() => goBack('profile')}
-          onSuccess={() => goBack('profile')}
+          onDone={() => { setMainTab('bookings'); resetScreen('profile'); }}
         />
       )}
 

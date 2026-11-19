@@ -209,7 +209,9 @@ export const MyBookingsScreen: React.FC<Props> = ({ telegramId, onGoToServices, 
                     {b.status === 'confirmed' && onReview && (
                       <button type="button" onClick={() => onReview(b)}
                         style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', color: 'var(--brand-ink)', fontSize: 13, fontWeight: 600, fontFamily: 'inherit' }}>
-                        ★ {t('rate_master')}
+                        {b.my_review
+                          ? <><span style={{ color: '#F5A623' }}>{'★'.repeat(b.my_review.rating)}</span> · {t('lr_edit')}</>
+                          : <>★ {t('rate_master')}</>}
                       </button>
                     )}
                   </div>
