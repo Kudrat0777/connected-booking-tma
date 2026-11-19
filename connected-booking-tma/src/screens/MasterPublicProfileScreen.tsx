@@ -7,8 +7,11 @@ import { useWhen } from './ClientHomeScreen';
 import { fill } from '../helpers/translationsBusiness';
 
 import { fetchMasterProfile, fetchMasterById, fetchPortfolio, fetchServices, getFullImageUrl } from '../helpers/api';
+import { Konnektik } from '../components/Konnektik';
+import { formatPhone } from '../helpers/phone';
 import type { MasterPublicProfile, PortfolioItem, Service } from '../helpers/api';
 import { ReviewsListScreen } from './ReviewsListScreen';
+import { PhotoGallery } from '../components/PhotoGallery';
 
 // ИМПОРТИРУЕМ ХУК ЛОКАЛИЗАЦИИ
 import { useLanguage } from '../helpers/LanguageContext';
@@ -18,11 +21,10 @@ const LottieIcon = KonnektikSticker;
 type Props = {
   masterId: number;
   onBack: () => void;
-  onBook: (masterName: string) => void;
   onServiceClick?: (service: Service) => void;
 };
 
-export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, onBook, onServiceClick }) => {
+export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, onServiceClick }) => {
   // ПОДКЛЮЧАЕМ ПЕРЕВОДЫ
   const { t } = useLanguage();
   const when = useWhen();
@@ -34,7 +36,8 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
   const [error, setError] = useState(false);
 
   const [isReviewsModalOpen, setIsReviewsModalOpen] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  // Работы на весь экран: index = null — сетка «Все работы»; fromGrid — вернуться к сетке по «Назад»
+  const [gallery, setGallery] = useState<{ index: number | null; fromGrid: boolean } | null>(null);
 
   // Функция форматирования опыта работы с учетом перевода
   const formatExperience = (years?: number) => {
@@ -101,8 +104,9 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
     if (loading || !master) return;
 
     const handleBack = () => {
-      if (selectedImage) {
-          setSelectedImage(null);
+      if (gallery) {
+          if (gallery.index !== null && gallery.fromGrid) setGallery({ index: null, fromGrid: false });
+          else setGallery(null);
       } else if (isReviewsModalOpen) {
           setIsReviewsModalOpen(false);
       } else {
@@ -118,7 +122,7 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
     tg.BackButton.onClick(handleBack);
     tg.BackButton.show();
 
-    if (isReviewsModalOpen || selectedImage || !inTelegram) {
+    if (isReviewsModalOpen || gallery || !inTelegram || services.length === 0) {
         tg.MainButton.hide();
     } else {
         tg.MainButton.setParams({
@@ -138,14 +142,13 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
       tg.MainButton.offClick(handleBook);
       tg.MainButton.hide();
     };
-  }, [loading, master, error, onBack, onBook, isReviewsModalOpen, selectedImage, t, services]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loading, master, error, onBack, isReviewsModalOpen, gallery, t, services]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // В Telegram запись — нативной кнопкой внизу, в браузере — своей кнопкой на странице
   const inTelegram = ((window as any).Telegram?.WebApp?.platform || 'unknown') !== 'unknown';
 
   function startBooking() {
     if (services.length === 1 && onServiceClick) { onServiceClick(services[0]); return; }
-    if (services.length === 0 && master) { onBook(master.name); return; }
     document.getElementById('services')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -226,6 +229,17 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '16px 16px 0' }}>
+        {/* Услуг нет — честно говорим, а не ведём на пустую страницу */}
+        {services.length === 0 && (
+          <div style={{ ...card, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Konnektik mood="think" size={64} />
+            <div>
+              <div style={{ fontWeight: 700 }}>{t('mp_no_services')}</div>
+              <div style={{ fontSize: 14, color: 'var(--tg-theme-hint-color)', marginTop: 2, lineHeight: 1.35 }}>{t('mp_no_services_desc')}</div>
+            </div>
+          </div>
+        )}
+
         {/* Услуги */}
         {services.length > 0 && (
           <div id="services">
@@ -258,17 +272,29 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
           </div>
         )}
 
-        {/* Работы */}
+        {/* Работы: первые 6, остальное — в галерее */}
         {portfolio.length > 0 && (
           <div style={card}>
-            <div style={{ fontWeight: 700, marginBottom: 10 }}>{t('portfolio_header')}</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+              <div style={{ fontWeight: 700 }}>{t('portfolio_header')}</div>
+              {portfolio.length > 1 && (
+                <button type="button" onClick={() => { triggerHaptic(); setGallery({ index: null, fromGrid: false }); }}
+                  style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: 'var(--brand-ink)' }}>
+                  {t('pf_all')} · {portfolio.length} ›
+                </button>
+              )}
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
-              {portfolio.slice(0, 9).map((item) => {
-                const imgUrl = getFullImageUrl(item.image_url);
+              {portfolio.slice(0, 6).map((item, i) => {
+                const more = i === 5 && portfolio.length > 6 ? portfolio.length - 6 : 0;
                 return (
-                  <button key={item.id} type="button" onClick={() => { triggerHaptic('light'); setSelectedImage(imgUrl || null); }}
-                    style={{ aspectRatio: '1/1', borderRadius: 10, overflow: 'hidden', border: 'none', padding: 0, cursor: 'pointer', backgroundColor: 'var(--tg-theme-secondary-bg-color)' }}>
-                    <img src={imgUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <button key={item.id} type="button"
+                    onClick={() => { triggerHaptic('light'); setGallery(more ? { index: null, fromGrid: false } : { index: i, fromGrid: false }); }}
+                    style={{ position: 'relative', aspectRatio: '1/1', borderRadius: 10, overflow: 'hidden', border: 'none', padding: 0, cursor: 'pointer', backgroundColor: 'var(--tg-theme-secondary-bg-color)' }}>
+                    <img src={getFullImageUrl(item.image_url)} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    {more > 0 && (
+                      <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.45)', color: '#fff', fontSize: 20, fontWeight: 800 }}>+{more}</span>
+                    )}
                   </button>
                 );
               })}
@@ -292,7 +318,7 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
             )}
             {master.phone && (
               <a href={`tel:${master.phone}`} style={{ display: 'block', padding: '6px 0', fontSize: 15, fontWeight: 600, color: 'var(--brand-ink)', textDecoration: 'none' }}>
-                📞 {master.phone}
+                📞 {formatPhone(master.phone)}
               </a>
             )}
           </div>
@@ -306,51 +332,19 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
         </div>
       )}
 
-      <ReviewsListScreen
-          masterId={master.id}
-          isOpen={isReviewsModalOpen}
-          onClose={() => setIsReviewsModalOpen(false)}
-      />
-
-      {selectedImage && (
-          <div
-              style={{
-                  position: 'fixed',
-                  top: 0, left: 0, right: 0, bottom: 0,
-                  backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                  backdropFilter: 'blur(10px)',
-                  zIndex: 99999,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  animation: 'fadeIn 0.2s ease-out'
-              }}
-              onClick={() => {
-                  triggerHaptic('light');
-                  setSelectedImage(null);
-              }}
-          >
-              <div style={{ position: 'absolute', top: 20, right: 20, width: 40, height: 40, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M18 6L6 18" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M6 6L18 18" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-              </div>
-
-              <img
-                  src={selectedImage}
-                  alt="Fullscreen portfolio"
-                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
-              />
-          </div>
+      {isReviewsModalOpen && (
+        <ReviewsListScreen masterId={master.id} onClose={() => setIsReviewsModalOpen(false)} />
       )}
 
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-      `}</style>
+      {gallery && (
+        <PhotoGallery
+          photos={portfolio.map((p) => p.image_url)}
+          title={master.name}
+          index={gallery.index}
+          onIndex={(i) => setGallery((g) => ({ index: i, fromGrid: g?.index === null ? true : !!g?.fromGrid }))}
+          onClose={() => setGallery(null)}
+        />
+      )}
     </div>
   );
 };

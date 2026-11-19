@@ -69,7 +69,7 @@ export const ManualBookingSheet: React.FC<{
       ) : (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {services.map((s) => (
-            <Chip key={s.id} active={service?.id === s.id} onClick={() => setService(s)}>
+            <Chip onCard key={s.id} active={service?.id === s.id} onClick={() => setService(s)}>
               {s.name}{s.duration ? ` · ${s.duration}′` : ''}
             </Chip>
           ))}
@@ -83,14 +83,14 @@ export const ManualBookingSheet: React.FC<{
             <div style={label}>{t('cal_time')}</div>
             <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 6, scrollbarWidth: 'none' }}>
               {Object.keys(byDate).slice(0, 14).map((d) => (
-                <Chip key={d} active={d === date} onClick={() => { setDate(d); setPicked(null); }}>
+                <Chip onCard key={d} active={d === date} onClick={() => { setDate(d); setPicked(null); }}>
                   {d === tashkent.today() ? t('cal_today') : new Date(`${d}T12:00:00`).toLocaleDateString(localeFor(lang), { weekday: 'short', day: 'numeric' })}
                 </Chip>
               ))}
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
               {(date ? byDate[date] : []).map((s) => (
-                <Chip key={s.id ?? s.time} active={picked?.time === s.time} onClick={() => setPicked(s)}>
+                <Chip onCard key={s.id ?? s.time} active={picked?.time === s.time} onClick={() => setPicked(s)}>
                   {tashkent.time(s.time)}
                 </Chip>
               ))}
@@ -167,7 +167,7 @@ export const ServiceSheet: React.FC<{
       <div style={label}>{t('ms_duration')}</div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
         {DURATIONS.map((m) => (
-          <Chip key={m} active={duration === String(m)} onClick={() => setDuration(String(m))}>
+          <Chip onCard key={m} active={duration === String(m)} onClick={() => setDuration(String(m))}>
             {m < 60 ? `${m} ${t('min')}` : `${m / 60} ${t('ms_hour')}`}
           </Chip>
         ))}

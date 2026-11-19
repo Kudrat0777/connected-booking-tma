@@ -18,8 +18,6 @@ type Props = {
   onLogout?: () => void;
   onOpenMasterProfile?: (masterId: number, masterName: string) => void;
   onReview?: (booking: Booking) => void;
-  onOpenMasterReviews?: (id: number) => void;
-  onOpenPortfolio?: (id: number, name: string) => void;
 };
 
 export const ProfileScreen: React.FC<Props> = ({

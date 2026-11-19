@@ -1,10 +1,12 @@
+// Страница заведения для клиента: кто работает, рейтинг, запись к мастеру или к любому свободному.
 import React, { useEffect, useRef, useState } from 'react';
-import { Title, Text, Spinner } from '@telegram-apps/telegram-ui';
+import { Spinner } from '@telegram-apps/telegram-ui';
 
-import { fetchBusinessBySlug, fetchSalonServices, BusinessPublic, useTunnelImage } from '../helpers/api';
-import { Konnektik } from '../components/Konnektik';
-import { Avatar as UiAvatar } from '../components/ui';
+import { fetchBusinessBySlug, fetchSalonServices, BusinessPublic } from '../helpers/api';
 import { useLanguage } from '../helpers/LanguageContext';
+import { pluralize } from '../helpers/translationsBusiness';
+import { Konnektik } from '../components/Konnektik';
+import { Avatar, Badge, PrimaryButton, card, page } from '../components/ui';
 
 type Props = {
   slug: string;
@@ -13,116 +15,132 @@ type Props = {
   onAnyMaster?: (businessName: string) => void;
 };
 
-const MasterAvatar: React.FC<{ src?: string; name: string }> = ({ src, name }) => {
-  const url = useTunnelImage(src);
-  return url ? (
-    <img src={url} alt="" style={{ width: 56, height: 56, borderRadius: 28, objectFit: 'cover' }} />
-  ) : (
-    <div style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: 'var(--tg-theme-secondary-bg-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 22 }}>
-      {name.slice(0, 1).toUpperCase()}
-    </div>
-  );
+// Значения в базе — по-русски, на экране — на языке клиента
+const CATS = ['Барбершоп', 'Салон красоты', 'Массаж', 'Маникюр / Педикюр', 'Брови и Ресницы',
+  'Медицина', 'Спорт / Фитнес', 'Автосервис', 'Другое'];
+const CITY_KEYS: Record<string, string> = {
+  'Ургенч': 'city_urgench', 'Ташкент': 'city_tashkent', 'Самарканд': 'city_samarkand', 'Бухара': 'city_bukhara', 'Хива': 'city_khiva',
 };
 
-/** Страница заведения для клиента: кто работает, рейтинг, переход к записи к конкретному мастеру. */
+const haptic = () => (window as any).Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
+
 export const BusinessPublicScreen: React.FC<Props> = ({ slug, onBack, onOpenMaster, onAnyMaster }) => {
-  const tg = (window as any).Telegram?.WebApp;
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [biz, setBiz] = useState<BusinessPublic | null>(null);
   const [state, setState] = useState<'loading' | 'ok' | 'missing'>('loading');
+  // Есть ли услуги, на которые можно записаться к любому свободному мастеру
+  const [anyAvailable, setAnyAvailable] = useState(false);
 
   const backRef = useRef(onBack);
   backRef.current = onBack;
   useEffect(() => {
+    const tg = (window as any).Telegram?.WebApp;
     if (!tg?.BackButton) return;
     const h = () => backRef.current();
     tg.BackButton.show();
     tg.BackButton.onClick(h);
     return () => tg.BackButton.offClick(h);
-  }, [tg]);
-
-  // Есть ли услуги, на которые можно записаться к любому свободному мастеру
-  const [anyAvailable, setAnyAvailable] = useState(false);
+  }, []);
 
   useEffect(() => {
-    fetchBusinessBySlug(slug).then((b) => { setBiz(b); setState(b ? 'ok' : 'missing'); });
-    fetchSalonServices(slug).then((list) => setAnyAvailable(list.length > 0));
+    fetchBusinessBySlug(slug).then((b) => { setBiz(b); setState(b ? 'ok' : 'missing'); }).catch(() => setState('missing'));
+    fetchSalonServices(slug).then((list) => setAnyAvailable(list.length > 0)).catch(() => {});
   }, [slug]);
 
   if (state === 'loading') {
-    return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spinner size="l" /></div>;
+    return <div style={{ ...page, display: 'flex', justifyContent: 'center', paddingTop: 120 }}><Spinner size="l" /></div>;
   }
   if (!biz) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, textAlign: 'center', color: 'var(--tg-theme-text-color)' }}>
-        <Konnektik mood="think" size={140} />
-        <Title level="2" weight="1" style={{ marginTop: 16 }}>{t('biz_not_found')}</Title>
-        <Text style={{ color: 'var(--tg-theme-hint-color)', marginTop: 8 }}>{t('biz_link_old')}</Text>
+      <div style={{ ...page, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, textAlign: 'center' }}>
+        <Konnektik mood="think" size={130} />
+        <div style={{ fontSize: 22, fontWeight: 800, marginTop: 12 }}>{t('biz_not_found')}</div>
+        <div style={{ fontSize: 15, color: 'var(--tg-theme-hint-color)', marginTop: 6, maxWidth: 300 }}>{t('biz_link_old')}</div>
+        <div style={{ width: '100%', maxWidth: 320, marginTop: 20 }}><PrimaryButton variant="soft" onClick={onBack}>{t('to_main_page')}</PrimaryButton></div>
       </div>
     );
   }
 
+  const catLabel = (c?: string) => { const i = CATS.indexOf(c || ''); return i >= 0 ? t(`cat_${i}`) : (c || ''); };
+  const cityLabel = (c?: string) => (c && CITY_KEYS[c] ? t(CITY_KEYS[c]) : c || '');
+
+  const rated = biz.masters.filter((m) => m.reviews_count > 0);
+  const reviews = rated.reduce((a, m) => a + m.reviews_count, 0);
+  const rating = reviews ? rated.reduce((a, m) => a + m.rating * m.reviews_count, 0) / reviews : 0;
+  const isMapLink = !!biz.address && /^https?:\/\//.test(biz.address);
+  const showAny = anyAvailable && !!onAnyMaster && biz.masters.length > 1;
+
   return (
-    <div style={{ backgroundColor: 'var(--tg-theme-secondary-bg-color)', minHeight: '100vh', paddingBottom: 40, color: 'var(--tg-theme-text-color)' }}>
-      <div style={{ padding: '24px 20px 16px', display: 'flex', gap: 14, alignItems: 'center' }}>
-        {biz.logo_url ? <UiAvatar src={biz.logo_url} name={biz.name} size={80} radius={24} /> : <Konnektik mood="hello" size={88} />}
-        <div style={{ minWidth: 0 }}>
-          <Title level="1" weight="1" style={{ marginBottom: 4 }}>{biz.name}</Title>
-          <Text style={{ color: 'var(--tg-theme-hint-color)', fontSize: 14 }}>
-            {[biz.category, biz.city].filter(Boolean).join(' · ')}
-          </Text>
-          {biz.address && (
-            <Text style={{ display: 'block', color: 'var(--tg-theme-hint-color)', fontSize: 13, marginTop: 2 }}>📍 {biz.address}</Text>
-          )}
+    <div style={{ ...page, paddingBottom: 40 }}>
+      {/* Шапка */}
+      <div style={{ backgroundColor: 'var(--tg-theme-bg-color)', padding: '28px 16px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', borderRadius: '0 0 24px 24px' }}>
+        {biz.logo_url ? <Avatar src={biz.logo_url} name={biz.name} size={92} radius={28} /> : <Konnektik mood="hello" size={96} />}
+        <div style={{ fontSize: 24, fontWeight: 800, marginTop: 12 }}>{biz.name}</div>
+        <div style={{ fontSize: 15, color: 'var(--tg-theme-hint-color)', marginTop: 4 }}>
+          {[catLabel(biz.category), cityLabel(biz.city)].filter(Boolean).join(' · ')}
         </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 6, marginTop: 12 }}>
+          {reviews > 0 && <Badge tone="brand">★ {rating.toFixed(1)} · {pluralize(lang, reviews, t('rv_count'))}</Badge>}
+          {biz.masters.length > 0 && <Badge tone="off">{pluralize(lang, biz.masters.length, t('biz_masters_word'))}</Badge>}
+        </div>
+        {biz.address && (
+          isMapLink ? (
+            <button type="button" onClick={() => window.open(biz.address, '_blank')}
+              style={{ marginTop: 12, border: 'none', background: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, color: 'var(--brand-ink)' }}>
+              📍 {t('biz_open_map')}
+            </button>
+          ) : (
+            <div style={{ marginTop: 12, fontSize: 14, color: 'var(--tg-theme-hint-color)' }}>📍 {biz.address}</div>
+          )
+        )}
       </div>
 
-      {biz.description && (
-        <Text style={{ display: 'block', padding: '0 20px 12px', fontSize: 15, lineHeight: 1.4 }}>{biz.description}</Text>
-      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '16px 16px 0' }}>
+        {biz.description && (
+          <div style={{ ...card, fontSize: 15, lineHeight: 1.5 }}>{biz.description}</div>
+        )}
 
-      {anyAvailable && onAnyMaster && biz.masters.length > 1 && (
-        <div style={{ padding: '0 16px 12px' }}>
-          <button
-            type="button"
-            onClick={() => { tg?.HapticFeedback?.impactOccurred('light'); onAnyMaster(biz.name); }}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: 16, borderRadius: 16, border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', backgroundColor: 'var(--tg-theme-button-color)', color: 'var(--tg-theme-button-text-color)', boxShadow: '0 6px 18px rgba(0,0,0,0.12)' }}
-          >
+        {/* Любой свободный мастер */}
+        {showAny && (
+          <button type="button" onClick={() => { haptic(); onAnyMaster!(biz.name); }} style={{
+            ...card, display: 'flex', alignItems: 'center', gap: 12, border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', width: '100%',
+            background: 'linear-gradient(135deg, var(--brand-accent, #50C878), #3FAF68)', color: 'var(--brand-on-accent, #14261B)', padding: 16,
+          }}>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: 17 }}>{t('biz_any_title')}</div>
-              <div style={{ fontSize: 13, opacity: 0.85, marginTop: 2 }}>{t('biz_any_desc')}</div>
+              <div style={{ fontWeight: 800, fontSize: 17 }}>{t('biz_any_title')}</div>
+              <div style={{ fontSize: 14, opacity: 0.85, marginTop: 2 }}>{t('biz_any_desc')}</div>
             </div>
-            <span style={{ fontSize: 22 }}>→</span>
+            <span aria-hidden="true" style={{ fontSize: 22, fontWeight: 800 }}>›</span>
           </button>
-        </div>
-      )}
+        )}
 
-      <div style={{ padding: '0 16px' }}>
-        <Text style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--tg-theme-hint-color)', textTransform: 'uppercase', margin: '8px 4px' }}>
-          {t('biz_choose_master')}
-        </Text>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {biz.masters.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              onClick={() => { tg?.HapticFeedback?.impactOccurred('light'); onOpenMaster(m.id, m.name); }}
-              style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, borderRadius: 16, border: 'none', backgroundColor: 'var(--tg-theme-bg-color)', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', textAlign: 'left', cursor: 'pointer', color: 'var(--tg-theme-text-color)', font: 'inherit' }}
-            >
-              <MasterAvatar src={m.avatar_url} name={m.name} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: 16 }}>{m.name}</div>
-                <div style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)' }}>
-                  {m.category}{m.rating ? ` · ★ ${m.rating}` : ''}{m.reviews_count ? ` (${m.reviews_count})` : ''}
-                </div>
-              </div>
-              <span style={{ color: 'var(--tg-theme-button-color)', fontWeight: 600, fontSize: 14 }}>{t('biz_book')}</span>
-            </button>
-          ))}
-          {biz.masters.length === 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16 }}>
-              <Konnektik mood="think" size={70} />
-              <Text style={{ color: 'var(--tg-theme-hint-color)' }}>{t('biz_masters_soon')}</Text>
+        {/* Мастера */}
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 700, margin: '4px 4px 10px' }}>{t('biz_choose_master')}</div>
+          {biz.masters.length === 0 ? (
+            <div style={{ ...card, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Konnektik mood="think" size={64} />
+              <div style={{ color: 'var(--tg-theme-hint-color)' }}>{t('biz_masters_soon')}</div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {biz.masters.map((m) => (
+                <button key={m.id} type="button" onClick={() => { haptic(); onOpenMaster(m.id, m.name); }} style={{
+                  ...card, display: 'flex', alignItems: 'center', gap: 12, border: 'none', cursor: 'pointer', textAlign: 'left',
+                  fontFamily: 'inherit', width: '100%', color: 'var(--tg-theme-text-color)',
+                }}>
+                  <Avatar src={m.avatar_url} name={m.name} size={52} radius={16} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 16, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</div>
+                    <div style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)', marginTop: 2 }}>
+                      {m.reviews_count > 0
+                        ? <><span style={{ color: '#F5A623' }}>★</span> {m.rating.toFixed(1)} ({m.reviews_count}){m.category ? ` · ${catLabel(m.category)}` : ''}</>
+                        : <>{t('mp_new_master')}{m.category ? ` · ${catLabel(m.category)}` : ''}</>}
+                    </div>
+                  </div>
+                  <span aria-label={t('biz_book')} style={{ fontSize: 22, color: 'var(--tg-theme-hint-color)', flex: '0 0 auto' }}>›</span>
+                </button>
+              ))}
             </div>
           )}
         </div>

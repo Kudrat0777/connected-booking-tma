@@ -2,20 +2,19 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Spinner } from '@telegram-apps/telegram-ui';
 
 import type { Booking, MasterPublicProfile, Service, Slot } from '../helpers/api';
-import { createBooking, fetchMasterById, fetchSlotsForService } from '../helpers/api';
+import { createBooking, fetchMasterById, fetchSlotsForService, fetchUserProfile, updateUserProfile } from '../helpers/api';
+import { PHONE_PLACEHOLDER, formatPhone, isValidPhone, normalizePhone, requestTelegramPhone } from '../helpers/phone';
 import { useLanguage } from '../helpers/LanguageContext';
 import { fill } from '../helpers/translationsBusiness';
 import { Konnektik } from '../components/Konnektik';
-import { Avatar, Chip, PrimaryButton, Sheet, card, localeFor, money, tashkent } from '../components/ui';
+import { Avatar, Chip, PrimaryButton, Sheet, card, fieldLabel, inputStyle, localeFor, money, tashkent } from '../components/ui';
 import { useWhen } from './ClientHomeScreen';
 
 type Props = {
   service: Service;
   onBack: () => void;
   /** Запись создана — показать экран «Вы записаны» */
-  onBooked?: (booking: Booking) => void;
-  /** Старый сценарий (отдельный экран подтверждения) — если onBooked не передан */
-  onSlotSelected?: (slot: Slot) => void;
+  onBooked: (booking: Booking) => void;
   user?: { id?: number; username?: string; photo_url?: string } | null;
 };
 
@@ -25,7 +24,7 @@ const partOf = (hhmm: string): Part => {
   return h < 12 ? 'morning' : h < 17 ? 'day' : 'evening';
 };
 
-export const SlotsScreen: React.FC<Props> = ({ service, onBack, onBooked, onSlotSelected, user }) => {
+export const SlotsScreen: React.FC<Props> = ({ service, onBack, onBooked, user }) => {
   const { t, lang } = useLanguage();
   const when = useWhen();
   const tg = (window as any).Telegram?.WebApp;
@@ -36,6 +35,18 @@ export const SlotsScreen: React.FC<Props> = ({ service, onBack, onBooked, onSlot
   const [picked, setPicked] = useState<Slot | null>(null);
   const [master, setMaster] = useState<MasterPublicProfile | null>(null);
   const [booking, setBooking] = useState(false);
+  // Телефона в профиле нет — спросим один раз прямо в подтверждении (null — ещё не знаем)
+  const [needPhone, setNeedPhone] = useState<boolean | null>(null);
+  const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState(false);
+  const canAskContact = !!tg?.requestContact && tg?.platform !== 'unknown';
+
+  useEffect(() => {
+    if (!user?.id) { setNeedPhone(false); return; }
+    fetchUserProfile(user.id)
+      .then((u) => setNeedPhone(!u?.phone))
+      .catch(() => setNeedPhone(true)); // профиля ещё нет — сохранение телефона его создаст
+  }, [user?.id]);
 
   const backRef = useRef(onBack);
   backRef.current = () => (picked ? setPicked(null) : onBack());
@@ -77,9 +88,17 @@ export const SlotsScreen: React.FC<Props> = ({ service, onBack, onBooked, onSlot
 
   const confirm = async () => {
     if (!picked) return;
-    if (!onBooked) { onSlotSelected?.(picked); return; }
+    if (needPhone && !isValidPhone(phone)) {
+      tg?.HapticFeedback?.notificationOccurred('error');
+      setPhoneError(true);
+      return;
+    }
     setBooking(true);
     try {
+      if (needPhone && user?.id) {
+        await updateUserProfile(user.id, { phone: normalizePhone(phone) });
+        setNeedPhone(false);
+      }
       const res = await createBooking({
         name: service.name,
         slot_id: picked.id,
@@ -186,6 +205,25 @@ export const SlotsScreen: React.FC<Props> = ({ service, onBack, onBooked, onSlot
             {service.price ? <Row label={t('sl_price')} value={money(service.price)} /> : null}
             {master?.address && <Row label={t('sl_address')} value={[master.city, master.address].filter(Boolean).join(', ')} />}
           </div>
+          {needPhone && (
+            <div style={{ marginTop: 16, padding: '2px 12px 12px', borderRadius: 14, backgroundColor: 'var(--tg-theme-secondary-bg-color)' }}>
+              <div style={fieldLabel}>{t('sl_phone_title')}</div>
+              <input type="tel" inputMode="tel" autoComplete="tel" value={phone} placeholder={PHONE_PLACEHOLDER}
+                aria-label={t('sl_phone_title')} aria-invalid={phoneError}
+                onFocus={() => { if (!phone) setPhone('+998 '); }}
+                onChange={(e) => { setPhone(formatPhone(e.target.value)); setPhoneError(false); }}
+                style={{ ...inputStyle, backgroundColor: 'var(--tg-theme-bg-color)', boxShadow: phoneError ? 'inset 0 0 0 1.5px #E0533D' : 'none' }} />
+              <div style={{ fontSize: 12, marginTop: 6, lineHeight: 1.35, color: phoneError ? '#E0533D' : 'var(--tg-theme-hint-color)' }}>
+                {phoneError ? t('cp_phone_bad') : t('sl_phone_hint')}
+              </div>
+              {canAskContact && (
+                <button type="button" onClick={async () => { const p = await requestTelegramPhone(); if (p) { setPhone(p); setPhoneError(false); } }}
+                  style={{ marginTop: 8, padding: '7px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, backgroundColor: 'var(--brand-soft, #E9F7EF)', color: 'var(--brand-ink, #1D7A46)' }}>
+                  📱 {t('cp_phone_tg')}
+                </button>
+              )}
+            </div>
+          )}
           <div style={{ marginTop: 18 }}>
             <PrimaryButton loading={booking} onClick={confirm}>{fill(t('sl_confirm'), { time: tashkent.time(picked.time) })}</PrimaryButton>
           </div>

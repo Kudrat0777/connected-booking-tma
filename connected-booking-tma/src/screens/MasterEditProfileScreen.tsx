@@ -211,7 +211,7 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
         <div style={fieldLabel}>{t('ep_category')}</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {categoryOptions.map((c) => (
-            <Chip key={c} active={form.category === c} onClick={() => { haptic(); set('category', c); }}>{catLabel(c)}</Chip>
+            <Chip onCard key={c} active={form.category === c} onClick={() => { haptic(); set('category', c); }}>{catLabel(c)}</Chip>
           ))}
         </div>
 
@@ -241,7 +241,7 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
         <div style={fieldLabel}>{t('ep_city')}</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {cityOptions.map((c) => (
-            <Chip key={c.value} active={form.city === c.value} onClick={() => { haptic(); set('city', c.value); }}>{c.key ? t(c.key) : c.value}</Chip>
+            <Chip onCard key={c.value} active={form.city === c.value} onClick={() => { haptic(); set('city', c.value); }}>{c.key ? t(c.key) : c.value}</Chip>
           ))}
         </div>
 
