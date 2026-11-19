@@ -11,6 +11,6 @@ export const MasterReviewsScreen: React.FC<Props> = ({ telegramId, onBack }) => 
   const { t } = useLanguage();
   return (
     <ReviewsView load={() => fetchMasterReviews(telegramId)} onBack={onBack}
-      emptyTitle={t('rv_empty')} emptyText={t('rv_empty_desc')} />
+      emptyTitle={t('rv_empty')} emptyText={t('rv_empty_desc')} canReply />
   );
 };

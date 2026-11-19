@@ -1,21 +1,24 @@
 // Список отзывов о мастере: средняя оценка, распределение по звёздам, фильтры и сами отзывы.
-// Используется и в кабинете мастера, и у клиента на странице мастера.
+// Используется и в кабинете мастера (canReply — можно отвечать), и у клиента на странице мастера.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Spinner } from '@telegram-apps/telegram-ui';
 
 import type { Review } from '../helpers/api';
+import { replyToReview } from '../helpers/api';
 import { useLanguage } from '../helpers/LanguageContext';
 import { pluralize } from '../helpers/translationsBusiness';
 import { Konnektik } from './Konnektik';
-import { Avatar, Chip, card, localeFor, page } from './ui';
+import { Avatar, Chip, PrimaryButton, Sheet, card, inputStyle, localeFor, page, tgAlert, tgConfirm } from './ui';
 
 type Props = {
   load: () => Promise<Review[]>;
   onBack: () => void;
   emptyTitle: string;
   emptyText: string;
+  /** Кабинет мастера: можно отвечать на отзывы */
+  canReply?: boolean;
 };
-type Filter = 'all' | 'text' | 1 | 2 | 3 | 4 | 5;
+type Filter = 'all' | 'text' | 'noreply' | 1 | 2 | 3 | 4 | 5;
 
 const STAR = '#F5A623';
 
@@ -25,10 +28,14 @@ const Stars: React.FC<{ value: number; size?: number }> = ({ value, size = 14 })
   </span>
 );
 
-export const ReviewsView: React.FC<Props> = ({ load, onBack, emptyTitle, emptyText }) => {
+export const ReviewsView: React.FC<Props> = ({ load, onBack, emptyTitle, emptyText, canReply }) => {
   const { t, lang } = useLanguage();
   const [reviews, setReviews] = useState<Review[] | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
+  // Окно ответа: какой отзыв и черновик ответа
+  const [replying, setReplying] = useState<Review | null>(null);
+  const [draft, setDraft] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const backRef = useRef(onBack);
   backRef.current = onBack;
@@ -51,7 +58,30 @@ export const ReviewsView: React.FC<Props> = ({ load, onBack, emptyTitle, emptyTe
   const avg = list.length ? list.reduce((a, r) => a + r.rating, 0) / list.length : 0;
   const byStars = useMemo(() => [5, 4, 3, 2, 1].map((s) => ({ s, n: list.filter((r) => r.rating === s).length })), [list]);
   const withText = list.filter((r) => r.text?.trim()).length;
-  const shown = list.filter((r) => (filter === 'all' ? true : filter === 'text' ? !!r.text?.trim() : r.rating === filter));
+  const noReply = list.filter((r) => !r.reply_text?.trim()).length;
+  const shown = list.filter((r) => (
+    filter === 'all' ? true
+      : filter === 'text' ? !!r.text?.trim()
+        : filter === 'noreply' ? !r.reply_text?.trim()
+          : r.rating === filter));
+
+  const openReply = (r: Review) => {
+    (window as any).Telegram?.WebApp?.HapticFeedback?.selectionChanged();
+    setReplying(r);
+    setDraft(r.reply_text || '');
+  };
+  const saveReply = async (text: string) => {
+    if (!replying) return;
+    setSaving(true);
+    try {
+      const updated = await replyToReview(replying.id, text);
+      setReviews((rs) => (rs || []).map((x) => (x.id === updated.id ? { ...x, ...updated } : x)));
+      (window as any).Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
+      setReplying(null);
+    } catch (e: any) {
+      tgAlert(e.message);
+    } finally { setSaving(false); }
+  };
 
   const locale = localeFor(lang);
   const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Tashkent' });
@@ -95,6 +125,9 @@ export const ReviewsView: React.FC<Props> = ({ load, onBack, emptyTitle, emptyTe
           {/* Фильтры: только те, по которым есть отзывы */}
           <div style={{ display: 'flex', gap: 6, overflowX: 'auto', margin: '12px 0 4px', scrollbarWidth: 'none' }}>
             <Chip active={filter === 'all'} onClick={() => setFilter('all')}>{t('rv_all')} · {list.length}</Chip>
+            {canReply && noReply > 0 && noReply < list.length && (
+              <Chip active={filter === 'noreply'} onClick={() => setFilter('noreply')}>{t('rv_no_reply')} · {noReply}</Chip>
+            )}
             {withText > 0 && withText < list.length && (
               <Chip active={filter === 'text'} onClick={() => setFilter('text')}>{t('rv_with_text')} · {withText}</Chip>
             )}
@@ -119,10 +152,57 @@ export const ReviewsView: React.FC<Props> = ({ load, onBack, emptyTitle, emptyTe
                   <Stars value={r.rating} />
                 </div>
                 {r.text?.trim() && <div style={{ fontSize: 15, lineHeight: 1.45, marginTop: 10, whiteSpace: 'pre-wrap' }}>{r.text}</div>}
+
+                {/* Ответ мастера */}
+                {r.reply_text?.trim() && (
+                  <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 12, backgroundColor: 'var(--tg-theme-secondary-bg-color)', borderLeft: '3px solid var(--brand-accent, #50C878)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12, color: 'var(--tg-theme-hint-color)', fontWeight: 600 }}>
+                      <span>💬 {t('rv_reply_label')}</span>
+                      {r.reply_at && <span style={{ fontWeight: 400 }}>{fmtDate(r.reply_at)}</span>}
+                    </div>
+                    <div style={{ fontSize: 14, lineHeight: 1.45, marginTop: 4, whiteSpace: 'pre-wrap' }}>{r.reply_text}</div>
+                  </div>
+                )}
+                {canReply && (
+                  <button type="button" onClick={() => openReply(r)} style={{
+                    marginTop: 10, padding: '7px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                    fontSize: 14, fontWeight: 700, backgroundColor: 'var(--brand-soft, #E9F7EF)', color: 'var(--brand-ink, #1D7A46)',
+                  }}>{r.reply_text?.trim() ? `✏️ ${t('rv_reply_edit')}` : `💬 ${t('rv_reply_btn')}`}</button>
+                )}
               </div>
             );
           })}
         </>
+      )}
+
+      {replying && (
+        <Sheet onClose={() => !saving && setReplying(null)}>
+          <div style={{ fontSize: 22, fontWeight: 800 }}>{t('rv_reply_title')}</div>
+          <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 12, backgroundColor: 'var(--tg-theme-secondary-bg-color)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+              <span style={{ fontWeight: 700 }}>{replying.author_name?.trim() || t('m_reviews_client')}</span>
+              <Stars value={replying.rating} />
+            </div>
+            {replying.text?.trim() && <div style={{ fontSize: 14, lineHeight: 1.4, marginTop: 6, color: 'var(--tg-theme-hint-color)' }}>{replying.text}</div>}
+          </div>
+          <textarea value={draft} onChange={(e) => setDraft(e.target.value)} maxLength={1000} rows={4} autoFocus
+            placeholder={t('rv_reply_ph')} aria-label={t('rv_reply_title')}
+            style={{ ...inputStyle, marginTop: 12, resize: 'vertical', lineHeight: 1.4 }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12, color: 'var(--tg-theme-hint-color)', margin: '6px 2px 0' }}>
+            <span style={{ lineHeight: 1.35 }}>{t('rv_reply_hint')}</span>
+            <span style={{ flex: '0 0 auto' }}>{draft.length} / 1000</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
+            <PrimaryButton loading={saving} disabled={!draft.trim() || draft.trim() === (replying.reply_text || '').trim()} onClick={() => saveReply(draft)}>
+              {t('rv_reply_save')}
+            </PrimaryButton>
+            {replying.reply_text?.trim() && (
+              <PrimaryButton variant="danger" onClick={async () => { if (await tgConfirm(t('rv_reply_delete_confirm'))) saveReply(''); }}>
+                {t('rv_reply_delete')}
+              </PrimaryButton>
+            )}
+          </div>
+        </Sheet>
       )}
     </div>
   );
