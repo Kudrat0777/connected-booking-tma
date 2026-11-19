@@ -589,7 +589,9 @@ export async function checkClientProfile(telegramId: number) {
 export const getFullImageUrl = (path?: string | null): string | undefined => {
   if (!path) return undefined;
 
-  const origin = new URL(API_BASE).origin; // Получаем https://...zrok.io
+  // API_BASE бывает и полным адресом (https://ctime.uz/api), и относительным (/api) —
+  // во втором случае картинки берём с того же адреса, откуда открыто приложение.
+  const origin = new URL(API_BASE, window.location.origin).origin;
 
   // Очищаем путь от любых локальных доменв, если они застряли в базе
   let cleanPath = path;

@@ -7,6 +7,8 @@ import './index.css';
 
 import { TonConnectUIProvider } from '@tonconnect/ui-react';
 import { LanguageProvider } from './helpers/LanguageContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { CrashScreen } from './components/CrashScreen';
 
 console.log('### index.tsx loaded');
 
@@ -21,7 +23,9 @@ if (!rootElement) {
     <React.StrictMode>
       <TonConnectUIProvider manifestUrl={manifestUrl}>
         <LanguageProvider>
-           <App />
+          <ErrorBoundary fallback={CrashScreen}>
+            <App />
+          </ErrorBoundary>
         </LanguageProvider>
       </TonConnectUIProvider>
     </React.StrictMode>,
