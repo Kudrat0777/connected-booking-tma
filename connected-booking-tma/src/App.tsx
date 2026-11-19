@@ -37,6 +37,7 @@ import { BusinessPublicScreen } from './screens/BusinessPublicScreen';
 import type { Service, Slot, Booking } from './helpers/api';
 import { checkClientProfile, registerClient, fetchCurrentMaster, fetchMasterBySlug, trackVisit } from './helpers/api';
 import { parseStartParam, rememberSource } from './helpers/links';
+import { applyBrand } from './helpers/brand';
 import { getUserFromQuery, getStartParam } from './helpers/telegramQueryUser';
 
 const originalFetch = window.fetch;
@@ -130,6 +131,9 @@ const AppContent: React.FC = () => {
 
       if (tg.setHeaderColor) tg.setHeaderColor(params.bg_color || (isDark ? '#000000' : '#ffffff'));
       if (tg.setBackgroundColor) tg.setBackgroundColor(params.bg_color || (isDark ? '#000000' : '#ffffff'));
+
+      // Кнопки, ссылки и акценты — фирменный зелёный Connected поверх темы Telegram
+      applyBrand(isDark);
     };
 
     tg.ready();
@@ -148,7 +152,7 @@ const AppContent: React.FC = () => {
   const [isAppLoading, setIsAppLoading] = useState(true);
   const [screen, setScreenState] = useState<Screen>('welcome');
   const [history, setHistory] = useState<Screen[]>([]);
-  const [mainTab, setMainTab] = useState<MainTab>('bookings');
+  const [mainTab, setMainTab] = useState<MainTab>('masters');
 
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
@@ -217,7 +221,7 @@ const AppContent: React.FC = () => {
           setHistory(['profile']);
           setScreenState('client_master_profile');
       } else {
-          setMainTab('bookings');
+          setMainTab('masters');
           resetScreen('profile');
       }
   };
@@ -296,16 +300,27 @@ const AppContent: React.FC = () => {
 
                openClientTarget(dipLinkMasterId, dipLinkBusiness);
            } else {
-               // Новый клиент
-               localStorage.removeItem('is_client_logged_in');
-
-               if (dipLinkMasterId) {
-                   setTargetMasterIdForNewClient(dipLinkMasterId);
+               // Новый клиент: Telegram уже знает, кто это, — регистрируем молча и сразу
+               // открываем нужный экран, без приветственных слайдов и кнопки «Начать работу»
+               const tgUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user || user;
+               try {
+                   await registerClient({
+                       telegram_id: uid,
+                       first_name: tgUser?.first_name || '',
+                       last_name: tgUser?.last_name || '',
+                       username: tgUser?.username || '',
+                       language: lang,
+                   });
+                   localStorage.setItem('is_client_logged_in', 'true');
+                   if (isMounted) openClientTarget(dipLinkMasterId, dipLinkBusiness);
+               } catch (e) {
+                   // Сервер недоступен — показываем приветствие, оттуда можно повторить вход
+                   console.error('Auto registration failed', e);
+                   localStorage.removeItem('is_client_logged_in');
+                   if (dipLinkMasterId) setTargetMasterIdForNewClient(dipLinkMasterId);
+                   if (dipLinkBusiness) setTargetBusinessForNewClient(dipLinkBusiness);
+                   resetScreen('welcome');
                }
-               if (dipLinkBusiness) {
-                   setTargetBusinessForNewClient(dipLinkBusiness);
-               }
-               resetScreen('welcome');
            }
 
        } catch (error) {
@@ -425,7 +440,7 @@ const AppContent: React.FC = () => {
                 setHistory(['profile']);
                 setScreenState('client_master_profile');
             } else {
-                setMainTab('bookings');
+                setMainTab('masters');
                 resetScreen('profile');
             }
           }}
@@ -445,7 +460,8 @@ const AppContent: React.FC = () => {
         <SlotsScreen
           service={selectedService}
           onBack={() => goBack('services')}
-          onSlotSelected={(slot) => { setSelectedSlot(slot); pushScreen('bookingConfirm'); }}
+          user={user}
+          onBooked={(booking) => { setCreatedBooking(booking); resetScreen('bookingDone'); }}
         />
       )}
 
@@ -463,6 +479,7 @@ const AppContent: React.FC = () => {
         <BookingSuccessScreen
            booking={createdBooking}
            onGoHome={resetToStart}
+           onBookMore={() => { resetToStart(); setMainTab('masters'); }}
         />
       )}
 

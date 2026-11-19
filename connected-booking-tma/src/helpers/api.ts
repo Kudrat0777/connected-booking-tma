@@ -71,6 +71,18 @@ export type Booking = {
   master_name: string | null;
   service_name: string | null;
   client_phone?: string;
+  master_info?: {
+    id: number;
+    avatar_url: string;
+    address: string;
+    city: string;
+    phone: string;
+    latitude: number | null;
+    longitude: number | null;
+    business: string;
+    duration: number | null;
+    price: number | null;
+  } | null;
 };
 
 export type CreateBookingPayload = {
@@ -234,6 +246,12 @@ export async function bulkGenerateSlots(
 }
 
 
+export type TodayStatus = {
+  state: 'open' | 'later' | 'closed' | 'day_off' | 'unknown';
+  opens: string | null;   // "10:00"
+  closes: string | null;
+};
+
 export type MasterPublicProfile = {
   id: number;
   name: string;
@@ -246,11 +264,17 @@ export type MasterPublicProfile = {
   address?: string;
   latitude?: number;
   longitude?: number;
+  category?: string;
+  slug?: string;
+  today?: TodayStatus;        // настоящие часы работы сегодня
+  next_free?: string | null;  // ближайшее свободное время (ISO)
+  business?: { name: string; slug: string; kind: 'solo' | 'team' } | null;
 };
 
 export async function fetchMasters(params?: {
   search?: string;
   city?: string;
+  category?: string;
   specialization?: string;
   ordering?: string;
 }): Promise<MasterPublicProfile[]> {
@@ -259,6 +283,7 @@ export async function fetchMasters(params?: {
   if (params) {
     if (params.search) url.searchParams.append('search', params.search);
     if (params.city) url.searchParams.append('city', params.city);
+    if (params.category) url.searchParams.append('category', params.category);
     if (params.specialization) url.searchParams.append('specialization', params.specialization);
     if (params.ordering) url.searchParams.append('ordering', params.ordering);
   }

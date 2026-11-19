@@ -13,6 +13,8 @@ import { Icon28PhoneOutline, Icon28UserCircleOutline } from '@vkontakte/icons';
 import { updateUserProfile, fetchUserProfile, deleteAccount, updateMasterProfile } from '../helpers/api';
 import { useTonConnectUI, useTonWallet } from '@tonconnect/ui-react';
 
+const SHOW_WEB3 = false;
+
 import { useLanguage } from '../helpers/LanguageContext';
 import { LangCode } from '../helpers/translations';
 
@@ -189,7 +191,8 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
               </Section>
 
               {/* ================= WEB 3 ================= */}
-              <Section header={t('web3_title')} footer={t('web3_desc')}>
+              {/* Кошелёк TON пока не работает — не показываем клиентам «скоро» на видном месте */}
+              {SHOW_WEB3 && <Section header={t('web3_title')} footer={t('web3_desc')}>
                 <Cell
                    onClick={handleWalletClick}
                    after={
@@ -213,7 +216,7 @@ export const SettingsScreen: React.FC<Props> = ({ telegramId, onBack, onLogout }
                       </div>
                   </div>
                 </Cell>
-              </Section>
+              </Section>}
 
               {/* ================= ЛИЧНЫЕ ДАННЫЕ ================= */}
               <Section header={t('personal_data')}>

@@ -1,3 +1,4 @@
+import { BRAND } from '../helpers/brand';
 import React, { useState, useEffect, useRef } from 'react';
 import { List, Section, Input, Text, Title } from '@telegram-apps/telegram-ui';
 import { KonnektikSticker } from '../components/Konnektik';
@@ -72,8 +73,8 @@ export const MasterLoginScreen: React.FC<Props> = ({ telegramId, onBack, onCompl
 
     tg.MainButton.setParams({
         text: 'ВОЙТИ',
-        color: tg.themeParams?.button_color || '#3390ec',
-        text_color: tg.themeParams?.button_text_color || '#ffffff',
+        color: BRAND.accent,
+        text_color: BRAND.onAccent,
         is_active: true,
         is_visible: true
     });

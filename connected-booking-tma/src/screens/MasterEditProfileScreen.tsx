@@ -1,3 +1,4 @@
+import { BRAND } from '../helpers/brand';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   List,
@@ -174,8 +175,8 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
 
       tg.MainButton.setParams({
           text: 'СОХРАНИТЬ',
-          color: tg.themeParams?.button_color || '#3390ec',
-          text_color: tg.themeParams?.button_text_color || '#ffffff',
+          color: BRAND.accent,
+          text_color: BRAND.onAccent,
           is_active: true,
           is_visible: true
       });

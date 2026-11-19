@@ -3,8 +3,8 @@
   --tgui--secondary_bg_color: #f1f1f1;
   --tgui--text_color: #000000;
   --tgui--hint_color: #999999;
-  --tgui--button_color: #2481cc;
-  --tgui--button_text_color: #ffffff;
+  --tgui--button_color: #50C878;
+  --tgui--button_text_color: #14261B;
   --tgui--destructive_text_color: #ff3b30;
 }
 
@@ -15,8 +15,8 @@
     --tgui--secondary_bg_color: #000000;
     --tgui--text_color: #ffffff;
     --tgui--hint_color: #8e8e93;
-    --tgui--button_color: #2481cc;
-    --tgui--button_text_color: #ffffff;
+    --tgui--button_color: #50C878;
+    --tgui--button_text_color: #14261B;
   }
 }
 
@@ -41,4 +41,10 @@ body {
 
 #root {
   min-height: 100vh;
+}
+/* Фирменный зелёный Connected для мягких подложек библиотеки Telegram UI
+   (выбранная вкладка, кнопки mode="bezeled"). Библиотека задаёт переменную на своём корневом
+   элементе с хэшированным классом, поэтому переопределяем на всех элементах страницы. */
+#root, #root * {
+  --tgui--secondary_fill: rgba(80, 200, 120, 0.16) !important;
 }

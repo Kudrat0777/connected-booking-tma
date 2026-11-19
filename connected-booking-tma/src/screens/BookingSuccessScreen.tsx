@@ -1,87 +1,54 @@
 import React, { useEffect } from 'react';
-import { Placeholder } from '@telegram-apps/telegram-ui';
-import { Konnektik } from '../components/Konnektik';
+
 import { Booking } from '../helpers/api';
-
-// ИМПОРТИРУЕМ ХУК ЛОКАЛИЗАЦИИ
 import { useLanguage } from '../helpers/LanguageContext';
-
-const LottieSuccess: React.FC<{ size?: number }> = ({ size = 140 }) => (
-  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
-    <Konnektik mood="happy" size={size} />
-  </div>
-);
+import { Konnektik } from '../components/Konnektik';
+import { PrimaryButton, card, money } from '../components/ui';
+import { useWhen } from './ClientHomeScreen';
 
 type Props = {
   booking: Booking;
-  onGoHome: () => void;
+  onGoHome: () => void;        // «К моим записям»
+  onBookMore?: () => void;     // «На главную»
 };
 
-export const BookingSuccessScreen: React.FC<Props> = ({ booking, onGoHome }) => {
-  // ПОДКЛЮЧАЕМ ПЕРЕВОДЫ
-  const { t, lang } = useLanguage();
+export const BookingSuccessScreen: React.FC<Props> = ({ booking, onGoHome, onBookMore }) => {
+  const { t } = useLanguage();
+  const when = useWhen();
 
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
     if (!tg) return;
-
     tg.BackButton.hide();
-    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+    tg.MainButton?.hide();
+    tg.HapticFeedback?.notificationOccurred('success');
+  }, []);
 
-    tg.MainButton.setParams({
-        text: t('btn_to_main'), // ПЕРЕВОД КНОПКИ
-        color: tg.themeParams?.button_color || '#3390ec',
-        text_color: tg.themeParams?.button_text_color || '#ffffff',
-        is_active: true,
-        is_visible: true
-    });
-    tg.MainButton.onClick(onGoHome);
-    tg.MainButton.show();
-
-    return () => {
-      tg.MainButton.offClick(onGoHome);
-      tg.MainButton.hide();
-    };
-  }, [onGoHome, t]);
-
-  const serviceName = booking.service_name || booking.slot?.service?.name || t('service');
-  const masterName = booking.master_name || booking.slot?.service?.master_name || t('specialist');
-
-  const d = new Date(booking.slot?.time || new Date());
-
-  // Форматируем дату в зависимости от выбранного языка
-  const localeForDate = lang === 'uz' ? 'uz-UZ' : (lang === 'en' ? 'en-US' : 'ru-RU');
-
-  const dateStr = d.toLocaleDateString(localeForDate, { day: 'numeric', month: 'long' });
-  const timeStr = d.toLocaleTimeString(localeForDate, { hour: '2-digit', minute: '2-digit', hour12: false });
-
-  // Собираем фразу описания (немного отличается порядок слов для английского)
-  let descriptionText = '';
-  if (lang === 'en') {
-      descriptionText = `${t('waiting_for_you')} ${dateStr} ${t('at_time')} ${timeStr} ${t('with_master')} ${masterName} ${t('for_service')} ${serviceName}.`;
-  } else if (lang === 'uz') {
-      // Sizni 10 May soat 14:00 da usta Master xizmatiga kutamiz
-      descriptionText = `${t('waiting_for_you')} ${dateStr} ${t('at_time')} ${timeStr} ${masterName} ${t('with_master')} ${serviceName} ${t('for_service')}.`;
-  } else {
-      // Ждем вас 10 мая в 14:00 у мастера Name на услугу Service
-      descriptionText = `${t('waiting_for_you')} ${dateStr} ${t('at_time')} ${timeStr} ${t('with_master')} ${masterName} ${t('for_service')} ${serviceName}.`;
-  }
+  const serviceName = booking.service_name || booking.slot?.service?.name || '';
+  const masterName = booking.master_name || booking.slot?.service?.master_name || '';
+  const info = booking.master_info;
+  const pending = booking.status === 'pending';
 
   return (
-    <div style={{
-        backgroundColor: 'var(--tg-theme-bg-color)',
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingBottom: '80px'
-    }}>
-      <Placeholder
-        header={t('success_header')}
-        description={descriptionText}
-      >
-        <LottieSuccess />
-      </Placeholder>
+    <div style={{ backgroundColor: 'var(--tg-theme-secondary-bg-color)', minHeight: '100vh', padding: '40px 16px 32px', color: 'var(--tg-theme-text-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+      <Konnektik mood="happy" size={150} />
+      <div style={{ fontSize: 28, fontWeight: 800, marginTop: 16 }}>{t('success_header')}</div>
+      <div style={{ fontSize: 15, color: 'var(--tg-theme-hint-color)', marginTop: 6, maxWidth: 320 }}>
+        {pending ? t('bs_pending') : t('bs_confirmed')}
+      </div>
+
+      <div style={{ ...card, width: '100%', boxSizing: 'border-box', marginTop: 24, textAlign: 'left' }}>
+        <div style={{ fontSize: 22, fontWeight: 800 }}>{when(booking.slot.time)}</div>
+        <div style={{ fontSize: 15, marginTop: 4 }}>{serviceName}{info?.price ? ` · ${money(info.price)}` : ''}</div>
+        <div style={{ fontSize: 14, color: 'var(--tg-theme-hint-color)', marginTop: 4 }}>
+          {[masterName, info?.business, info?.address].filter(Boolean).join(' · ')}
+        </div>
+      </div>
+
+      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8, marginTop: 'auto', paddingTop: 24 }}>
+        <PrimaryButton onClick={onGoHome}>{t('bs_my_bookings')}</PrimaryButton>
+        {onBookMore && <PrimaryButton variant="soft" onClick={onBookMore}>{t('bs_home')}</PrimaryButton>}
+      </div>
     </div>
   );
 };
