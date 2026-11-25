@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import React, { createContext, useState, useContext, ReactNode } from 'react';
 import { translations, LangCode } from './translations';
 
 type LanguageContextType = {
@@ -9,32 +9,27 @@ type LanguageContextType = {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
+const LANGS: LangCode[] = ['ru', 'uz', 'en'];
+
+// Язык нужен уже при первой отрисовке: с ним же регистрируется новый клиент
+const detectLang = (): LangCode => {
+  // 1. Язык, выбранный вручную в приложении
+  try {
+    const manual = localStorage.getItem('app_manual_lang') as LangCode;
+    if (LANGS.includes(manual)) return manual;
+  } catch { /* приватный режим */ }
+  // 2. Язык Telegram; остальные языки (испанский, немецкий и т. д.) — английский
+  const code = String((window as any).Telegram?.WebApp?.initDataUnsafe?.user?.language_code || '').slice(0, 2) as LangCode;
+  return LANGS.includes(code) ? code : 'en';
+};
+
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Изначально ставим английский, но сразу же в useEffect определим правильный
-  const [lang, setLangState] = useState<LangCode>('en');
-
-  useEffect(() => {
-    // 1. Проверяем, менял ли пользователь язык ВРУЧНУЮ внутри нашего приложения
-    const manualLang = localStorage.getItem('app_manual_lang') as LangCode;
-
-    if (manualLang && ['ru', 'uz', 'en'].includes(manualLang)) {
-        // Если менял вручную - строго используем его
-        setLangState(manualLang);
-    } else {
-        // 2. Если вручную не менял - читаем СВЕЖИЙ язык из Telegram
-        const tg = (window as any).Telegram?.WebApp;
-        const tgLang = tg?.initDataUnsafe?.user?.language_code;
-
-        if (tgLang === 'ru') setLangState('ru');
-        else if (tgLang === 'uz') setLangState('uz');
-        else setLangState('en'); // Все остальные языки (испанский, немецкий и тд) -> английский
-    }
-  }, []);
+  const [lang, setLangState] = useState<LangCode>(detectLang);
 
   // Функция для ручного переключения языка (например, из настроек)
   const setLang = (newLang: LangCode) => {
     setLangState(newLang);
-    // Сохраняе�� флаг, что юзер сам выбрал язык, чтобы больше не слушать Telegram
+    // Сохраняем флаг, что юзер сам выбрал язык, чтобы больше не слушать Telegram
     localStorage.setItem('app_manual_lang', newLang);
   };
 

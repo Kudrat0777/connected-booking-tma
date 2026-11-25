@@ -30,7 +30,7 @@ import { MasterGroupsScreen } from './screens/MasterGroupsScreen';
 import { BusinessPublicScreen } from './screens/BusinessPublicScreen';
 
 import type { Service, Booking } from './helpers/api';
-import { checkClientProfile, registerClient, fetchCurrentMaster, fetchMasterBySlug, fetchBooking, trackVisit } from './helpers/api';
+import { checkClientProfile, registerClient, fetchCurrentMaster, fetchMasterBySlug, fetchBooking, trackVisit, updateUserProfile } from './helpers/api';
 import { REBOOK_SOURCE, parseStartParam, rememberSource } from './helpers/links';
 import { applyBrand } from './helpers/brand';
 import { getUserFromQuery, getStartParam } from './helpers/telegramQueryUser';
@@ -309,6 +309,8 @@ const AppContent: React.FC = () => {
 
            if (profile) {
                // Клиент существует в базе
+               // Бот пишет на языке приложения: исправляем и тех, кому раньше записался не тот язык
+               if (profile.language !== lang) updateUserProfile(uid, { language: lang }).catch(() => {});
                localStorage.setItem('is_client_logged_in', 'true');
 
                if (target?.kind === 'review') await openReviewTarget(target.bookingId);
