@@ -3,7 +3,7 @@ import { Spinner } from '@telegram-apps/telegram-ui';
 
 import type { Booking } from '../helpers/api';
 import { fetchMyBookings, cancelBooking } from '../helpers/api';
-import { MyClass, classLeave, dayLabel, fetchMyClasses } from '../helpers/classes';
+import { MyClass, classLeave, dayLabel, fetchClassHistory, fetchMyClasses } from '../helpers/classes';
 import { useLanguage } from '../helpers/LanguageContext';
 import { ask, tell } from '../components/ClassSchedule';
 import { Konnektik } from '../components/Konnektik';
@@ -49,13 +49,14 @@ export const MyBookingsScreen: React.FC<Props> = ({ telegramId, onGoToServices, 
   const { t, lang } = useLanguage();
   const when = useWhen();
   const [classes, setClasses] = useState<MyClass[]>([]);
+  const [history, setHistory] = useState<MyClass[]>([]);
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [segment, setSegment] = useState<Segment>('upcoming');
   const [busyId, setBusyId] = useState<number | null>(null);
 
   const loadClasses = () => fetchMyClasses().then(setClasses).catch(() => {});
   const load = () => fetchMyBookings(telegramId).then(setBookings).catch(() => setBookings([]));
-  useEffect(() => { load(); loadClasses(); }, [telegramId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); loadClasses(); fetchClassHistory().then(setHistory).catch(() => {}); }, [telegramId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { upcoming, past } = useMemo(() => {
     const now = Date.now();
@@ -70,6 +71,12 @@ export const MyBookingsScreen: React.FC<Props> = ({ telegramId, onGoToServices, 
     pa.sort((a, b) => +new Date(b.slot.time) - +new Date(a.slot.time));
     return { upcoming: up, past: pa };
   }, [bookings]);
+
+  // Личные записи и занятия в группах — одним списком, сначала последние
+  const pastItems = useMemo(() => [
+    ...past.map((b) => ({ time: +new Date(b.slot.time), b, c: null })),
+    ...history.map((c) => ({ time: +new Date(c.start), b: null, c })),
+  ].sort((x, y) => y.time - x.time), [past, history]);
 
   const confirmAsk = (msg: string) => new Promise<boolean>((resolve) => {
     const w = tg();
@@ -235,11 +242,27 @@ export const MyBookingsScreen: React.FC<Props> = ({ telegramId, onGoToServices, 
       )}
 
       {segment === 'past' && (
-        past.length === 0 ? (
+        pastItems.length === 0 ? (
           <Empty title={t('mb_past_empty')} text="" action={t('mb_book')} onAction={onGoToServices} />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
-            {past.map((b) => (
+            {pastItems.map(({ b, c }) => (c ? (
+              <div key={`c${c.group}-${c.date}`} style={{ ...card, display: 'flex', alignItems: 'center', gap: 12 }}>
+                <Avatar src={c.avatar_url} name={c.master_name} size={44} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.program || c.group_name}</div>
+                  <div style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)' }}>
+                    {[when(c.start), c.program && c.group_name, c.master_name].filter(Boolean).join(' · ')}
+                  </div>
+                  {onOpenMaster && (
+                    <button type="button" onClick={() => onOpenMaster(c.master, c.master_name)}
+                      style={{ marginTop: 6, padding: 0, border: 'none', background: 'none', cursor: 'pointer', color: 'var(--brand-ink)', fontSize: 13, fontWeight: 600, fontFamily: 'inherit' }}>
+                      ↻ {t('mb_again')}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : b && (
               <div key={b.id} style={{ ...card, display: 'flex', alignItems: 'center', gap: 12, opacity: b.status === 'rejected' ? 0.65 : 1 }}>
                 <Avatar src={b.master_info?.avatar_url} name={b.master_name || '?'} size={44} />
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -264,7 +287,7 @@ export const MyBookingsScreen: React.FC<Props> = ({ telegramId, onGoToServices, 
                   </div>
                 </div>
               </div>
-            ))}
+            )))}
           </div>
         )
       )}
