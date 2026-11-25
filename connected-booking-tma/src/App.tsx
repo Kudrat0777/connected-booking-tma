@@ -145,7 +145,7 @@ const AppContent: React.FC = () => {
 
   const [isAppLoading, setIsAppLoading] = useState(true);
   const [screen, setScreenState] = useState<Screen>('welcome');
-  const [history, setHistory] = useState<Screen[]>([]);
+  const [, setHistory] = useState<Screen[]>([]);
   const [mainTab, setMainTab] = useState<MainTab>('masters');
 
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -494,7 +494,6 @@ const AppContent: React.FC = () => {
       {/* MASTER SCREENS */}
       {screen === 'master_welcome' && (
         <MasterWelcomeScreen
-          onStart={() => {}}
           onLogin={async () => {
               localStorage.removeItem('is_master_logged_out');
               if (await loadCurrentMaster()) resetScreen('master_dashboard');

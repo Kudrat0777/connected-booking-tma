@@ -15,7 +15,7 @@ type Props = {
   telegramId: number;
   initialTab?: MainTab;
   onBack: () => void;
-  onLogout?: () => void;
+  onLogout: () => void;
   onOpenMasterProfile?: (masterId: number, masterName: string) => void;
   onReview?: (booking: Booking) => void;
 };

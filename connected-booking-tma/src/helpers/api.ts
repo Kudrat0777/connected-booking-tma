@@ -487,9 +487,6 @@ export async function deletePortfolioPhoto(photoId: number) {
 }
 
 
-export async function fetchMasterSlots(telegramId: number, date: string): Promise<Slot[]> {
-  return [];
-}
 
 // slot: готовый слот (id) или время по графику ({ serviceId, time });
 // clientKey — «Записать снова» из базы клиентов (имя и телефон берутся из истории)

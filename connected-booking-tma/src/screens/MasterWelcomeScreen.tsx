@@ -15,7 +15,6 @@ import { Konnektik, moodForSticker } from '../components/Konnektik';
 import { useLanguage } from '../helpers/LanguageContext';
 
 type Props = {
-  onStart: () => void;
   onLogin?: () => void;
   onRegister: () => void;
 };
@@ -30,7 +29,6 @@ const SWIPE_THRESHOLD = 40;
 const AUTO_SLIDE_INTERVAL = 5000;
 
 export const MasterWelcomeScreen: React.FC<Props> = ({
-  onStart,
   onLogin,
   onRegister, // <--- ОБЯЗАТЕЛЬНО: добавлено сюда, иначе приложение упадет!
 }) => {
