@@ -40,6 +40,7 @@ async function call<T>(path: string, method = 'GET', body?: unknown): Promise<T>
 
 export const fetchClassSchedule = (master: number, days = 31) => call<ClassSchedule>(`classes/schedule/?master=${master}&days=${days}`);
 export const fetchMyClasses = () => call<MyClass[]>('classes/my/');
+export const fetchClassHistory = () => call<MyClass[]>('classes/history/');
 export const classSignup = (group: number, date: string) =>
   call<{ status: 'active' | 'waiting' }>('classes/signup/', 'POST', { group, date, source: currentSource() });
 export const classLeave = (group: number, date: string) => call('classes/leave/', 'POST', { group, date });
