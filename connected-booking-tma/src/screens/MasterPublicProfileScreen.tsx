@@ -11,6 +11,7 @@ import { Konnektik } from '../components/Konnektik';
 import { formatPhone } from '../helpers/phone';
 import type { MasterPublicProfile, PortfolioItem, Service } from '../helpers/api';
 import { ReviewsListScreen } from './ReviewsListScreen';
+import { ClassSchedule } from '../components/ClassSchedule';
 import { PhotoGallery } from '../components/PhotoGallery';
 
 // ИМПОРТИРУЕМ ХУК ЛОКАЛИЗАЦИИ
@@ -32,6 +33,7 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
   const [master, setMaster] = useState<MasterPublicProfile | null>(null);
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [hasClasses, setHasClasses] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -229,8 +231,11 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '16px 16px 0' }}>
+        {/* Групповые занятия (йога, фитнес) */}
+        <ClassSchedule masterId={master.id} onLoaded={setHasClasses} />
+
         {/* Услуг нет — честно говорим, а не ведём на пустую страницу */}
-        {services.length === 0 && (
+        {services.length === 0 && !hasClasses && (
           <div style={{ ...card, display: 'flex', alignItems: 'center', gap: 12 }}>
             <Konnektik mood="think" size={64} />
             <div>

@@ -13,6 +13,9 @@ import { Konnektik } from '../components/Konnektik';
 import { Avatar, Badge, PrimaryButton, Sheet, card, localeFor, money, tashkent } from '../components/ui';
 import { ManualBookingSheet, ServiceSheet } from '../components/MasterSheets';
 import { MasterProfileTab } from '../components/MasterProfileTab';
+import { ClassManage, ClassSession, fetchClassManage, setSessionCanceled } from '../helpers/classes';
+import { ask, tell } from '../components/ClassSchedule';
+import { Roster } from './MasterGroupsScreen';
 import { useWhen } from './ClientHomeScreen';
 
 type Props = {
@@ -27,6 +30,7 @@ type Props = {
   onOpenTeam?: () => void;
   onOpenSalonCalendar?: () => void;
   onOpenClients?: () => void;
+  onOpenGroups?: () => void;
 };
 
 type Tab = 'bookings' | 'services' | 'profile';
@@ -53,6 +57,10 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
   const [todayStats, setTodayStats] = useState<{ count: number; money: number } | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
 
+  const [classData, setClassData] = useState<ClassManage | null>(null);
+  const [classOpen, setClassOpen] = useState<{ date: string; session: ClassSession } | null>(null);
+  const [classBusy, setClassBusy] = useState(false);
+
   const [services, setServices] = useState<Service[] | null>(null);
   const [serviceSheet, setServiceSheet] = useState<Service | 'new' | null>(null);
   const [manualOpen, setManualOpen] = useState(false);
@@ -68,6 +76,7 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
 
   const loadBookings = useCallback(() => {
     setBookings(null);
+    fetchClassManage().then(setClassData).catch(() => {});
     fetchMasterBookings(telegramId, period as any)
       .then((d) => setBookings((d.items || []).filter((b: Booking) => b.status !== 'rejected')))
       .catch(() => setBookings([]));
@@ -123,6 +132,40 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
     Object.values(g).forEach((list) => list.sort((a, b) => +new Date(a.slot.time) - +new Date(b.slot.time)));
     return g;
   }, [bookings]);
+
+  // Групповые занятия по дням; в «Все» — только те, куда кто-то записан
+  const classesByDay = useMemo(() => {
+    const shift = (n: number) => {
+      const d = new Date(`${tashkent.today()}T12:00:00Z`);
+      d.setUTCDate(d.getUTCDate() + n);
+      return d.toISOString().slice(0, 10);
+    };
+    const [from, to] = period === 'today' ? [shift(0), shift(0)] : period === 'tomorrow' ? [shift(1), shift(1)]
+      : period === 'week' ? [shift(0), shift(6)] : [shift(0), shift(31)];
+    const out: Record<string, ClassSession[]> = {};
+    (classData?.days || []).forEach((d) => {
+      if (d.date < from || d.date > to) return;
+      const list = d.sessions.filter((s) => period !== 'all' || s.taken + s.waiting > 0);
+      if (list.length) out[d.date] = list;
+    });
+    return out;
+  }, [classData, period]);
+  const dayKeys = [...new Set([...Object.keys(grouped), ...Object.keys(classesByDay)])].sort();
+  const classesToday = (classData?.days.find((d) => d.date === tashkent.today())?.sessions || [])
+    .reduce((n, s) => n + s.taken, 0);
+
+  const toggleClass = async (canceled: boolean) => {
+    if (!classOpen || classBusy) return;
+    const { date, session } = classOpen;
+    if (canceled && !(await ask(fill(t('gc_cancel_session_q'), { n: session.taken + session.waiting })))) return;
+    setClassBusy(true);
+    try {
+      setClassData(await setSessionCanceled(session.group, date, canceled));
+      setClassOpen(null);
+    } catch (e: any) {
+      tell(lang === 'ru' && e?.message ? e.message : t('gc_err'));
+    } finally { setClassBusy(false); }
+  };
 
   const dayTitle = (d: string) => {
     if (d === tashkent.today()) return t('cal_today_full');
@@ -185,7 +228,7 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
 
       {/* Сводка дня */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 16 }}>
-        <Stat label={t('md_today')} value={todayStats ? String(todayStats.count) : '…'} />
+        <Stat label={t('md_today')} value={todayStats ? String(todayStats.count + classesToday) : '…'} />
         <Stat label={t('md_waiting')} value={String(pending.length)} warn={pending.length > 0} />
         <Stat label={t('md_today_money')} value={todayStats ? new Intl.NumberFormat(localeFor(lang), { notation: 'compact', maximumFractionDigits: 1 }).format(todayStats.money) : '…'} />
       </div>
@@ -229,7 +272,7 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
 
       {bookings === null ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><Spinner size="l" /></div>
-      ) : bookings.length === 0 ? (
+      ) : dayKeys.length === 0 ? (
         <div style={{ ...card, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: 24, marginTop: 14 }}>
           <Konnektik mood="think" size={110} />
           <div style={{ fontWeight: 700, marginTop: 10 }}>{t('md_empty')}</div>
@@ -237,13 +280,30 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
           <PrimaryButton variant="soft" onClick={props.onOpenLinks}>{t('prof_links')}</PrimaryButton>
         </div>
       ) : (
-        Object.keys(grouped).sort().map((d) => (
+        dayKeys.map((d) => (
           <div key={d}>
             <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--tg-theme-hint-color)', textTransform: 'uppercase', margin: '18px 4px 8px' }}>
-              {dayTitle(d)} · {pluralize(lang, grouped[d].length, t('p_bookings'))}
+              {dayTitle(d)} · {pluralize(lang, (grouped[d]?.length || 0) + (classesByDay[d] || []).reduce((n, s) => n + s.taken, 0), t('p_bookings'))}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {grouped[d].map((b) => <BookingCard key={b.id} b={b} />)}
+              {(classesByDay[d] || []).map((s) => (
+                <button key={`c${s.group}`} type="button" onClick={() => setClassOpen({ date: d, session: s })} style={{
+                  ...card, display: 'flex', alignItems: 'center', gap: 12, width: '100%', border: 'none', cursor: 'pointer',
+                  textAlign: 'left', color: 'var(--tg-theme-text-color)', fontFamily: 'inherit', fontSize: 15,
+                }}>
+                  <span style={{ width: 48, flex: '0 0 auto', textAlign: 'center', fontSize: 17, fontWeight: 800 }}>{tashkent.time(s.start)}</span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: 'block', fontWeight: 700 }}>{s.name}</span>
+                    <span style={{ display: 'block', fontSize: 13, color: 'var(--tg-theme-hint-color)' }}>
+                      {fill(t('gc_signed'), { n: s.taken })}{s.capacity != null ? ` / ${s.capacity}` : ''}
+                      {s.waiting > 0 ? ` · ${fill(t('gc_waiting'), { n: s.waiting })}` : ''}
+                    </span>
+                  </span>
+                  {s.state === 'canceled' && <Badge tone="off">{t('gc_canceled')}</Badge>}
+                  <span aria-hidden="true">›</span>
+                </button>
+              ))}
+              {(grouped[d] || []).map((b) => <BookingCard key={b.id} b={b} />)}
             </div>
           </div>
         ))
@@ -308,6 +368,7 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
             onOpenTeam={props.onOpenTeam}
             onOpenSalonCalendar={props.onOpenSalonCalendar}
             onOpenClients={props.onOpenClients}
+            onOpenGroups={props.onOpenGroups}
             onSwitchToClient={props.onSwitchToClient}
             onLogoutClick={handleLogout}
             onDeleteAccount={handleDeleteAccount}
@@ -315,12 +376,19 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
         )}
       </main>
 
-      {!(serviceSheet || manualOpen || newClient) && (
+      {!(serviceSheet || manualOpen || newClient || classOpen) && (
       <Tabbar style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 100 }}>
         <Tabbar.Item text={t('md_tab_bookings')} selected={tab === 'bookings'} onClick={() => setTab('bookings')}><Icon28CalendarOutline /></Tabbar.Item>
         <Tabbar.Item text={t('m_tab_services')} selected={tab === 'services'} onClick={() => setTab('services')}><Icon28ServicesOutline /></Tabbar.Item>
         <Tabbar.Item text={t('tab_profile')} selected={tab === 'profile'} onClick={() => setTab('profile')}><Icon28UserCircleOutline /></Tabbar.Item>
       </Tabbar>
+      )}
+
+      {classOpen && (
+        <Sheet onClose={() => setClassOpen(null)}>
+          <Roster date={classOpen.date} session={classOpen.session} busy={classBusy}
+            onCancel={() => toggleClass(true)} onRestore={() => toggleClass(false)} />
+        </Sheet>
       )}
 
       {manualOpen && (

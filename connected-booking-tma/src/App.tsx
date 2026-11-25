@@ -26,6 +26,7 @@ import { MasterPublicProfileScreen } from './screens/MasterPublicProfileScreen';
 import { MasterRegistrationScreen } from './screens/MasterRegistrationScreen';
 import { MasterLinksScreen } from './screens/MasterLinksScreen';
 import { MasterTeamScreen } from './screens/MasterTeamScreen';
+import { MasterGroupsScreen } from './screens/MasterGroupsScreen';
 import { BusinessPublicScreen } from './screens/BusinessPublicScreen';
 
 import type { Service, Booking } from './helpers/api';
@@ -77,7 +78,7 @@ type Screen =
   | 'master_schedule' | 'master_edit_profile' | 'master_analytics'
   | 'master_reviews' | 'client_master_profile'
   | 'master_links' | 'master_team' | 'client_business' | 'master_member_schedule'
-  | 'salon_calendar' | 'client_any_master' | 'master_clients' | 'master_client_detail';
+  | 'master_groups' | 'salon_calendar' | 'client_any_master' | 'master_clients' | 'master_client_detail';
 
 type MainTab = 'bookings' | 'masters' | 'settings';
 
@@ -545,8 +546,11 @@ const AppContent: React.FC = () => {
           onOpenTeam={() => pushScreen('master_team')}
           onOpenSalonCalendar={() => pushScreen('salon_calendar')}
           onOpenClients={() => pushScreen('master_clients')}
+          onOpenGroups={() => pushScreen('master_groups')}
         />
       )}
+
+      {screen === 'master_groups' && <MasterGroupsScreen onBack={() => goBack('master_dashboard')} />}
 
       {screen === 'master_clients' && (
         <MasterClientsScreen

@@ -2,10 +2,12 @@
 // Подмешиваются в общий словарь в translations.ts.
 // Подстановки — {name}; множественное число — формы через «|» (см. pluralize).
 
+import { classTranslations } from './translationsClasses';
 import type { LangCode } from './translations';
 
 export const businessTranslations: Record<LangCode, Record<string, string>> = {
   ru: {
+    ...classTranslations.ru,
     cat_0: 'Барбершоп',
     cat_1: 'Салон красоты',
     cat_2: 'Массаж',
@@ -490,6 +492,7 @@ export const businessTranslations: Record<LangCode, Record<string, string>> = {
   },
 
   uz: {
+    ...classTranslations.uz,
     cat_0: 'Barbershop',
     cat_1: "Go'zallik saloni",
     cat_2: 'Massaj',
@@ -963,6 +966,7 @@ export const businessTranslations: Record<LangCode, Record<string, string>> = {
   },
 
   en: {
+    ...classTranslations.en,
     cat_0: 'Barbershop',
     cat_1: 'Beauty salon',
     cat_2: 'Massage',

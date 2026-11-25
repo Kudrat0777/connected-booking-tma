@@ -17,6 +17,7 @@ type Props = {
   onOpenTeam?: () => void;
   onOpenSalonCalendar?: () => void;
   onOpenClients?: () => void;
+  onOpenGroups?: () => void;
   onSwitchToClient: () => void;
   onLogoutClick: () => void;
   onDeleteAccount: () => void;
@@ -43,6 +44,7 @@ export const MasterProfileTab: React.FC<Props> = (p) => {
     { emoji: '🔗', title: t('prof_links'), hint: t('mp_tile_links'), onClick: p.onOpenLinks, show: true },
     { emoji: '👥', title: t('prof_clients'), hint: t('mp_tile_clients'), onClick: p.onOpenClients, show: true },
     { emoji: '📊', title: t('m_statistics'), hint: t('mp_tile_stats'), onClick: p.onOpenAnalytics, show: true },
+    { emoji: '🧘', title: t('gc_manage'), hint: t('gc_manage_hint'), onClick: p.onOpenGroups, show: true },
     { emoji: '🏠', title: t('prof_calendar'), hint: t('prof_calendar_desc'), onClick: p.onOpenSalonCalendar, show: isTeam },
     { emoji: '🤝', title: t('prof_team'), hint: canManage ? t('prof_team_desc_manage') : t('prof_team_desc'), onClick: p.onOpenTeam, show: isTeam || canManage },
   ];
