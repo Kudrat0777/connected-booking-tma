@@ -715,6 +715,7 @@ export type CurrentMaster = MasterPublicProfile & {
   slug: string;
   role: MasterRole;
   category: string;
+  language?: string;
   experience_years: number;
   business: BusinessShort | null;
 };
