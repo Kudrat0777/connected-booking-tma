@@ -65,7 +65,7 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
             masterData = await fetchMasterById(masterId);
         }
 
-        if (!masterData || masterData.detail === "Not found.") {
+        if (!masterData?.id) {
            setError(true);
            return;
         }
