@@ -4,7 +4,7 @@ import { Icon28CalendarOutline, Icon28ServicesOutline, Icon28UserCircleOutline }
 
 import {
   confirmBooking, deleteAccount, fetchCurrentMaster, fetchMasterBookings, fetchMyServices,
-  rejectBooking, Booking, CurrentMaster, Service,
+  rejectBooking, updateMasterProfile, Booking, CurrentMaster, Service,
 } from '../helpers/api';
 import { useLanguage } from '../helpers/LanguageContext';
 import { fill, pluralize } from '../helpers/translationsBusiness';
@@ -73,6 +73,15 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
   }, [tab]);
 
   useEffect(() => { fetchCurrentMaster().then(setMe).catch(() => {}); }, []);
+
+  // Бот мастера пишет на языке кабинета: сохраняем и смену языка, и прежнее расхождение
+  const savedLang = me?.language;
+  useEffect(() => {
+    if (!savedLang || savedLang === lang) return;
+    updateMasterProfile(telegramId, { language: lang })
+      .then(() => setMe((m) => (m ? { ...m, language: lang } : m)))
+      .catch(() => {});
+  }, [savedLang, lang, telegramId]);
 
   const loadBookings = useCallback(() => {
     setBookings(null);
