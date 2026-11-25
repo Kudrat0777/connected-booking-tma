@@ -193,6 +193,16 @@ export const MasterGroupsScreen: React.FC<{ onBack: () => void }> = ({ onBack })
         </div>
       )}
 
+      {tab === 'groups' && data.groups.length > 0 && (
+        <div style={{ ...card, display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
+          <div style={{ flex: 1 }}>
+            <b>{t('gc_notify')}</b>
+            <div style={{ ...hint, marginTop: 2 }}>{t('gc_notify_hint')}</div>
+          </div>
+          <Switch on={data.notify_signups} label={t('gc_notify')} onChange={(v) => run(() => saveClassOptions({ notify_signups: v }))} />
+        </div>
+      )}
+
       {editor && (
         <Sheet onClose={() => setEditor(null)}>
           {editor.kind === 'group' && (

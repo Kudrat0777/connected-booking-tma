@@ -162,6 +162,8 @@ const AppContent: React.FC = () => {
   const [businessName, setBusinessName] = useState('');
   const [clientKey, setClientKey] = useState<string | null>(null);
   const [targetBusinessForNewClient, setTargetBusinessForNewClient] = useState<string | null>(null);
+  // Занятие, список которого мастер открыл кнопкой из бота
+  const [classTarget, setClassTarget] = useState<{ group: number; date: string } | null>(null);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   // Владелец/админ редактирует график мастера своей команды
   const [scheduleMasterId, setScheduleMasterId] = useState<number | null>(null);
@@ -291,6 +293,7 @@ const AppContent: React.FC = () => {
                const loggedOut = localStorage.getItem('is_master_logged_out') === 'true';
                const isMasterLoaded = !loggedOut && await loadCurrentMaster();
                if (isMounted) {
+                   if (target?.kind === 'class') setClassTarget({ group: target.group, date: target.date });
                    resetScreen(isMasterLoaded ? 'master_dashboard' : 'master_welcome');
                    setIsAppLoading(false);
                }
@@ -537,6 +540,8 @@ const AppContent: React.FC = () => {
       {screen === 'master_dashboard' && user && (
         <MasterDashboardScreen
           telegramId={user.id}
+          classTarget={classTarget}
+          onClassTargetOpened={() => setClassTarget(null)}
           onSwitchToClient={() => { resetScreen('profile'); }}
           onOpenSchedule={() => pushScreen('master_schedule')}
           onEditProfile={() => { loadCurrentMaster(user.id); pushScreen('master_edit_profile'); }}

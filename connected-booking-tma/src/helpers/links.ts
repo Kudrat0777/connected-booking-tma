@@ -47,6 +47,7 @@ export type StartTarget =
   | { kind: 'join'; code: string }
   | { kind: 'review'; bookingId: number }
   | { kind: 'rebook'; bookingId: number }
+  | { kind: 'class'; group: number; date: string }
   | null;
 
 export function parseStartParam(raw: string | null | undefined): StartTarget {
@@ -65,6 +66,9 @@ export function parseStartParam(raw: string | null | undefined): StartTarget {
     const id = parseInt(raw.slice('rebook_'.length), 10);
     return Number.isFinite(id) ? { kind: 'rebook', bookingId: id } : null;
   }
+  // Кнопка «Список записанных» из бота мастеров
+  const cls = raw.match(/^class_(\d+)_(\d{4}-\d{2}-\d{2})$/);
+  if (cls) return { kind: 'class', group: Number(cls[1]), date: cls[2] };
   if (raw.startsWith('join_')) {
     const code = raw.slice('join_'.length);
     return code ? { kind: 'join', code } : null;
