@@ -1,7 +1,7 @@
 // Работы мастера на весь экран: сетка «Все работы» и просмотр по одной с перелистыванием.
 // Управляется снаружи: index = null — сетка, число — открыта эта фотография.
 // Кнопку «Назад» Telegram обрабатывает экран-владелец (см. MasterPublicProfileScreen).
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 import { getFullImageUrl } from '../helpers/api';
 import { useLanguage } from '../helpers/LanguageContext';
@@ -26,9 +26,7 @@ const haptic = () => (window as any).Telegram?.WebApp?.HapticFeedback?.selection
 export const PhotoGallery: React.FC<Props> = ({ photos, title, index, onIndex, onClose }) => {
   const { t } = useLanguage();
   const n = photos.length;
-  // Адрес считаем один раз: getFullImageUrl добавляет ?t=…, и без этого фото скачивались бы заново при каждом пролистывании
-  const key = photos.join('|');
-  const urls = useMemo(() => photos.map((p) => getFullImageUrl(p) || ''), [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const urls = photos.map((p) => getFullImageUrl(p) || '');
   const touchX = useRef<number | null>(null);
 
   const go = (d: number) => {

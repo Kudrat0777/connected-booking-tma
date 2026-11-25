@@ -627,9 +627,8 @@ export const getFullImageUrl = (path?: string | null): string | undefined => {
   // Если это наша картинка из /media/, добавляем слэш, если нужно
   cleanPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
 
-  // === ХАК ДЛЯ ZROK ===
-  // Добавляем случайный параметр (timestamp) в конец ссылки.
-  return `${origin}${cleanPath}?t=${new Date().getTime()}`;
+  // Без «?t=…»: у каждого загруженного файла своё имя, поэтому браузер может спокойно брать картинку из кэша
+  return `${origin}${cleanPath}`;
 };
 
 
