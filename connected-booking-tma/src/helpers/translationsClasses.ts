@@ -78,6 +78,8 @@ export const classTranslations: Record<LangCode, Record<string, string>> = {
     gc_by_week: "Раз в неделю",
     gc_push: "Присылать программу подписчикам",
     gc_push_hint: "Накануне после 20:00, об особом занятии ещё и за два дня. Подписчиков: {n}",
+    gc_notify: "Сообщать мне о записях",
+    gc_notify_hint: "Бот напишет, когда ученик записался, отменил или перешёл в другую группу",
     gc_student: "Ученик",
   },
   uz: {
@@ -156,6 +158,8 @@ export const classTranslations: Record<LangCode, Record<string, string>> = {
     gc_by_week: "Haftada bir",
     gc_push: "Obunachilarga dastur yuborish",
     gc_push_hint: "Bir kun oldin 20:00 dan keyin, maxsus mashg'ulot haqida ikki kun oldin ham. Obunachilar: {n}",
+    gc_notify: "Yozuvlar haqida xabar berish",
+    gc_notify_hint: "O'quvchi yozilganda, bekor qilganda yoki boshqa guruhga o'tganda bot yozadi",
     gc_student: "O'quvchi",
   },
   en: {
@@ -234,6 +238,8 @@ export const classTranslations: Record<LangCode, Record<string, string>> = {
     gc_by_week: "Once a week",
     gc_push: "Send the program to subscribers",
     gc_push_hint: "The evening before after 20:00, special classes also two days ahead. Subscribers: {n}",
+    gc_notify: "Tell me about bookings",
+    gc_notify_hint: "The bot messages you when a student books, cancels or moves to another group",
     gc_student: "Student",
   },
 };

@@ -31,6 +31,8 @@ type Props = {
   onOpenSalonCalendar?: () => void;
   onOpenClients?: () => void;
   onOpenGroups?: () => void;
+  classTarget?: { group: number; date: string } | null;
+  onClassTargetOpened?: () => void;
 };
 
 type Tab = 'bookings' | 'services' | 'profile';
@@ -162,6 +164,16 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
   const dayKeys = [...new Set([...Object.keys(grouped), ...Object.keys(classesByDay)])].sort();
   const classesToday = (classData?.days.find((d) => d.date === tashkent.today())?.sessions || [])
     .reduce((n, s) => n + s.taken, 0);
+
+  // Пришли по кнопке из бота: сразу открываем список этого занятия
+  const { classTarget, onClassTargetOpened } = props;
+  useEffect(() => {
+    if (!classTarget || !classData) return;
+    const session = classData.days.find((d) => d.date === classTarget.date)?.sessions
+      .find((s) => s.group === classTarget.group);
+    if (session) setClassOpen({ date: classTarget.date, session });
+    onClassTargetOpened?.();
+  }, [classTarget, classData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleClass = async (canceled: boolean) => {
     if (!classOpen || classBusy) return;

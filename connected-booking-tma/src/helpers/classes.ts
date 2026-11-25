@@ -25,7 +25,7 @@ export type ClassProgram = { title: string; description: string };
 export type ClassRule = { kind: 'weekly' | 'last'; weekday: number; title: string; description: string };
 export type ClassManage = {
   groups: ClassGroup[]; programs: ClassProgram[]; rules: ClassRule[]; advance: 'day' | 'week';
-  push_enabled: boolean; next_index: number; subscribers: number; days: ClassDay[];
+  push_enabled: boolean; notify_signups: boolean; next_index: number; subscribers: number; days: ClassDay[];
 };
 export type RosterRow = { id: number; name: string; status: 'active' | 'waiting'; username: string; phone: string };
 
@@ -53,7 +53,7 @@ export const deleteGroup = (id: number) => call<ClassManage>(`class-manage/${id}
 export const savePrograms = (programs: ClassProgram[], next_index?: number) =>
   call<ClassManage>('class-manage/programs/', 'PUT', { programs, next_index });
 export const saveRules = (rules: ClassRule[]) => call<ClassManage>('class-manage/rules/', 'PUT', { rules });
-export const saveClassOptions = (o: { advance?: 'day' | 'week'; push_enabled?: boolean }) =>
+export const saveClassOptions = (o: { advance?: 'day' | 'week'; push_enabled?: boolean; notify_signups?: boolean }) =>
   call<ClassManage>('class-manage/options/', 'POST', o);
 export const fetchRoster = (group: number, date: string) => call<RosterRow[]>(`class-manage/${group}/roster/?date=${date}`);
 export const setSessionCanceled = (group: number, date: string, canceled: boolean) =>
