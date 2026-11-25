@@ -3,9 +3,11 @@ import { Spinner } from '@telegram-apps/telegram-ui';
 
 import type { Booking } from '../helpers/api';
 import { fetchMyBookings, cancelBooking } from '../helpers/api';
+import { MyClass, classLeave, dayLabel, fetchMyClasses } from '../helpers/classes';
 import { useLanguage } from '../helpers/LanguageContext';
+import { ask, tell } from '../components/ClassSchedule';
 import { Konnektik } from '../components/Konnektik';
-import { Avatar, Badge, PrimaryButton, card, money } from '../components/ui';
+import { Avatar, Badge, PrimaryButton, card, localeFor, money, tashkent } from '../components/ui';
 import { useWhen } from './ClientHomeScreen';
 
 type Props = {
@@ -44,14 +46,16 @@ const StatusBadge: React.FC<{ status: Booking['status']; past?: boolean }> = ({ 
 };
 
 export const MyBookingsScreen: React.FC<Props> = ({ telegramId, onGoToServices, onReview, onOpenMaster }) => {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const when = useWhen();
+  const [classes, setClasses] = useState<MyClass[]>([]);
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [segment, setSegment] = useState<Segment>('upcoming');
   const [busyId, setBusyId] = useState<number | null>(null);
 
+  const loadClasses = () => fetchMyClasses().then(setClasses).catch(() => {});
   const load = () => fetchMyBookings(telegramId).then(setBookings).catch(() => setBookings([]));
-  useEffect(() => { load(); }, [telegramId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); loadClasses(); }, [telegramId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { upcoming, past } = useMemo(() => {
     const now = Date.now();
@@ -90,6 +94,17 @@ export const MyBookingsScreen: React.FC<Props> = ({ telegramId, onGoToServices, 
     }
   };
 
+  const leaveClass = async (c: MyClass) => {
+    if (!(await ask(t('gc_leave_q')))) return;
+    try {
+      await classLeave(c.group, c.date);
+      tg()?.HapticFeedback?.notificationOccurred('success');
+    } catch (e: any) {
+      tell(lang === 'ru' && e?.message ? e.message : t('gc_err'));
+    }
+    loadClasses();
+  };
+
   if (bookings === null) {
     return <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><Spinner size="l" /></div>;
   }
@@ -110,11 +125,43 @@ export const MyBookingsScreen: React.FC<Props> = ({ telegramId, onGoToServices, 
       <div style={{ fontSize: 26, fontWeight: 800 }}>{t('mb_title')}</div>
 
       <div style={{ display: 'flex', gap: 4, padding: 4, borderRadius: 12, marginTop: 14, backgroundColor: 'rgba(127,127,127,0.12)' }}>
-        {tabBtn('upcoming', t('tab_upcoming'), upcoming.length)}
+        {tabBtn('upcoming', t('tab_upcoming'), upcoming.length + classes.length)}
         {tabBtn('past', t('tab_past'), 0)}
       </div>
 
-      {segment === 'upcoming' && (
+      {segment === 'upcoming' && classes.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
+          {classes.map((c) => (
+            <div key={`${c.group}-${c.date}`} style={card}>
+              <button type="button" onClick={() => onOpenMaster?.(c.master, c.master_name)} style={{
+                display: 'flex', alignItems: 'center', gap: 12, width: '100%', border: 'none', background: 'none', padding: 0,
+                cursor: 'pointer', textAlign: 'left', color: 'inherit', fontFamily: 'inherit',
+              }}>
+                <Avatar src={c.avatar_url} name={c.master_name} size={44} />
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: 'block', fontWeight: 700 }}>
+                    {dayLabel(c.date, localeFor(lang), { weekday: 'short', day: 'numeric', month: 'short' })}, {tashkent.time(c.start)}
+                  </span>
+                  <span style={{ display: 'block', fontSize: 13, color: 'var(--tg-theme-hint-color)' }}>
+                    {[c.program, c.group_name, c.master_name].filter(Boolean).join(' · ')}
+                  </span>
+                  {c.address && <span style={{ display: 'block', fontSize: 13, color: 'var(--tg-theme-hint-color)' }}>📍 {c.address}</span>}
+                </span>
+                <span aria-hidden="true">›</span>
+              </button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                <Badge tone={c.status === 'active' ? 'ok' : 'wait'}>{t(c.status === 'active' ? 'gc_you_in' : 'gc_you_wait')}</Badge>
+                <button type="button" onClick={() => leaveClass(c)}
+                  style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', color: 'var(--tg-theme-hint-color)', fontSize: 14, fontFamily: 'inherit' }}>
+                  {t('gc_leave')}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {segment === 'upcoming' && (upcoming.length > 0 || classes.length === 0) && (
         upcoming.length === 0 ? (
           <Empty title={t('mb_empty_title')} text={t('mb_empty_text')} action={t('mb_book')} onAction={onGoToServices} />
         ) : (

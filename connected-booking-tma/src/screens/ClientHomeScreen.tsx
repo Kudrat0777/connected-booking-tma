@@ -3,6 +3,7 @@ import { Spinner } from '@telegram-apps/telegram-ui';
 import { Icon24Search } from '@vkontakte/icons';
 
 import { fetchMasters, fetchMyBookings, Booking, MasterPublicProfile } from '../helpers/api';
+import { MyClass, fetchMyClasses } from '../helpers/classes';
 import { useLanguage } from '../helpers/LanguageContext';
 import { fill } from '../helpers/translationsBusiness';
 import { Konnektik } from '../components/Konnektik';
@@ -75,6 +76,7 @@ export const ClientHomeScreen: React.FC<Props> = ({ telegramId, firstName, onOpe
   const when = useWhen();
   const [masters, setMasters] = useState<MasterPublicProfile[] | null>(null);
   const [next, setNext] = useState<Booking | null>(null);
+  const [nextClass, setNextClass] = useState<MyClass | null>(null);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [city, setCity] = useState<string>(() => {
@@ -90,6 +92,7 @@ export const ClientHomeScreen: React.FC<Props> = ({ telegramId, firstName, onOpe
         .sort((a, b) => new Date(a.slot.time).getTime() - new Date(b.slot.time).getTime());
       setNext(upcoming[0] ?? null);
     }).catch(() => setNext(null));
+    fetchMyClasses().then((list) => setNextClass(list[0] ?? null)).catch(() => setNextClass(null));
   }, [telegramId]);
 
   useEffect(() => {
@@ -105,6 +108,9 @@ export const ClientHomeScreen: React.FC<Props> = ({ telegramId, firstName, onOpe
     }, search ? 350 : 0);
     return () => window.clearTimeout(id);
   }, [search, city, category]);
+
+  // Показываем то, что раньше: личную запись или занятие в группе
+  const classFirst = !!nextClass && (!next || new Date(nextClass.start) < new Date(next.slot.time));
 
   const cityLabel = useMemo(() => {
     const c = CITIES.find((x) => x.value === city);
@@ -135,7 +141,18 @@ export const ClientHomeScreen: React.FC<Props> = ({ telegramId, firstName, onOpe
       </div>
 
       {/* Ближайшая запись */}
-      {next && (
+      {classFirst && nextClass && (
+        <button type="button" onClick={onOpenBookings} style={{
+          ...card, width: '100%', marginTop: 18, border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+          color: 'var(--brand-on-accent)', backgroundColor: 'var(--brand-accent)', boxShadow: '0 8px 24px rgba(80, 200, 120, 0.35)',
+        }}>
+          <div style={{ fontSize: 13, fontWeight: 600, opacity: 0.8 }}>{t(nextClass.status === 'active' ? 'gc_you_in' : 'gc_you_wait')}</div>
+          <div style={{ fontSize: 22, fontWeight: 800, marginTop: 4 }}>{when(nextClass.start)}</div>
+          <div style={{ fontSize: 15, marginTop: 2 }}>{[nextClass.program || nextClass.group_name, nextClass.master_name].join(' · ')}</div>
+          {nextClass.address && <div style={{ fontSize: 13, opacity: 0.8, marginTop: 6 }}>📍 {nextClass.address}</div>}
+        </button>
+      )}
+      {next && !classFirst && (
         <button type="button" onClick={onOpenBookings} style={{
           ...card, width: '100%', marginTop: 18, border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
           color: 'var(--brand-on-accent)', backgroundColor: 'var(--brand-accent)', boxShadow: '0 8px 24px rgba(80, 200, 120, 0.35)',
