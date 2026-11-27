@@ -7,15 +7,14 @@ import {
   updateMasterProfile, uploadMasterAvatar, fetchPortfolio, uploadPortfolioPhoto, deletePortfolioPhoto,
   PortfolioItem, useTunnelImage,
 } from '../helpers/api';
+import { PROFESSIONS, Profession, professionOf } from '../helpers/professions';
+import { ProfessionGlyph } from '../components/ProfessionIcon';
 import { useLanguage } from '../helpers/LanguageContext';
 import { fill } from '../helpers/translationsBusiness';
 import {
   Avatar, Badge, Chip, PrimaryButton, card, fieldLabel, inputStyle, page, tgAlert, tgConfirm,
 } from '../components/ui';
 
-// Значения хранятся в базе по-русски, на экране — переводятся
-const CATEGORIES = ['Барбершоп', 'Салон красоты', 'Массаж', 'Маникюр / Педикюр', 'Брови и Ресницы',
-  'Медицина', 'Спорт / Фитнес', 'Автосервис', 'Другое'];
 const CITIES: { value: string; key: string }[] = [
   { value: 'Ургенч', key: 'city_urgench' }, { value: 'Ташкент', key: 'city_tashkent' },
   { value: 'Самарканд', key: 'city_samarkand' }, { value: 'Бухара', key: 'city_bukhara' },
@@ -24,7 +23,7 @@ const CITIES: { value: string; key: string }[] = [
 const PORTFOLIO_MAX = 10;
 const BIO_MAX = 500;
 
-type Form = { name: string; bio: string; phone: string; city: string; address: string; experience: number; category: string };
+type Form = { name: string; bio: string; phone: string; city: string; address: string; experience: number; profession: Profession };
 
 type Props = {
   telegramId: number;
@@ -37,6 +36,7 @@ type Props = {
     address?: string;
     experience_years?: number;
     category?: string;
+    profession?: string;
   };
   onBack: () => void;
   onSaved: () => void;
@@ -74,7 +74,7 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
     city: initialData?.city || '',
     address: initialData?.address || '',
     experience: initialData?.experience_years ?? 0,
-    category: initialData?.category || '',
+    profession: professionOf(initialData),
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), []);
   const [form, setForm] = useState<Form>(initial);
@@ -121,7 +121,7 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
         experience_years: form.experience,
         // Пустые сфера/город не отправляем, чтобы не стереть то, что уже есть в базе
         ...(form.city ? { city: form.city } : {}),
-        ...(form.category ? { category: form.category } : {}),
+        profession: form.profession,
       });
       haptic('success');
       onSaved();
@@ -165,10 +165,7 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
     catch { tgAlert(t('ep_save_error')); }
   };
 
-  // Если в базе значение не из списка (старые данные) — показываем его отдельной кнопкой, чтобы не потерять
-  const categoryOptions = form.category && !CATEGORIES.includes(form.category) ? [...CATEGORIES, form.category] : CATEGORIES;
   const cityOptions = form.city && !CITIES.some((c) => c.value === form.city) ? [...CITIES, { value: form.city, key: '' }] : CITIES;
-  const catLabel = (c: string) => { const i = CATEGORIES.indexOf(c); return i >= 0 ? t(`cat_${i}`) : c; };
 
   const section = (title: string, children: React.ReactNode, hint?: React.ReactNode) => (
     <div style={{ ...card, marginTop: 12, padding: '4px 14px 14px' }}>
@@ -208,10 +205,12 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
         <input style={inputStyle} value={form.name} onChange={(e) => set('name', e.target.value)}
           placeholder={t('ep_name_ph')} aria-label={t('ep_name')} />
 
-        <div style={fieldLabel}>{t('ep_category')}</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {categoryOptions.map((c) => (
-            <Chip onCard key={c} active={form.category === c} onClick={() => { haptic(); set('category', c); }}>{catLabel(c)}</Chip>
+        <div style={fieldLabel}>{t('pf_profession')}</div>
+        <div role="radiogroup" aria-label={t('pf_profession')} style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {PROFESSIONS.map((c) => (
+            <Chip onCard key={c} active={form.profession === c} onClick={() => { haptic(); set('profession', c); }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><ProfessionGlyph name={c} size={18} />{t(`pf_${c}`)}</span>
+            </Chip>
           ))}
         </div>
 

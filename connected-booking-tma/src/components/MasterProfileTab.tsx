@@ -1,6 +1,7 @@
 import React from 'react';
 
 import type { CurrentMaster } from '../helpers/api';
+import { professionLabel } from '../helpers/professions';
 import { useLanguage } from '../helpers/LanguageContext';
 import { LangCode } from '../helpers/translations';
 import { clientLink, copyText } from '../helpers/links';
@@ -23,9 +24,6 @@ type Props = {
   onDeleteAccount: () => void;
 };
 
-const CATS = ['Барбершоп', 'Салон красоты', 'Массаж', 'Маникюр / Педикюр', 'Брови и Ресницы',
-  'Медицина', 'Спорт / Фитнес', 'Автосервис', 'Другое'];
-
 export const MasterProfileTab: React.FC<Props> = (p) => {
   const { lang, setLang, t } = useLanguage();
   const tg = (window as any).Telegram?.WebApp;
@@ -34,8 +32,7 @@ export const MasterProfileTab: React.FC<Props> = (p) => {
   const canManage = me?.role === 'owner' || me?.role === 'admin';
   const haptic = () => tg?.HapticFeedback?.selectionChanged();
 
-  const catIndex = CATS.indexOf(me?.category || '');
-  const category = catIndex >= 0 ? t(`cat_${catIndex}`) : (me?.category || '');
+  const category = me ? professionLabel(t, me) : '';
   const myLink = me ? clientLink('m', me.slug) : '';
 
   // Быстрые действия: то, что мастер открывает каждый день, — крупными плитками

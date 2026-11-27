@@ -275,6 +275,7 @@ export type MasterPublicProfile = {
   latitude?: number;
   longitude?: number;
   category?: string;
+  profession?: string;
   slug?: string;
   today?: TodayStatus;        // настоящие часы работы сегодня
   next_free?: string | null;  // ближайшее свободное время (ISO)
@@ -285,6 +286,7 @@ export async function fetchMasters(params?: {
   search?: string;
   city?: string;
   category?: string;
+  profession?: string;
   specialization?: string;
   ordering?: string;
 }): Promise<MasterPublicProfile[]> {
@@ -294,6 +296,7 @@ export async function fetchMasters(params?: {
     if (params.search) url.searchParams.append('search', params.search);
     if (params.city) url.searchParams.append('city', params.city);
     if (params.category) url.searchParams.append('category', params.category);
+    if (params.profession) url.searchParams.append('profession', params.profession);
     if (params.specialization) url.searchParams.append('specialization', params.specialization);
     if (params.ordering) url.searchParams.append('ordering', params.ordering);
   }
@@ -322,7 +325,7 @@ export async function fetchMasterProfile(telegramId: number): Promise<MasterPubl
 // ДОБАВЛЕНО ПОЛЕ language
 export async function updateMasterProfile(telegramId: number, data: {
   name?: string; bio?: string; phone?: string; city?: string; address?: string; language?: string;
-  category?: string; experience_years?: number;
+  category?: string; profession?: string; experience_years?: number;
 }) {
   const res = await fetch(`${API_BASE}/masters/me_update/`, {
     method: 'PATCH',
@@ -577,6 +580,7 @@ export async function registerMaster(data: {
   phone: string;
   password: string;
   category: string;
+  profession?: string;
   city: string;
   experience_years: number;
 }) {
@@ -676,6 +680,7 @@ export type BusinessShort = {
   slug: string;
   kind: 'solo' | 'team';
   category: string;
+  profession?: string;
   city: string;
   address: string;
   logo_url: string;
@@ -690,6 +695,7 @@ export type TeamMember = {
   role: MasterRole;
   avatar_url: string;
   category: string;
+  profession?: string;
   phone: string;
   is_active: boolean;
   services_count: number;
@@ -712,6 +718,7 @@ export type CurrentMaster = MasterPublicProfile & {
   slug: string;
   role: MasterRole;
   category: string;
+  profession?: string;
   language?: string;
   experience_years: number;
   business: BusinessShort | null;
@@ -730,6 +737,7 @@ export type OnboardPayload = {
   name: string;
   phone: string;
   category?: string;
+  profession?: string;
   city?: string;
   experience_years?: number;
   business_name?: string;
@@ -795,7 +803,7 @@ export type BusinessPublic = BusinessShort & {
   phone: string;
   latitude: number | null;
   longitude: number | null;
-  masters: (MasterPublicProfile & { slug: string; role: MasterRole; category: string })[];
+  masters: (MasterPublicProfile & { slug: string; role: MasterRole; category: string; profession?: string })[];
 };
 
 export async function fetchBusinessBySlug(slug: string): Promise<BusinessPublic | null> {

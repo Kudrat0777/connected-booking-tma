@@ -1,10 +1,14 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 import { translations, LangCode } from './translations';
+import { Profession, professionWords } from './professions';
 
 type LanguageContextType = {
   lang: LangCode;
   setLang: (lang: LangCode) => void;
   t: (key: string) => string;
+  /** Профессия мастера, чей кабинет открыт: от неё слова «ученики», «пациенты» и т. п. Клиенту — null */
+  profession: Profession | null;
+  setProfession: (p: Profession | null) => void;
 };
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -25,6 +29,7 @@ const detectLang = (): LangCode => {
 
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [lang, setLangState] = useState<LangCode>(detectLang);
+  const [profession, setProfession] = useState<Profession | null>(null);
 
   // Функция для ручного переключения языка (например, из настроек)
   const setLang = (newLang: LangCode) => {
@@ -34,12 +39,13 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   // Функция перевода
+  const words = professionWords(profession, lang);
   const t = (key: string): string => {
-    return translations[lang]?.[key] || translations['en'][key] || key;
+    return words[key] || translations[lang]?.[key] || translations['en'][key] || key;
   };
 
   return (
-    <LanguageContext.Provider value={{ lang, setLang, t }}>
+    <LanguageContext.Provider value={{ lang, setLang, t, profession, setProfession }}>
       {children}
     </LanguageContext.Provider>
   );

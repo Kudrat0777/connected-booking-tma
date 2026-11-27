@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Spinner } from '@telegram-apps/telegram-ui';
 
 import { fetchBusinessBySlug, fetchSalonServices, BusinessPublic } from '../helpers/api';
+import { professionLabel } from '../helpers/professions';
 import { useLanguage } from '../helpers/LanguageContext';
 import { pluralize } from '../helpers/translationsBusiness';
 import { Konnektik } from '../components/Konnektik';
@@ -16,8 +17,6 @@ type Props = {
 };
 
 // Значения в базе — по-русски, на экране — на языке клиента
-const CATS = ['Барбершоп', 'Салон красоты', 'Массаж', 'Маникюр / Педикюр', 'Брови и Ресницы',
-  'Медицина', 'Спорт / Фитнес', 'Автосервис', 'Другое'];
 const CITY_KEYS: Record<string, string> = {
   'Ургенч': 'city_urgench', 'Ташкент': 'city_tashkent', 'Самарканд': 'city_samarkand', 'Бухара': 'city_bukhara', 'Хива': 'city_khiva',
 };
@@ -61,7 +60,7 @@ export const BusinessPublicScreen: React.FC<Props> = ({ slug, onBack, onOpenMast
     );
   }
 
-  const catLabel = (c?: string) => { const i = CATS.indexOf(c || ''); return i >= 0 ? t(`cat_${i}`) : (c || ''); };
+  const catLabel = (x?: { profession?: string; category?: string } | null) => (x ? professionLabel(t, x) : '');
   const cityLabel = (c?: string) => (c && CITY_KEYS[c] ? t(CITY_KEYS[c]) : c || '');
 
   const rated = biz.masters.filter((m) => m.reviews_count > 0);
@@ -77,7 +76,7 @@ export const BusinessPublicScreen: React.FC<Props> = ({ slug, onBack, onOpenMast
         {biz.logo_url ? <Avatar src={biz.logo_url} name={biz.name} size={92} radius={28} /> : <Konnektik mood="hello" size={96} />}
         <div style={{ fontSize: 24, fontWeight: 800, marginTop: 12 }}>{biz.name}</div>
         <div style={{ fontSize: 15, color: 'var(--tg-theme-hint-color)', marginTop: 4 }}>
-          {[catLabel(biz.category), cityLabel(biz.city)].filter(Boolean).join(' · ')}
+          {[catLabel(biz), cityLabel(biz.city)].filter(Boolean).join(' · ')}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 6, marginTop: 12 }}>
           {reviews > 0 && <Badge tone="brand">★ {rating.toFixed(1)} · {pluralize(lang, reviews, t('rv_count'))}</Badge>}
@@ -134,8 +133,8 @@ export const BusinessPublicScreen: React.FC<Props> = ({ slug, onBack, onOpenMast
                     <div style={{ fontWeight: 700, fontSize: 16, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</div>
                     <div style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)', marginTop: 2 }}>
                       {m.reviews_count > 0
-                        ? <><span style={{ color: '#F5A623' }}>★</span> {m.rating.toFixed(1)} ({m.reviews_count}){m.category ? ` · ${catLabel(m.category)}` : ''}</>
-                        : <>{t('mp_new_master')}{m.category ? ` · ${catLabel(m.category)}` : ''}</>}
+                        ? <><span style={{ color: '#F5A623' }}>★</span> {m.rating.toFixed(1)} ({m.reviews_count}){` · ${catLabel(m)}`}</>
+                        : <>{t('mp_new_master')}{` · ${catLabel(m)}`}</>}
                     </div>
                   </div>
                   <span aria-label={t('biz_book')} style={{ fontSize: 22, color: 'var(--tg-theme-hint-color)', flex: '0 0 auto' }}>›</span>

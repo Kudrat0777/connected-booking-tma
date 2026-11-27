@@ -4,6 +4,8 @@ import { Icon24Search } from '@vkontakte/icons';
 
 import { fetchMasters, fetchMyBookings, Booking, MasterPublicProfile } from '../helpers/api';
 import { MyClass, fetchMyClasses } from '../helpers/classes';
+import { PROFESSIONS, professionLabel } from '../helpers/professions';
+import { ProfessionGlyph } from '../components/ProfessionIcon';
 import { useLanguage } from '../helpers/LanguageContext';
 import { fill } from '../helpers/translationsBusiness';
 import { Konnektik } from '../components/Konnektik';
@@ -16,9 +18,6 @@ type Props = {
   onOpenBookings: () => void;
 };
 
-// Значения хранятся в базе по-русски — по ним работает фильтр; подписи переводятся
-const CATEGORIES = ['Барбершоп', 'Салон красоты', 'Массаж', 'Маникюр / Педикюр', 'Брови и Ресницы',
-  'Медицина', 'Спорт / Фитнес', 'Автосервис', 'Другое'];
 const CITIES = [
   { key: 'city_urgench', value: 'Ургенч' }, { key: 'city_tashkent', value: 'Ташкент' },
   { key: 'city_samarkand', value: 'Самарканд' }, { key: 'city_bukhara', value: 'Бухара' }, { key: 'city_khiva', value: 'Хива' },
@@ -45,8 +44,7 @@ export function useWhen() {
 export const MasterCard: React.FC<{ m: MasterPublicProfile; onOpen: () => void }> = ({ m, onOpen }) => {
   const { t } = useLanguage();
   const when = useWhen();
-  const catIndex = CATEGORIES.indexOf(m.category || '');
-  const category = catIndex >= 0 ? t(`cat_${catIndex}`) : (m.category || '');
+  const category = professionLabel(t, m);
   const sub = [category, m.business?.kind === 'team' ? m.business.name : ''].filter(Boolean).join(' · ');
   return (
     <button type="button" onClick={onOpen} style={{
@@ -98,7 +96,7 @@ export const ClientHomeScreen: React.FC<Props> = ({ telegramId, firstName, onOpe
   useEffect(() => {
     const id = window.setTimeout(() => {
       setMasters(null);
-      fetchMasters({ search: search.trim() || undefined, city, category: category || undefined, ordering: 'rating' })
+      fetchMasters({ search: search.trim() || undefined, city, profession: category || undefined, ordering: 'rating' })
         .then((list) => {
           // Сначала те, к кому можно записаться раньше
           const ts = (m: MasterPublicProfile) => (m.next_free ? new Date(m.next_free).getTime() : Infinity);
@@ -177,8 +175,10 @@ export const ClientHomeScreen: React.FC<Props> = ({ telegramId, firstName, onOpe
       {/* Сферы */}
       <div style={{ display: 'flex', gap: 8, overflowX: 'auto', margin: '12px -16px 0', padding: '0 16px 4px', scrollbarWidth: 'none' }}>
         <Chip active={!category} onClick={() => setCategory('')}>{t('ch_all')}</Chip>
-        {CATEGORIES.map((c, i) => (
-          <Chip key={c} active={category === c} onClick={() => setCategory(category === c ? '' : c)}>{t(`cat_${i}`)}</Chip>
+        {PROFESSIONS.map((c) => (
+          <Chip key={c} active={category === c} onClick={() => setCategory(category === c ? '' : c)}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><ProfessionGlyph name={c} size={18} />{t(`pf_${c}`)}</span>
+          </Chip>
         ))}
       </div>
 

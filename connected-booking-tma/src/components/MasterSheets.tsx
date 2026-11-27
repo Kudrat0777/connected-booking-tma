@@ -116,9 +116,8 @@ export const ManualBookingSheet: React.FC<{
 // ---------- Услуга: создать или изменить ----------
 
 // Срок «пора снова» по категории — как в booking/rebook.py (для новой услуги, пока сервер его не прислал)
-const REBOOK_DEFAULTS: Record<string, number> = {
-  'Барбершоп': 28, 'Салон красоты': 42, 'Массаж': 14, 'Маникюр / Педикюр': 21, 'Брови и Ресницы': 28,
-};
+// Пока сервер не прислал свой срок: по профессии мастера (как booking/professions.py)
+const REBOOK_DEFAULTS: Record<string, number> = { barber: 28, hair: 42, massage: 14, nails: 21, brows: 28 };
 const REBOOK_OPTIONS = [0, 14, 21, 28, 42, 56];
 
 export const ServiceSheet: React.FC<{

@@ -6,6 +6,8 @@ import {
   confirmBooking, deleteAccount, fetchCurrentMaster, fetchMasterBookings, fetchMyServices,
   rejectBooking, updateMasterProfile, Booking, CurrentMaster, Service,
 } from '../helpers/api';
+import { CLASS_FIRST, professionOf } from '../helpers/professions';
+import { ProfessionIcon } from '../components/ProfessionIcon';
 import { useLanguage } from '../helpers/LanguageContext';
 import { fill, pluralize } from '../helpers/translationsBusiness';
 import { clientLink, shareToTelegram } from '../helpers/links';
@@ -47,7 +49,7 @@ const confirmAsk = (m: string) => new Promise<boolean>((resolve) => {
 
 export const MasterDashboardScreen: React.FC<Props> = (props) => {
   const { telegramId, onLogout } = props;
-  const { t, lang } = useLanguage();
+  const { t, lang, setProfession } = useLanguage();
   const when = useWhen();
 
   const [tab, setTab] = useState<Tab>('bookings');
@@ -75,6 +77,10 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
   }, [tab]);
 
   useEffect(() => { fetchCurrentMaster().then(setMe).catch(() => {}); }, []);
+  // Слова профессии во всём кабинете: «ученики», «пациенты», «Занятия»…
+  const profession = me ? professionOf(me) : null;
+  useEffect(() => { if (profession) setProfession(profession); }, [profession, setProfession]);
+  const classFirst = !!profession && CLASS_FIRST.has(profession);
 
   // Бот мастера пишет на языке кабинета: сохраняем и смену языка, и прежнее расхождение
   const savedLang = me?.language;
@@ -119,7 +125,7 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
   };
 
   const handleLogout = async () => {
-    if (await confirmAsk(t('m_logout_confirm'))) setTimeout(() => onLogout?.(), 10);
+    if (await confirmAsk(t('m_logout_confirm'))) setTimeout(() => { setProfession(null); onLogout?.(); }, 10);
   };
 
   // Удаление аккаунта — два явных подтверждения вместо ввода «DELETE» (prompt не работает в Telegram на iOS)
@@ -253,6 +259,21 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
         <Stat label={t('md_waiting')} value={String(pending.length)} warn={pending.length > 0} />
         <Stat label={t('md_today_money')} value={todayStats ? new Intl.NumberFormat(localeFor(lang), { notation: 'compact', maximumFractionDigits: 1 }).format(todayStats.money) : '…'} />
       </div>
+
+      {/* Йога, фитнес, танцы, курсы: группы — главное, вход в них сразу под сводкой */}
+      {classFirst && props.onOpenGroups && (
+        <button type="button" onClick={props.onOpenGroups} style={{
+          ...card, display: 'flex', alignItems: 'center', gap: 12, width: '100%', marginTop: 12, border: 'none', cursor: 'pointer',
+          textAlign: 'left', fontFamily: 'inherit', color: 'var(--tg-theme-text-color)', boxSizing: 'border-box',
+        }}>
+          <ProfessionIcon name={profession!} size={28} tile={46} />
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: 'block', fontWeight: 800, fontSize: 16 }}>{t('pf_groups_card')}</span>
+            <span style={{ display: 'block', fontSize: 13, color: 'var(--tg-theme-hint-color)', marginTop: 2 }}>{t('pf_groups_card_sub')}</span>
+          </span>
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--tg-theme-hint-color)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5l7 7-7 7" /></svg>
+        </button>
+      )}
 
       {/* Ждут подтверждения */}
       {pending.length > 0 && (
@@ -390,7 +411,7 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
             onOpenSalonCalendar={props.onOpenSalonCalendar}
             onOpenClients={props.onOpenClients}
             onOpenGroups={props.onOpenGroups}
-            onSwitchToClient={props.onSwitchToClient}
+            onSwitchToClient={() => { setProfession(null); props.onSwitchToClient(); }}
             onLogoutClick={handleLogout}
             onDeleteAccount={handleDeleteAccount}
           />
@@ -421,7 +442,7 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
       )}
 
       {serviceSheet && (
-        <ServiceSheet telegramId={telegramId} service={serviceSheet === 'new' ? null : serviceSheet} category={me?.category}
+        <ServiceSheet telegramId={telegramId} service={serviceSheet === 'new' ? null : serviceSheet} category={profession ?? undefined}
           onClose={() => setServiceSheet(null)} onSaved={() => { setServiceSheet(null); loadServices(); }} />
       )}
 
