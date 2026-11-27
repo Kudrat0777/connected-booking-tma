@@ -31,6 +31,13 @@ export function sourceLabel(id: string, t: (key: string) => string): string {
   return known ? t(known.labelKey) : id;
 }
 
+/** Короткая ссылка мастера на нашем домене: https://ctime.uz/kudrat, с источником — /kudrat/ig.
+ *  Открывается страница мастера с карточкой для Telegram/Instagram и кнопкой в бота. */
+export function masterShortLink(m: { slug: string; short_name?: string | null }, source = ''): string {
+  const name = m.short_name || m.slug;
+  return `${window.location.origin}/${name}${source ? `/${source}` : ''}`;
+}
+
 export function clientLink(kind: 'b' | 'm', slug: string, source = ''): string {
   const start = source ? `${kind}_${slug}__${source}` : `${kind}_${slug}`;
   return `https://t.me/${CLIENT_BOT_USERNAME}?start=${start}`;

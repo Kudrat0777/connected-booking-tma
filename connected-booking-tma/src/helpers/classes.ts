@@ -108,3 +108,13 @@ export const fetchClassStudents = (q = '', kind: 'all' | 'active' | 'new' | 'los
 export const fetchClassStudent = (tid: number) => call<ClassStudentCard>(`class-manage/students/${tid}/`);
 export const saveClassStudentNote = (tid: number, text: string) =>
   call<{ note: string }>(`class-manage/students/${tid}/`, 'PUT', { text });
+
+export type ClassPause = {
+  id: number; start_date: string; end_date: string; note: string; message: string;
+  groups: { id: number; name: string }[];
+};
+export type PauseInput = { start_date: string; end_date: string; groups: number[]; note?: string; message?: string };
+export const fetchPauses = () => call<ClassPause[]>('class-manage/pauses/');
+export const previewPause = (p: PauseInput) => call<{ affected: number }>('class-manage/pauses/', 'POST', { ...p, dry_run: true });
+export const createPause = (p: PauseInput) => call<ClassPause & { affected: number }>('class-manage/pauses/', 'POST', p);
+export const deletePause = (id: number) => call<null>(`class-manage/pauses/${id}/`, 'DELETE');

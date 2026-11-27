@@ -274,9 +274,11 @@ export type MasterPublicProfile = {
   address?: string;
   latitude?: number;
   longitude?: number;
+  address_note?: string;
   category?: string;
   profession?: string;
   slug?: string;
+  short_name?: string | null;
   today?: TodayStatus;        // настоящие часы работы сегодня
   next_free?: string | null;  // ближайшее свободное время (ISO)
   business?: { name: string; slug: string; kind: 'solo' | 'team' } | null;
@@ -326,6 +328,7 @@ export async function fetchMasterProfile(telegramId: number): Promise<MasterPubl
 export async function updateMasterProfile(telegramId: number, data: {
   name?: string; bio?: string; phone?: string; city?: string; address?: string; language?: string;
   category?: string; profession?: string; experience_years?: number;
+  latitude?: number | null; longitude?: number | null; address_note?: string;
 }) {
   const res = await fetch(`${API_BASE}/masters/me_update/`, {
     method: 'PATCH',
@@ -334,6 +337,16 @@ export async function updateMasterProfile(telegramId: number, data: {
   });
   if (!res.ok) throw new Error('Failed to update profile');
   return res.json();
+}
+
+/** Имя короткой ссылки ctime.uz/<имя>. Ошибка — текст для мастера («Это имя уже занято»). */
+export async function setShortName(name: string): Promise<string> {
+  const res = await fetch(`${API_BASE}/masters/me_update/`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ short_name: name }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data.short_name && data.short_name[0]) || data.detail || '');
+  return data.short_name || '';
 }
 
 // Загрузка аватарки
@@ -1020,4 +1033,21 @@ export async function updateService(
     body: JSON.stringify(data),
   });
   return jsonOrThrow(res, 'Не удалось сохранить услугу');
+}
+
+// ---------- Карта: адрес по точке и поиск адреса (через сервер, OpenStreetMap) ----------
+export async function geoReverse(lat: number, lon: number, lang: string): Promise<string> {
+  const res = await fetch(`${API_BASE}/geo/reverse/?lat=${lat}&lon=${lon}&lang=${lang}`);
+  if (!res.ok) return '';
+  return (await res.json()).address || '';
+}
+export type GeoHit = { address: string; full: string; lat: number; lon: number };
+export async function geoSearch(q: string, lang: string): Promise<GeoHit[]> {
+  const res = await fetch(`${API_BASE}/geo/search/?q=${encodeURIComponent(q)}&lang=${lang}`);
+  return res.ok ? res.json() : [];
+}
+export async function makePortfolioCover(photoId: number) {
+  const res = await fetch(`${API_BASE}/portfolio/${photoId}/make_cover/`, { method: 'POST' });
+  if (!res.ok) throw new Error('cover failed');
+  return res.json();
 }

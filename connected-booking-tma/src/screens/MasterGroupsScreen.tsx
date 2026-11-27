@@ -11,9 +11,10 @@ import { fill } from '../helpers/translationsBusiness';
 import { formatPhone } from '../helpers/phone';
 import { ask, tell } from '../components/ClassSchedule';
 import { Konnektik } from '../components/Konnektik';
+import { ClassPauses } from '../components/ClassPauses';
 import { Badge, Chip, PrimaryButton, Sheet, card, fieldLabel, inputStyle, localeFor, money, page, tashkent } from '../components/ui';
 
-type Tab = 'days' | 'groups' | 'programs';
+type Tab = 'days' | 'groups' | 'programs' | 'pauses';
 type Editor =
   | { kind: 'group'; group?: ClassGroup }
   | { kind: 'program'; index?: number }
@@ -39,7 +40,7 @@ const Switch: React.FC<{ on: boolean; label: string; onChange: (v: boolean) => v
   </button>
 );
 
-export const MasterGroupsScreen: React.FC<{ onBack: () => void; initialTab?: 'days' | 'groups' | 'programs' }> = ({ onBack, initialTab }) => {
+export const MasterGroupsScreen: React.FC<{ onBack: () => void; initialTab?: Tab }> = ({ onBack, initialTab }) => {
   const { t, lang } = useLanguage();
   const locale = localeFor(lang);
   const [data, setData] = useState<ClassManage | null>(null);
@@ -95,10 +96,12 @@ export const MasterGroupsScreen: React.FC<{ onBack: () => void; initialTab?: 'da
     <div style={{ ...page, padding: '20px 16px 40px' }}>
       <div style={{ fontSize: 26, fontWeight: 800 }}>{t('gc_manage')}</div>
       <div style={{ display: 'flex', gap: 6, margin: '14px 0', overflowX: 'auto' }}>
-        {(['days', 'groups', 'programs'] as Tab[]).map((x) => <Chip key={x} active={tab === x} onClick={() => setTab(x)}>{t(`gc_tab_${x}`)}</Chip>)}
+        {(['days', 'groups', 'programs', 'pauses'] as Tab[]).map((x) => <Chip key={x} active={tab === x} onClick={() => setTab(x)}>{t(`gc_tab_${x}`)}</Chip>)}
       </div>
 
-      {tab !== 'programs' && data.groups.length === 0 && (
+      {tab === 'pauses' && <ClassPauses groups={data.groups} onChanged={() => { fetchClassManage().then(setData).catch(() => {}); }} />}
+
+      {(tab === 'days' || tab === 'groups') && data.groups.length === 0 && (
         <div style={{ ...card, textAlign: 'center', padding: 24, marginBottom: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'center' }}><Konnektik mood="explain" size={110} /></div>
           <div style={{ marginTop: 8 }}>{t('gc_empty')}</div>
@@ -135,7 +138,7 @@ export const MasterGroupsScreen: React.FC<{ onBack: () => void; initialTab?: 'da
           <span aria-hidden="true">›</span>
         </button>
       ))}
-      {tab !== 'programs' && (tab === 'groups' || data.groups.length === 0) && (
+      {(tab === 'days' || tab === 'groups') && (tab === 'groups' || data.groups.length === 0) && (
         <PrimaryButton onClick={() => setEditor({ kind: 'group' })}>+ {t('gc_add_group')}</PrimaryButton>
       )}
 

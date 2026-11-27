@@ -1,29 +1,32 @@
-// Редактирование профиля мастера: фото, основное, контакты, примеры работ.
+// Редактирование профиля мастера (по макету): фото, основное, контакты и место на карте, фото работ.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Spinner } from '@telegram-apps/telegram-ui';
-import { useTonConnectUI, useTonWallet } from '@tonconnect/ui-react';
 
 import {
-  updateMasterProfile, uploadMasterAvatar, fetchPortfolio, uploadPortfolioPhoto, deletePortfolioPhoto,
+  updateMasterProfile, uploadMasterAvatar, fetchPortfolio, uploadPortfolioPhoto, deletePortfolioPhoto, makePortfolioCover,
   PortfolioItem, useTunnelImage,
 } from '../helpers/api';
-import { PROFESSIONS, Profession, professionOf } from '../helpers/professions';
-import { ProfessionGlyph } from '../components/ProfessionIcon';
+import { CLASS_FIRST, Profession, professionOf } from '../helpers/professions';
+import { cityLabel } from '../helpers/cities';
+import { ProfessionIcon } from '../components/ProfessionIcon';
+import { BrandIcon } from '../components/BrandIcon';
+import { CitySheet, ProfessionSheet } from '../components/ProfilePickers';
+import { MapPicker, Place } from '../components/MapPicker';
 import { useLanguage } from '../helpers/LanguageContext';
 import { fill } from '../helpers/translationsBusiness';
 import {
-  Avatar, Badge, Chip, PrimaryButton, card, fieldLabel, inputStyle, page, tgAlert, tgConfirm,
+  Avatar, Chip, PrimaryButton, Sheet, card, fieldLabel, inputStyle, page, tgAlert, tgConfirm,
 } from '../components/ui';
 
-const CITIES: { value: string; key: string }[] = [
-  { value: 'Ургенч', key: 'city_urgench' }, { value: 'Ташкент', key: 'city_tashkent' },
-  { value: 'Самарканд', key: 'city_samarkand' }, { value: 'Бухара', key: 'city_bukhara' },
-  { value: 'Хива', key: 'city_khiva' },
-];
 const PORTFOLIO_MAX = 10;
 const BIO_MAX = 500;
 
-type Form = { name: string; bio: string; phone: string; city: string; address: string; experience: number; profession: Profession };
+type Form = {
+  name: string; bio: string; phone: string; city: string; address: string; experience: number; profession: Profession;
+  lat: number | null; lon: number | null; note: string;
+};
+const EXPERIENCE = [0, 1, 3, 5]; // «до года», «1–3», «3–5», «5+»
+const bucket = (y: number) => (y >= 5 ? 5 : y >= 3 ? 3 : y >= 1 ? 1 : 0);
 
 type Props = {
   telegramId: number;
@@ -34,6 +37,9 @@ type Props = {
     phone: string;
     city?: string;
     address?: string;
+    address_note?: string;
+    latitude?: number | null;
+    longitude?: number | null;
     experience_years?: number;
     category?: string;
     profession?: string;
@@ -50,22 +56,27 @@ const haptic = (kind: 'select' | 'light' | 'success' | 'error' = 'select') => {
   else h.notificationOccurred(kind);
 };
 
-const PortfolioThumb: React.FC<{ path: string; onDelete: () => void }> = ({ path, onDelete }) => {
+const PortfolioThumb: React.FC<{ path: string; cover: boolean; coverLabel: string; onOpen: () => void }> = ({ path, cover, coverLabel, onOpen }) => {
   const src = useTunnelImage(path);
   return (
-    <div style={{ position: 'relative', aspectRatio: '1 / 1', borderRadius: 12, overflow: 'hidden', backgroundColor: 'var(--tg-theme-secondary-bg-color)' }}>
+    <button type="button" onClick={onOpen} style={{
+      position: 'relative', aspectRatio: '1 / 1', borderRadius: 12, overflow: 'hidden', padding: 0, border: 'none', cursor: 'pointer',
+      backgroundColor: 'var(--tg-theme-secondary-bg-color)',
+    }}>
       {src ? <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-        : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spinner size="s" /></div>}
-      <button type="button" aria-label="×" onClick={onDelete} style={{
-        position: 'absolute', top: 6, right: 6, width: 28, height: 28, borderRadius: 14, border: 'none', cursor: 'pointer',
-        backgroundColor: 'rgba(0,0,0,0.55)', color: '#fff', fontSize: 16, lineHeight: '28px', padding: 0,
-      }}>✕</button>
-    </div>
+        : <span style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spinner size="s" /></span>}
+      {cover && (
+        <span style={{
+          position: 'absolute', left: 6, top: 6, padding: '2px 7px', borderRadius: 999, fontSize: 11, fontWeight: 800,
+          backgroundColor: 'var(--brand-accent)', color: 'var(--brand-on-accent)',
+        }}>{coverLabel}</span>
+      )}
+    </button>
   );
 };
 
 export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialData, onBack, onSaved }) => {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   const initial = useMemo<Form>(() => ({
     name: initialData?.name || '',
@@ -75,6 +86,9 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
     address: initialData?.address || '',
     experience: initialData?.experience_years ?? 0,
     profession: professionOf(initialData),
+    lat: initialData?.latitude ?? null,
+    lon: initialData?.longitude ?? null,
+    note: initialData?.address_note || '',
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), []);
   const [form, setForm] = useState<Form>(initial);
@@ -87,8 +101,8 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
   const [portfolio, setPortfolio] = useState<PortfolioItem[] | null>(null);
   const [portfolioBusy, setPortfolioBusy] = useState(false);
 
-  const [tonConnectUI] = useTonConnectUI();
-  const wallet = useTonWallet();
+  const [sheet, setSheet] = useState<'profession' | 'city' | 'map' | null>(null);
+  const [photoMenu, setPhotoMenu] = useState<PortfolioItem | null>(null);
 
   // «Назад» в Telegram: не теряем изменения молча
   const dirtyRef = useRef(dirty);
@@ -122,6 +136,7 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
         // Пустые сфера/город не отправляем, чтобы не стереть то, что уже есть в базе
         ...(form.city ? { city: form.city } : {}),
         profession: form.profession,
+        latitude: form.lat, longitude: form.lon, address_note: form.note.trim(),
       });
       haptic('success');
       onSaved();
@@ -147,25 +162,44 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
     finally { setAvatarBusy(false); }
   };
 
-  const addPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = pickFile(e);
-    if (!f) return;
-    if ((portfolio?.length ?? 0) >= PORTFOLIO_MAX) { tgAlert(fill(t('ep_portfolio_full'), { max: PORTFOLIO_MAX })); return; }
+  // Можно выбрать несколько фото сразу: загружаем по очереди, пока есть место
+  const addPhotos = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (!files.length) return;
+    const room = PORTFOLIO_MAX - (portfolio?.length ?? 0);
+    if (room <= 0) { tgAlert(fill(t('ep_portfolio_full'), { max: PORTFOLIO_MAX })); return; }
     haptic('light');
     setPortfolioBusy(true);
-    try { await uploadPortfolioPhoto(telegramId, f); await loadPortfolio(); }
-    catch { tgAlert(t('ep_upload_error')); }
-    finally { setPortfolioBusy(false); }
+    try {
+      for (const f of files.slice(0, room)) await uploadPortfolioPhoto(telegramId, f);
+      if (files.length > room) tgAlert(fill(t('ep_portfolio_full'), { max: PORTFOLIO_MAX }));
+    } catch { tgAlert(t('ep_upload_error')); }
+    finally { await loadPortfolio(); setPortfolioBusy(false); }
+  };
+
+  const makeCover = async (id: number) => {
+    setPhotoMenu(null);
+    try { await makePortfolioCover(id); haptic('success'); await loadPortfolio(); }
+    catch { tgAlert(t('ep_save_error')); }
   };
 
   const removePhoto = async (id: number) => {
+    setPhotoMenu(null);
     haptic('light');
     if (!(await tgConfirm(t('ep_photo_delete_confirm')))) return;
     try { await deletePortfolioPhoto(id); setPortfolio((p) => (p || []).filter((x) => x.id !== id)); }
     catch { tgAlert(t('ep_save_error')); }
   };
 
-  const cityOptions = form.city && !CITIES.some((c) => c.value === form.city) ? [...CITIES, { value: form.city, key: '' }] : CITIES;
+  const classes = CLASS_FIRST.has(form.profession);
+  const savePlace = (p: Place) => {
+    setForm((f) => ({ ...f, lat: p.lat, lon: p.lon, address: p.address || f.address, note: p.note }));
+    setSheet(null);
+  };
+  const selectRow: React.CSSProperties = {
+    ...inputStyle, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', border: 'none', textAlign: 'left', minHeight: 50,
+  };
 
   const section = (title: string, children: React.ReactNode, hint?: React.ReactNode) => (
     <div style={{ ...card, marginTop: 12, padding: '4px 14px 14px' }}>
@@ -187,7 +221,7 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
             position: 'absolute', right: -4, bottom: -4, width: 30, height: 30, borderRadius: 15, display: 'flex',
             alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--brand-accent, #50C878)',
             color: 'var(--brand-on-accent, #14261B)', fontSize: 15, border: '3px solid var(--tg-theme-bg-color)',
-          }}>{avatarBusy ? '…' : '📷'}</span>
+          }}>{avatarBusy ? '…' : <BrandIcon name="camera" size={15} strokeWidth={2.2} />}</span>
           <input type="file" hidden accept="image/*" onChange={changeAvatar} disabled={avatarBusy} />
         </label>
         <div style={{ minWidth: 0 }}>
@@ -206,24 +240,17 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
           placeholder={t('ep_name_ph')} aria-label={t('ep_name')} />
 
         <div style={fieldLabel}>{t('pf_profession')}</div>
-        <div role="radiogroup" aria-label={t('pf_profession')} style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {PROFESSIONS.map((c) => (
-            <Chip onCard key={c} active={form.profession === c} onClick={() => { haptic(); set('profession', c); }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><ProfessionGlyph name={c} size={18} />{t(`pf_${c}`)}</span>
-            </Chip>
-          ))}
-        </div>
+        <button type="button" onClick={() => { haptic(); setSheet('profession'); }} style={selectRow}>
+          <ProfessionIcon name={form.profession} size={22} tile={34} />
+          <span style={{ flex: 1, fontSize: 16, fontWeight: 600 }}>{t(`pf_${form.profession}`)}</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--brand-ink)' }}>{t('ep_change')}</span>
+        </button>
 
-        <div style={fieldLabel}>{t('ep_experience')}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {[-1, 1].map((d) => (
-            <button key={d} type="button" aria-label={d < 0 ? '−' : '+'} onClick={() => { haptic(); set('experience', Math.min(60, Math.max(0, form.experience + d))); }}
-              style={{ width: 44, height: 44, borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: 22, fontWeight: 700,
-                backgroundColor: 'var(--brand-soft)', color: 'var(--brand-ink)', order: d < 0 ? 0 : 2 }}>
-              {d < 0 ? '−' : '+'}
-            </button>
+        <div style={fieldLabel}>{t('pf_exp')}</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {EXPERIENCE.map((y) => (
+            <Chip onCard key={y} active={bucket(form.experience) === y} onClick={() => { haptic(); set('experience', y); }}>{t(`pf_exp_${y}`)}</Chip>
           ))}
-          <div style={{ order: 1, minWidth: 48, textAlign: 'center', fontSize: 22, fontWeight: 800 }}>{form.experience}</div>
         </div>
 
         <div style={fieldLabel}>{t('ep_about')}</div>
@@ -232,59 +259,70 @@ export const MasterEditProfileScreen: React.FC<Props> = ({ telegramId, initialDa
         <div style={{ fontSize: 12, color: 'var(--tg-theme-hint-color)', textAlign: 'right', marginTop: 4 }}>{form.bio.length} / {BIO_MAX}</div>
       </>)}
 
-      {section(t('ep_contacts'), <>
+      {section(t('ep_contacts_place'), <>
         <div style={fieldLabel}>{t('ep_phone')}</div>
         <input style={inputStyle} type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)}
           placeholder="+998 90 000 00 00" aria-label={t('ep_phone')} />
 
         <div style={fieldLabel}>{t('ep_city')}</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {cityOptions.map((c) => (
-            <Chip onCard key={c.value} active={form.city === c.value} onClick={() => { haptic(); set('city', c.value); }}>{c.key ? t(c.key) : c.value}</Chip>
-          ))}
-        </div>
+        <button type="button" onClick={() => { haptic(); setSheet('city'); }} style={selectRow}>
+          <span style={{ flex: 1, fontSize: 16, fontWeight: 600, color: form.city ? 'inherit' : 'var(--tg-theme-hint-color)' }}>
+            {form.city ? cityLabel(form.city, lang) : t('ep_city_pick')}
+          </span>
+          <span style={{ color: 'var(--tg-theme-hint-color)', display: 'flex', transform: 'rotate(90deg)' }}><BrandIcon name="chevron" size={16} strokeWidth={2.2} /></span>
+        </button>
 
-        <div style={fieldLabel}>{t('ep_address')}</div>
-        <textarea style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.4 }} rows={2} value={form.address}
-          onChange={(e) => set('address', e.target.value)} placeholder={t('ep_address_ph')} aria-label={t('ep_address')} />
+        <div style={fieldLabel}>{t('ep_place')}</div>
+        <button type="button" onClick={() => { haptic(); setSheet('map'); }} style={{ ...selectRow, alignItems: 'flex-start', padding: 14 }}>
+          <span style={{ color: 'var(--brand-ink)', display: 'flex', marginTop: 2 }}><BrandIcon name="pin" size={24} /></span>
+          <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+            <span style={{ fontSize: 15, fontWeight: 700 }}>{form.lat != null ? (form.address || t('ep_place_set')) : t('ep_place_empty')}</span>
+            {form.lat != null && form.note && <span style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)' }}>{form.note}</span>}
+            {form.lat == null && form.address && <span style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)' }}>{form.address}</span>}
+          </span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--brand-ink)', whiteSpace: 'nowrap' }}>{t('ep_on_map')}</span>
+        </button>
+        <div style={{ fontSize: 12, color: 'var(--tg-theme-hint-color)', marginTop: 6, lineHeight: 1.4 }}>{t('ep_place_hint')}</div>
       </>)}
 
-      {section(t('ep_portfolio'), (
+      {section(classes ? t('ep_photos_classes') : t('ep_portfolio'), (
         portfolio === null ? <div style={{ padding: 16, textAlign: 'center' }}><Spinner size="s" /></div> : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 12 }}>
-            {portfolio.map((p) => <PortfolioThumb key={p.id} path={p.image_url} onDelete={() => removePhoto(p.id)} />)}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 6, marginTop: 12 }}>
+            {portfolio.map((p, i) => (
+              <PortfolioThumb key={p.id} path={p.image_url} cover={i === 0} coverLabel={t('ep_cover')} onOpen={() => { haptic(); setPhotoMenu(p); }} />
+            ))}
             {count < PORTFOLIO_MAX && (
               <label style={{
                 aspectRatio: '1 / 1', borderRadius: 12, cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 4,
-                alignItems: 'center', justifyContent: 'center', border: '2px dashed var(--brand-accent, #50C878)',
-                backgroundColor: 'var(--brand-soft)', color: 'var(--brand-ink)', fontWeight: 700, fontSize: 13,
+                alignItems: 'center', justifyContent: 'center', border: '2px dashed rgba(127,127,127,0.35)',
+                color: 'var(--brand-ink)', fontWeight: 700, fontSize: 13,
               }}>
-                {portfolioBusy ? <Spinner size="s" /> : <><span style={{ fontSize: 26, lineHeight: 1 }}>+</span>{t('ep_portfolio_add')}</>}
-                <input type="file" hidden accept="image/*" onChange={addPhoto} disabled={portfolioBusy} />
+                {portfolioBusy ? <Spinner size="s" /> : <><BrandIcon name="plus" size={24} strokeWidth={2} />{t('ep_portfolio_add')}</>}
+                <input type="file" hidden multiple accept="image/*" onChange={addPhotos} disabled={portfolioBusy} />
               </label>
             )}
           </div>
         )
-      ), fill(t('ep_portfolio_hint'), { n: count, max: PORTFOLIO_MAX }))}
+      ), <span style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+        <span>{t('ep_cover_hint')}</span><span style={{ whiteSpace: 'nowrap' }}>{fill(t('ep_count'), { n: count, max: PORTFOLIO_MAX })}</span>
+      </span>)}
 
-      {/* TON — пока заготовка на будущее, поэтому внизу и компактно */}
-      <div style={{ ...card, marginTop: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#0098EA', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto' }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="white" />
-            <path d="M2 17L12 22L22 17M2 12L12 17L22 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, whiteSpace: 'nowrap' }}>{t('ep_wallet')} <Badge tone="wait">{t('ep_soon')}</Badge></div>
-          <div style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)', marginTop: 2 }}>{t('ep_wallet_hint')}</div>
-        </div>
-        <button type="button" onClick={() => { haptic(); if (wallet) tonConnectUI.disconnect(); else tonConnectUI.openModal(); }}
-          style={{ border: 'none', background: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 15, fontWeight: 700,
-            color: wallet ? 'var(--tg-theme-hint-color)' : 'var(--brand-ink)', padding: 4 }}>
-          {wallet ? `${wallet.account.address.slice(0, 4)}…${wallet.account.address.slice(-4)}` : t('ep_wallet_connect')}
-        </button>
-      </div>
+      {sheet === 'profession' && <ProfessionSheet value={form.profession} onPick={(v) => set('profession', v)} onClose={() => setSheet(null)} />}
+      {sheet === 'city' && <CitySheet value={form.city} onPick={(v) => set('city', v)} onClose={() => setSheet(null)} />}
+      {sheet === 'map' && (
+        <MapPicker initial={{ lat: form.lat ?? undefined, lon: form.lon ?? undefined, address: form.address, note: form.note }}
+          city={form.city} onSave={savePlace} onClose={() => setSheet(null)} />
+      )}
+      {photoMenu && (
+        <Sheet onClose={() => setPhotoMenu(null)}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {portfolio && portfolio[0]?.id !== photoMenu.id && (
+              <PrimaryButton variant="soft" onClick={() => makeCover(photoMenu.id)}>{t('ep_make_cover')}</PrimaryButton>
+            )}
+            <PrimaryButton variant="danger" onClick={() => removePhoto(photoMenu.id)}>{t('ep_photo_delete')}</PrimaryButton>
+          </div>
+        </Sheet>
+      )}
 
       {/* Сохранение — всегда под рукой */}
       <div style={{
