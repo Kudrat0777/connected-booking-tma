@@ -75,3 +75,16 @@ export const dayLabel = (date: string, locale: string, opts: Intl.DateTimeFormat
 /** 0 — понедельник (2024-01-01 — понедельник). */
 export const weekdayName = (w: number, locale: string, weekday: 'short' | 'long' = 'short') =>
   dayLabel(`2024-01-0${w + 1}`, locale, { weekday });
+
+export type ClassAnalytics = {
+  period: 'week' | 'month' | 'half'; from: string; to: string;
+  signups: number; prev_signups: number; students: number; newcomers: number;
+  fill: number | null; held: number; canceled: number; dropped: number;
+  bars: { start: string; end: string; count: number }[];
+  groups: { id: number; name: string; start: string; capacity: number | null; sessions: number; avg: number; fill: number | null }[];
+  programs: { title: string; avg: number; sessions: number }[];
+  lost: { telegram_id: number; name: string; username: string; last: string }[];
+  sources: { source: string; count: number }[];
+  subscribers: number;
+};
+export const fetchClassAnalytics = (period: ClassAnalytics['period']) => call<ClassAnalytics>(`class-manage/analytics/?period=${period}`);

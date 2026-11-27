@@ -27,6 +27,7 @@ import { MasterRegistrationScreen } from './screens/MasterRegistrationScreen';
 import { MasterLinksScreen } from './screens/MasterLinksScreen';
 import { MasterTeamScreen } from './screens/MasterTeamScreen';
 import { MasterGroupsScreen } from './screens/MasterGroupsScreen';
+import { ClassAnalyticsScreen } from './screens/ClassAnalyticsScreen';
 import { BusinessPublicScreen } from './screens/BusinessPublicScreen';
 
 import type { Service, Booking } from './helpers/api';
@@ -75,7 +76,7 @@ type Screen =
   | 'welcome' | 'slots' | 'bookingDone'
   | 'profile' | 'leave_review'
   | 'master_welcome' | 'master_login' | 'master_registration' | 'master_dashboard'
-  | 'master_schedule' | 'master_edit_profile' | 'master_analytics'
+  | 'master_schedule' | 'master_edit_profile' | 'master_analytics' | 'master_class_analytics'
   | 'master_reviews' | 'client_master_profile'
   | 'master_links' | 'master_team' | 'client_business' | 'master_member_schedule'
   | 'master_groups' | 'salon_calendar' | 'client_any_master' | 'master_clients' | 'master_client_detail';
@@ -548,6 +549,7 @@ const AppContent: React.FC = () => {
           onOpenSchedule={() => pushScreen('master_schedule')}
           onEditProfile={() => { loadCurrentMaster(user.id); pushScreen('master_edit_profile'); }}
           onOpenAnalytics={() => pushScreen('master_analytics')}
+          onOpenClassAnalytics={() => pushScreen('master_class_analytics')}
           onOpenReviews={() => pushScreen('master_reviews')}
           onLogout={handleMasterLogout}
           onOpenLinks={() => pushScreen('master_links')}
@@ -639,6 +641,10 @@ const AppContent: React.FC = () => {
 
       {screen === 'master_analytics' && user && (
         <MasterAnalyticsScreen telegramId={user.id} onBack={() => goBack('master_dashboard')} />
+      )}
+
+      {screen === 'master_class_analytics' && user && (
+        <ClassAnalyticsScreen onBack={() => goBack('master_dashboard')} />
       )}
 
       {screen === 'master_reviews' && user && (
