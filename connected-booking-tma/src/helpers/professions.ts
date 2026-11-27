@@ -89,6 +89,7 @@ export const professionTranslations: Record<LangCode, Dict> = {
     pf_no_classes_soon: 'В ближайший месяц занятий нет',
     pf_qa_groups: 'Группы', pf_qa_programs: 'Программы', pf_qa_link: 'Ссылка', pf_qa_services: 'Услуги',
     pf_personal: 'Личные записи',
+    pf_tab_analytics: 'Аналитика',
   },
   uz: {
     pf_barber: 'Barber', pf_hair: 'Sartarosh', pf_nails: 'Manikyur', pf_brows: 'Qosh va kipriklar',
@@ -135,6 +136,7 @@ export const professionTranslations: Record<LangCode, Dict> = {
     pf_no_classes_soon: "Yaqin bir oyda mashg'ulot yo'q",
     pf_qa_groups: 'Guruhlar', pf_qa_programs: 'Dasturlar', pf_qa_link: 'Havola', pf_qa_services: 'Xizmatlar',
     pf_personal: 'Shaxsiy yozuvlar',
+    pf_tab_analytics: 'Statistika',
   },
   en: {
     pf_barber: 'Barber', pf_hair: 'Hairdresser', pf_nails: 'Nails', pf_brows: 'Brows & lashes',
@@ -181,6 +183,7 @@ export const professionTranslations: Record<LangCode, Dict> = {
     pf_no_classes_soon: 'No classes in the next month',
     pf_qa_groups: 'Groups', pf_qa_programs: 'Programs', pf_qa_link: 'Link', pf_qa_services: 'Services',
     pf_personal: 'Personal bookings',
+    pf_tab_analytics: 'Analytics',
   },
 };
 

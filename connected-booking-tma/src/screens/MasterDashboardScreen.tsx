@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Spinner, Tabbar } from '@telegram-apps/telegram-ui';
-import { Icon28CalendarOutline, Icon28ServicesOutline, Icon28UserCircleOutline, Icon28Users3Outline } from '@vkontakte/icons';
+import { Icon28CalendarOutline, Icon28ServicesOutline, Icon28StatisticsOutline, Icon28UserCircleOutline, Icon28Users3Outline } from '@vkontakte/icons';
 
 import {
   confirmBooking, deleteAccount, fetchCurrentMaster, fetchMasterBookings, fetchMyServices,
@@ -342,11 +342,10 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginTop: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, marginTop: 14 }}>
           <QuickAction icon="groups" label={t('pf_qa_groups')} onClick={() => props.onOpenGroups?.()} />
           <QuickAction icon="programs" label={t('pf_qa_programs')} onClick={() => props.onOpenGroups?.('programs')} />
           <QuickAction icon="link" label={t('pf_qa_link')} onClick={props.onOpenLinks} />
-          <QuickAction icon="services" label={t('pf_qa_services')} onClick={() => setTab('services')} />
         </div>
 
         {personal.length > 0 && (
@@ -501,6 +500,7 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
           <MasterProfileTab
             me={me}
             servicesCount={services?.length ?? 0}
+            hideServicesWarning={classFirst}
             onEditProfile={props.onEditProfile}
             onOpenSchedule={props.onOpenSchedule}
             onOpenAnalytics={props.onOpenAnalytics}
@@ -518,17 +518,25 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
       </main>
 
       {!(serviceSheet || manualOpen || newClient || classOpen) && (
+      classFirst ? (
+        // Инструктор: четыре раздела как в макете; своя панель, чтобы все подписи помещались на телефоне
+        <nav aria-label={t('md_tab_bookings')} style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 100, display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+          padding: '6px 4px calc(6px + env(safe-area-inset-bottom))', backgroundColor: 'var(--tg-theme-bg-color)',
+          borderTop: '1px solid rgba(127,127,127,0.18)',
+        }}>
+          <NavItem label={t('md_tab_bookings')} active={tab === 'bookings'} onClick={() => setTab('bookings')}><Icon28CalendarOutline /></NavItem>
+          <NavItem label={t('cl_title')} onClick={() => props.onOpenClients?.()}><Icon28Users3Outline /></NavItem>
+          <NavItem label={t('pf_tab_analytics')} onClick={() => props.onOpenAnalytics()}><Icon28StatisticsOutline /></NavItem>
+          <NavItem label={t('tab_profile')} active={tab === 'profile'} onClick={() => setTab('profile')}><Icon28UserCircleOutline /></NavItem>
+        </nav>
+      ) : (
       <Tabbar style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 100 }}>
         <Tabbar.Item text={t('md_tab_bookings')} selected={tab === 'bookings'} onClick={() => setTab('bookings')}><Icon28CalendarOutline /></Tabbar.Item>
-        {classFirst ? (
-          <>
-            <Tabbar.Item text={t('cl_title')} selected={false} onClick={() => props.onOpenClients?.()}><Icon28Users3Outline /></Tabbar.Item>
-          </>
-        ) : (
-          <Tabbar.Item text={t('m_tab_services')} selected={tab === 'services'} onClick={() => setTab('services')}><Icon28ServicesOutline /></Tabbar.Item>
-        )}
+        <Tabbar.Item text={t('m_tab_services')} selected={tab === 'services'} onClick={() => setTab('services')}><Icon28ServicesOutline /></Tabbar.Item>
         <Tabbar.Item text={t('tab_profile')} selected={tab === 'profile'} onClick={() => setTab('profile')}><Icon28UserCircleOutline /></Tabbar.Item>
       </Tabbar>
+      )
       )}
 
       {classOpen && (
@@ -589,14 +597,14 @@ const QA_PATHS: Record<string, { d: string[]; dot: [number, number, number] }> =
   groups: { d: ['M4 6.5h16v13H4z', 'M4 10.5h16M8.5 4v4M15.5 4v4'], dot: [12, 15, 1.7] },
   programs: { d: ['M5 4.5h14v15H5z', 'M8.5 9h7M8.5 13h7M8.5 17h4'], dot: [18.5, 4.5, 2] },
   link: { d: ['M9.5 14.5l5-5', 'M11 6.5l1.5-1.5a4 4 0 0 1 5.7 5.7L16.7 12.2', 'M13 17.5l-1.5 1.5a4 4 0 0 1-5.7-5.7L7.3 11.8'], dot: [19, 19, 2] },
-  services: { d: ['M4 5h7v7H4z', 'M13 5h7v7h-7z', 'M4 14h7v6H4z'], dot: [16.5, 17, 2.4] },
 };
 const QuickAction: React.FC<{ icon: keyof typeof QA_PATHS; label: string; onClick?: () => void }> = ({ icon, label, onClick }) => {
   const g = QA_PATHS[icon];
   return (
     <button type="button" onClick={onClick} style={{
-      ...card, height: 76, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 600,
-      color: 'var(--tg-theme-text-color)', display: 'flex', alignItems: 'center', gap: 12, padding: '0 14px',
+      ...card, height: 84, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
+      color: 'var(--tg-theme-text-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      gap: 8, padding: '0 6px',
     }}>
       <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         {g.d.map((d) => <path key={d} d={d} />)}
@@ -606,3 +614,15 @@ const QuickAction: React.FC<{ icon: keyof typeof QA_PATHS; label: string; onClic
     </button>
   );
 };
+
+/** Раздел нижней панели инструктора */
+const NavItem: React.FC<{ label: string; active?: boolean; onClick?: () => void; children: React.ReactNode }> = ({ label, active, onClick, children }) => (
+  <button type="button" onClick={onClick} aria-current={active ? 'page' : undefined} style={{
+    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '4px 0', border: 'none', background: 'none',
+    cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, fontWeight: active ? 700 : 600, minWidth: 0,
+    color: active ? 'var(--brand-accent, #50C878)' : 'var(--tg-theme-hint-color)',
+  }}>
+    {children}
+    <span style={{ maxWidth: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+  </button>
+);

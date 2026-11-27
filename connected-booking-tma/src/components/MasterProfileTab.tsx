@@ -10,6 +10,8 @@ import { Avatar, Badge, card } from './ui';
 type Props = {
   me: CurrentMaster | null;
   servicesCount: number;
+  /** Инструктору групп услуги не обязательны — не пугаем предупреждением */
+  hideServicesWarning?: boolean;
   onEditProfile: () => void;
   onOpenSchedule: () => void;
   onOpenAnalytics: () => void;
@@ -98,7 +100,7 @@ export const MasterProfileTab: React.FC<Props> = (p) => {
         ))}
       </div>
 
-      {p.servicesCount === 0 && (
+      {p.servicesCount === 0 && !p.hideServicesWarning && (
         <div style={{ ...card, marginTop: 12, backgroundColor: 'rgba(255,149,0,0.1)', fontSize: 14 }}>⚠️ {t('mp_no_services_warn')}</div>
       )}
 
