@@ -28,6 +28,7 @@ import { MasterLinksScreen } from './screens/MasterLinksScreen';
 import { MasterTeamScreen } from './screens/MasterTeamScreen';
 import { MasterGroupsScreen } from './screens/MasterGroupsScreen';
 import { ClassAnalyticsScreen } from './screens/ClassAnalyticsScreen';
+import { ClassStudentScreen } from './screens/ClassStudentScreen';
 import { BusinessPublicScreen } from './screens/BusinessPublicScreen';
 
 import type { Service, Booking } from './helpers/api';
@@ -76,7 +77,7 @@ type Screen =
   | 'welcome' | 'slots' | 'bookingDone'
   | 'profile' | 'leave_review'
   | 'master_welcome' | 'master_login' | 'master_registration' | 'master_dashboard'
-  | 'master_schedule' | 'master_edit_profile' | 'master_analytics' | 'master_class_analytics'
+  | 'master_schedule' | 'master_edit_profile' | 'master_analytics' | 'master_class_analytics' | 'class_student'
   | 'master_reviews' | 'client_master_profile'
   | 'master_links' | 'master_team' | 'client_business' | 'master_member_schedule'
   | 'master_groups' | 'salon_calendar' | 'client_any_master' | 'master_clients' | 'master_client_detail';
@@ -169,6 +170,7 @@ const AppContent: React.FC = () => {
   const [groupsTab, setGroupsTab] = useState<'days' | 'programs'>('days');
   // Вкладка кабинета мастера: из карточки ученика возвращаемся туда же
   const [dashTab, setDashTab] = useState<DashboardTab>('bookings');
+  const [studentId, setStudentId] = useState<number | null>(null);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   // Владелец/админ редактирует график мастера своей команды
   const [scheduleMasterId, setScheduleMasterId] = useState<number | null>(null);
@@ -555,6 +557,7 @@ const AppContent: React.FC = () => {
           initialTab={dashTab}
           onTabChange={setDashTab}
           onOpenClient={(key) => { setClientKey(key); pushScreen('master_client_detail'); }}
+          onOpenStudent={(id) => { setStudentId(id); pushScreen('class_student'); }}
           onOpenReviews={() => pushScreen('master_reviews')}
           onLogout={handleMasterLogout}
           onOpenLinks={() => pushScreen('master_links')}
@@ -646,6 +649,10 @@ const AppContent: React.FC = () => {
 
       {screen === 'master_analytics' && user && (
         <MasterAnalyticsScreen telegramId={user.id} onBack={() => goBack('master_dashboard')} />
+      )}
+
+      {screen === 'class_student' && studentId != null && (
+        <ClassStudentScreen telegramId={studentId} onBack={() => goBack('master_dashboard')} />
       )}
 
       {screen === 'master_class_analytics' && user && (

@@ -88,3 +88,23 @@ export type ClassAnalytics = {
   subscribers: number;
 };
 export const fetchClassAnalytics = (period: ClassAnalytics['period']) => call<ClassAnalytics>(`class-manage/analytics/?period=${period}`);
+
+export type StudentTag = '' | 'new' | 'lost';
+export type ClassStudent = {
+  telegram_id: number; name: string; username: string; phone: string;
+  total: number; since: string | null; last: string | null;
+  next: { date: string; start: string; group: string; status: 'active' | 'waiting' } | null;
+  groups: string[]; canceled: number; tag: StudentTag; note: string; subscribed: boolean;
+};
+export type ClassStudentCard = Omit<ClassStudent, 'last' | 'groups' | 'next'> & {
+  this_month: number; prev_month: number;
+  last: { date: string; group: string; program: string } | null;
+  next: (ClassStudent['next'] & { program: string }) | null;
+  groups: { name: string; start: string; count: number }[];
+  history: { date: string; group: string; program: string; status: 'booked' | 'done' | 'canceled' | 'waiting' }[];
+};
+export const fetchClassStudents = (q = '', kind: 'all' | 'active' | 'new' | 'lost' = 'all') =>
+  call<ClassStudent[]>(`class-manage/students/?q=${encodeURIComponent(q)}&kind=${kind}`);
+export const fetchClassStudent = (tid: number) => call<ClassStudentCard>(`class-manage/students/${tid}/`);
+export const saveClassStudentNote = (tid: number, text: string) =>
+  call<{ note: string }>(`class-manage/students/${tid}/`, 'PUT', { text });
