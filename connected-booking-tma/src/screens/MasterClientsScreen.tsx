@@ -9,6 +9,8 @@ import { Konnektik } from '../components/Konnektik';
 type Props = {
   onBack: () => void;
   onOpenClient: (key: string) => void;
+  /** Вкладка кабинета инструктора: назад не нужен, снизу меню */
+  embedded?: boolean;
 };
 
 const SORTS: CustomerSort[] = ['recent', 'visits', 'spent', 'lost'];
@@ -20,7 +22,7 @@ const chip = (active: boolean): React.CSSProperties => ({
   color: active ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
 });
 
-export const MasterClientsScreen: React.FC<Props> = ({ onBack, onOpenClient }) => {
+export const MasterClientsScreen: React.FC<Props> = ({ onBack, onOpenClient, embedded }) => {
   const tg = (window as any).Telegram?.WebApp;
   const { t, lang } = useLanguage();
   const locale = lang === 'uz' ? 'uz-UZ' : lang === 'en' ? 'en-GB' : 'ru-RU';
@@ -34,12 +36,12 @@ export const MasterClientsScreen: React.FC<Props> = ({ onBack, onOpenClient }) =
   const backRef = useRef(onBack);
   backRef.current = onBack;
   useEffect(() => {
-    if (!tg?.BackButton) return;
+    if (!tg?.BackButton || embedded) return;
     const h = () => backRef.current();
     tg.BackButton.show();
     tg.BackButton.onClick(h);
     return () => tg.BackButton.offClick(h);
-  }, [tg]);
+  }, [tg, embedded]);
 
   useEffect(() => {
     fetchCurrentMaster().then((m) => {
@@ -63,7 +65,7 @@ export const MasterClientsScreen: React.FC<Props> = ({ onBack, onOpenClient }) =
     iso ? new Date(iso).toLocaleDateString(locale, { day: 'numeric', month: 'short', timeZone: 'Asia/Tashkent' }) : '';
 
   return (
-    <div style={{ backgroundColor: 'var(--tg-theme-secondary-bg-color)', minHeight: '100vh', paddingBottom: 40, color: 'var(--tg-theme-text-color)' }}>
+    <div style={{ backgroundColor: 'var(--tg-theme-secondary-bg-color)', minHeight: '100vh', paddingBottom: embedded ? 110 : 40, color: 'var(--tg-theme-text-color)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '22px 16px 8px' }}>
         <Konnektik mood="happy" size={72} />
         <div>

@@ -17,6 +17,8 @@ import { MasterProfileTab } from '../components/MasterProfileTab';
 import { ClassManage, ClassSession, fetchClassManage, setSessionCanceled } from '../helpers/classes';
 import { ask, tell } from '../components/ClassSchedule';
 import { Roster } from './MasterGroupsScreen';
+import { MasterClientsScreen } from './MasterClientsScreen';
+import { ClassAnalyticsScreen } from './ClassAnalyticsScreen';
 import { useWhen } from './ClientHomeScreen';
 
 type Props = {
@@ -27,6 +29,10 @@ type Props = {
   onOpenAnalytics: () => void;
   /** Аналитика групповых занятий (инструктор) */
   onOpenClassAnalytics?: () => void;
+  /** Вкладка при открытии и её смена: App помнит её, чтобы вернуться из карточки ученика туда же */
+  initialTab?: DashboardTab;
+  onTabChange?: (tab: DashboardTab) => void;
+  onOpenClient?: (key: string) => void;
   onOpenReviews: () => void;
   onLogout?: () => void;
   onOpenLinks?: () => void;
@@ -38,7 +44,8 @@ type Props = {
   onClassTargetOpened?: () => void;
 };
 
-type Tab = 'bookings' | 'services' | 'profile';
+export type DashboardTab = 'bookings' | 'services' | 'profile' | 'students' | 'analytics';
+type Tab = DashboardTab;
 type Period = 'today' | 'tomorrow' | 'week' | 'all';
 
 const tgApp = () => (window as any).Telegram?.WebApp;
@@ -53,7 +60,8 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
   const { t, lang, setProfession } = useLanguage();
   const when = useWhen();
 
-  const [tab, setTab] = useState<Tab>('bookings');
+  const [tab, setTabState] = useState<Tab>(props.initialTab ?? 'bookings');
+  const setTab = (next: Tab) => { setTabState(next); props.onTabChange?.(next); };
   const [me, setMe] = useState<CurrentMaster | null>(null);
 
   const [period, setPeriod] = useState<Period>('today');
@@ -82,6 +90,10 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
   const profession = me ? professionOf(me) : null;
   useEffect(() => { if (profession) setProfession(profession); }, [profession, setProfession]);
   const classFirst = !!profession && CLASS_FIRST.has(profession);
+  // Вкладки «Ученики» и «Аналитика» — только у инструктора (профессию могли сменить)
+  useEffect(() => {
+    if (profession && !classFirst && (tab === 'students' || tab === 'analytics')) setTab('bookings');
+  }, [profession, classFirst, tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Бот мастера пишет на языке кабинета: сохраняем и смену языка, и прежнее расхождение
   const savedLang = me?.language;
@@ -498,6 +510,8 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
       <main style={{ height: '100%', overflowY: 'auto' }}>
         {tab === 'bookings' && (classFirst ? renderClasses() : renderBookings())}
         {tab === 'services' && renderServices()}
+        {tab === 'students' && <MasterClientsScreen embedded onBack={() => setTab('bookings')} onOpenClient={(k) => props.onOpenClient?.(k)} />}
+        {tab === 'analytics' && <ClassAnalyticsScreen embedded onBack={() => setTab('bookings')} />}
         {tab === 'profile' && (
           <MasterProfileTab
             me={me}
@@ -505,12 +519,12 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
             hideServicesWarning={classFirst}
             onEditProfile={props.onEditProfile}
             onOpenSchedule={props.onOpenSchedule}
-            onOpenAnalytics={classFirst && props.onOpenClassAnalytics ? props.onOpenClassAnalytics : props.onOpenAnalytics}
+            onOpenAnalytics={classFirst ? () => setTab('analytics') : props.onOpenAnalytics}
             onOpenReviews={props.onOpenReviews}
             onOpenLinks={props.onOpenLinks}
             onOpenTeam={props.onOpenTeam}
             onOpenSalonCalendar={props.onOpenSalonCalendar}
-            onOpenClients={props.onOpenClients}
+            onOpenClients={classFirst ? () => setTab('students') : props.onOpenClients}
             onOpenGroups={props.onOpenGroups}
             onSwitchToClient={() => { setProfession(null); props.onSwitchToClient(); }}
             onLogoutClick={handleLogout}
@@ -528,8 +542,8 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
           borderTop: '1px solid rgba(127,127,127,0.18)',
         }}>
           <NavItem label={t('md_tab_bookings')} active={tab === 'bookings'} onClick={() => setTab('bookings')}><Icon28CalendarOutline /></NavItem>
-          <NavItem label={t('cl_title')} onClick={() => props.onOpenClients?.()}><Icon28Users3Outline /></NavItem>
-          <NavItem label={t('pf_tab_analytics')} onClick={() => (props.onOpenClassAnalytics ?? props.onOpenAnalytics)()}><Icon28StatisticsOutline /></NavItem>
+          <NavItem label={t('cl_title')} active={tab === 'students'} onClick={() => setTab('students')}><Icon28Users3Outline /></NavItem>
+          <NavItem label={t('pf_tab_analytics')} active={tab === 'analytics'} onClick={() => setTab('analytics')}><Icon28StatisticsOutline /></NavItem>
           <NavItem label={t('tab_profile')} active={tab === 'profile'} onClick={() => setTab('profile')}><Icon28UserCircleOutline /></NavItem>
         </nav>
       ) : (

@@ -13,7 +13,7 @@ import { LeaveReviewScreen } from './screens/LeaveReviewScreen';
 // Master Screens
 import { MasterWelcomeScreen } from './screens/MasterWelcomeScreen';
 import { MasterLoginScreen } from './screens/MasterLoginScreen';
-import { MasterDashboardScreen } from './screens/MasterDashboardScreen';
+import { MasterDashboardScreen, DashboardTab } from './screens/MasterDashboardScreen';
 import { MasterWorkHoursScreen } from './screens/MasterWorkHoursScreen';
 import { SalonCalendarScreen } from './screens/SalonCalendarScreen';
 import { AnyMasterScreen } from './screens/AnyMasterScreen';
@@ -167,6 +167,8 @@ const AppContent: React.FC = () => {
   const [classTarget, setClassTarget] = useState<{ group: number; date: string } | null>(null);
   // С какой вкладки открыть «Группы и программы» (из кабинета инструктора — сразу программы)
   const [groupsTab, setGroupsTab] = useState<'days' | 'programs'>('days');
+  // Вкладка кабинета мастера: из карточки ученика возвращаемся туда же
+  const [dashTab, setDashTab] = useState<DashboardTab>('bookings');
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   // Владелец/админ редактирует график мастера своей команды
   const [scheduleMasterId, setScheduleMasterId] = useState<number | null>(null);
@@ -550,6 +552,9 @@ const AppContent: React.FC = () => {
           onEditProfile={() => { loadCurrentMaster(user.id); pushScreen('master_edit_profile'); }}
           onOpenAnalytics={() => pushScreen('master_analytics')}
           onOpenClassAnalytics={() => pushScreen('master_class_analytics')}
+          initialTab={dashTab}
+          onTabChange={setDashTab}
+          onOpenClient={(key) => { setClientKey(key); pushScreen('master_client_detail'); }}
           onOpenReviews={() => pushScreen('master_reviews')}
           onLogout={handleMasterLogout}
           onOpenLinks={() => pushScreen('master_links')}
