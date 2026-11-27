@@ -25,6 +25,8 @@ type Props = {
   onOpenSchedule: () => void;
   onEditProfile: () => void;
   onOpenAnalytics: () => void;
+  /** Аналитика групповых занятий (инструктор) */
+  onOpenClassAnalytics?: () => void;
   onOpenReviews: () => void;
   onLogout?: () => void;
   onOpenLinks?: () => void;
@@ -503,7 +505,7 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
             hideServicesWarning={classFirst}
             onEditProfile={props.onEditProfile}
             onOpenSchedule={props.onOpenSchedule}
-            onOpenAnalytics={props.onOpenAnalytics}
+            onOpenAnalytics={classFirst && props.onOpenClassAnalytics ? props.onOpenClassAnalytics : props.onOpenAnalytics}
             onOpenReviews={props.onOpenReviews}
             onOpenLinks={props.onOpenLinks}
             onOpenTeam={props.onOpenTeam}
@@ -527,7 +529,7 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
         }}>
           <NavItem label={t('md_tab_bookings')} active={tab === 'bookings'} onClick={() => setTab('bookings')}><Icon28CalendarOutline /></NavItem>
           <NavItem label={t('cl_title')} onClick={() => props.onOpenClients?.()}><Icon28Users3Outline /></NavItem>
-          <NavItem label={t('pf_tab_analytics')} onClick={() => props.onOpenAnalytics()}><Icon28StatisticsOutline /></NavItem>
+          <NavItem label={t('pf_tab_analytics')} onClick={() => (props.onOpenClassAnalytics ?? props.onOpenAnalytics)()}><Icon28StatisticsOutline /></NavItem>
           <NavItem label={t('tab_profile')} active={tab === 'profile'} onClick={() => setTab('profile')}><Icon28UserCircleOutline /></NavItem>
         </nav>
       ) : (
