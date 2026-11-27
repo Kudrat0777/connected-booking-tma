@@ -14,6 +14,12 @@ RUN npm ci
 # Копируем все остальные файлы проекта
 COPY . .
 
+# Имена ботов попадают в ссылки приложения при сборке
+ARG VITE_CLIENT_BOT_USERNAME
+ARG VITE_MASTER_BOT_USERNAME
+ENV VITE_CLIENT_BOT_USERNAME=$VITE_CLIENT_BOT_USERNAME \
+    VITE_MASTER_BOT_USERNAME=$VITE_MASTER_BOT_USERNAME
+
 # Собираем production билд (Vite сложит статику в папку dist)
 RUN npx vite build
 

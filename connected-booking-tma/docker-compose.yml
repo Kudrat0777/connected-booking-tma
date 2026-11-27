@@ -1,8 +1,12 @@
-version: '3.8'
 services:
   frontend:
-    build: .
+    build:
+      context: .
+      args:
+        VITE_CLIENT_BOT_USERNAME: ${VITE_CLIENT_BOT_USERNAME:?задайте имя клиентского бота без @}
+        VITE_MASTER_BOT_USERNAME: ${VITE_MASTER_BOT_USERNAME:-ConnectedTimeMasterBot}
     ports:
-      - "8080:80"
+      # Наружу смотрит только внешний nginx с HTTPS
+      - "127.0.0.1:8080:80"
     container_name: react-frontend-app
     restart: always
