@@ -518,6 +518,7 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
             me={me}
             servicesCount={services?.length ?? 0}
             hideServicesWarning={classFirst}
+            classFirst={classFirst}
             onEditProfile={props.onEditProfile}
             onOpenSchedule={props.onOpenSchedule}
             onOpenAnalytics={classFirst ? () => setTab('analytics') : props.onOpenAnalytics}
