@@ -3,9 +3,11 @@ import { Title, Text, Button, Spinner } from '@telegram-apps/telegram-ui';
 import { Icon28CopyOutline, Icon28ShareOutline } from '@vkontakte/icons';
 import QRCode from 'qrcode';
 
-import { fetchCurrentMaster, fetchMasterAnalytics, CurrentMaster, SourceStat } from '../helpers/api';
-import { LINK_SOURCES, clientLink, copyText, shareToTelegram, sourceLabel } from '../helpers/links';
+import { fetchCurrentMaster, fetchMasterAnalytics, setShortName, CurrentMaster, SourceStat } from '../helpers/api';
+import { LINK_SOURCES, clientLink, copyText, masterShortLink, shareToTelegram, sourceLabel } from '../helpers/links';
 import { Konnektik } from '../components/Konnektik';
+import { BrandIcon } from '../components/BrandIcon';
+import { PrimaryButton, Sheet, inputStyle } from '../components/ui';
 import { useLanguage } from '../helpers/LanguageContext';
 import { fill } from '../helpers/translationsBusiness';
 
@@ -45,6 +47,10 @@ export const MasterLinksScreen: React.FC<Props> = ({ onBack, onOpenAnalytics }) 
   const [source, setSource] = useState('ig');
   const [qr, setQr] = useState('');
   const [stats, setStats] = useState<SourceStat[]>([]);
+  const [nameOpen, setNameOpen] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [nameBusy, setNameBusy] = useState(false);
 
   const backRef = useRef(onBack);
   backRef.current = onBack;
@@ -71,7 +77,7 @@ export const MasterLinksScreen: React.FC<Props> = ({ onBack, onOpenAnalytics }) 
   const link = useMemo(() => {
     if (!me) return '';
     if (target === 'business' && me.business) return clientLink('b', me.business.slug, source);
-    return clientLink('m', me.slug, source);
+    return masterShortLink(me, source);
   }, [me, target, source]);
 
   useEffect(() => {
@@ -156,9 +162,19 @@ export const MasterLinksScreen: React.FC<Props> = ({ onBack, onOpenAnalytics }) 
         </div>
 
         <div style={card}>
-          <div style={{ fontSize: 13, color: 'var(--tg-theme-link-color)', wordBreak: 'break-all', backgroundColor: 'var(--tg-theme-secondary-bg-color)', padding: '10px 12px', borderRadius: 10, marginBottom: 12 }}>
-            {link}
-          </div>
+          {target === 'master' ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: 'var(--tg-theme-secondary-bg-color)', padding: '12px 12px 12px 14px', borderRadius: 14, marginBottom: 12 }}>
+              <span style={{ flex: 1, minWidth: 0, fontSize: 20, fontWeight: 800, wordBreak: 'break-all' }}>{link.replace(/^https?:\/\//, '')}</span>
+              <button type="button" aria-label={t('sl_edit')} onClick={() => { setNameDraft(me.short_name || me.slug); setNameError(''); setNameOpen(true); }} style={{
+                width: 36, height: 36, flex: '0 0 auto', borderRadius: 10, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                backgroundColor: 'var(--tg-theme-bg-color)', color: 'var(--tg-theme-text-color)',
+              }}><BrandIcon name="edit" size={18} strokeWidth={1.9} /></button>
+            </div>
+          ) : (
+            <div style={{ fontSize: 13, color: 'var(--tg-theme-link-color)', wordBreak: 'break-all', backgroundColor: 'var(--tg-theme-secondary-bg-color)', padding: '10px 12px', borderRadius: 10, marginBottom: 12 }}>
+              {link}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 8 }}>
             <Button size="m" mode="bezeled" stretched before={<Icon28CopyOutline width={20} height={20} />} onClick={onCopy}>
               {t('btn_copy')}
@@ -213,6 +229,32 @@ export const MasterLinksScreen: React.FC<Props> = ({ onBack, onOpenAnalytics }) 
           </div>
         </div>
       </div>
+      {nameOpen && me && (
+        <Sheet onClose={() => setNameOpen(false)}>
+          <div style={{ fontSize: 20, fontWeight: 800 }}>{t('sl_title')}</div>
+          <div style={{ fontSize: 14, color: 'var(--tg-theme-hint-color)', marginTop: 6, lineHeight: 1.4 }}>{t('sl_hint')}</div>
+          <label style={{ ...inputStyle, display: 'flex', alignItems: 'center', gap: 2, marginTop: 12, padding: '0 14px', height: 50 }}>
+            <span style={{ color: 'var(--tg-theme-hint-color)', fontSize: 16 }}>{window.location.host}/</span>
+            <input value={nameDraft} maxLength={30} autoCapitalize="none" autoCorrect="off" spellCheck={false} aria-label={t('sl_title')}
+              onChange={(e) => { setNameDraft(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')); setNameError(''); }}
+              style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', color: 'var(--tg-theme-text-color)', fontFamily: 'inherit', fontSize: 16, fontWeight: 700 }} />
+          </label>
+          {nameError && <div style={{ color: '#E0533D', fontSize: 13, marginTop: 6 }}>{nameError}</div>}
+          <div style={{ fontSize: 12, color: 'var(--tg-theme-hint-color)', marginTop: 8, lineHeight: 1.4 }}>{t('sl_warn')}</div>
+          <div style={{ marginTop: 14 }}>
+            <PrimaryButton loading={nameBusy} disabled={nameDraft.length < 3} onClick={async () => {
+              setNameBusy(true);
+              try {
+                const saved = await setShortName(nameDraft);
+                setMe({ ...me, short_name: saved });
+                setNameOpen(false);
+                haptic('success');
+              } catch (e: any) { setNameError(e?.message || t('sl_error')); }
+              finally { setNameBusy(false); }
+            }}>{t('sl_save')}</PrimaryButton>
+          </div>
+        </Sheet>
+      )}
     </div>
   );
 };

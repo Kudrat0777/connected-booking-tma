@@ -16,6 +16,8 @@ import { PhotoGallery } from '../components/PhotoGallery';
 
 // ИМПОРТИРУЕМ ХУК ЛОКАЛИЗАЦИИ
 import { professionLabel } from '../helpers/professions';
+import { cityLabel, mapLinks } from '../helpers/cities';
+import { BrandIcon } from '../components/BrandIcon';
 import { useLanguage } from '../helpers/LanguageContext';
 
 const LottieIcon = KonnektikSticker;
@@ -28,7 +30,7 @@ type Props = {
 
 export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, onServiceClick }) => {
   // ПОДКЛЮЧАЕМ ПЕРЕВОДЫ
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const when = useWhen();
 
   const [master, setMaster] = useState<MasterPublicProfile | null>(null);
@@ -177,7 +179,13 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
       );
   }
 
-  const isAddressLink = master.address && master.address.includes('http');
+  const isAddressLink = !!master.address && master.address.includes('http');
+  const hasPoint = master.latitude != null && master.longitude != null;
+  const links = hasPoint ? mapLinks(master.latitude!, master.longitude!) : null;
+  const openLink = (url: string) => {
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg?.openLink) tg.openLink(url); else window.open(url, '_blank');
+  };
   const today = master.today;
   const category = professionLabel(t, master);
 
@@ -305,23 +313,34 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
           </div>
         )}
 
-        {/* Как найти */}
-        {(master.phone || master.address) && (
+        {/* Как найти: точка на карте — кнопки Яндекс и Google Карт; старый адрес текстом или ссылкой */}
+        {(master.phone || master.address || hasPoint) && (
           <div style={card}>
             <div style={{ fontWeight: 700, marginBottom: 8 }}>{t('contacts_header')}</div>
-            {master.address && (
-              isAddressLink ? (
-                <button type="button" onClick={() => window.open(master.address, '_blank')}
-                  style={{ border: 'none', background: 'none', padding: '6px 0', cursor: 'pointer', color: 'var(--brand-ink)', fontWeight: 600, fontSize: 15, fontFamily: 'inherit' }}>
-                  📍 {t('open_in_map')}
-                </button>
-              ) : (
-                <div style={{ fontSize: 15, padding: '6px 0' }}>📍 {[master.city, master.address].filter(Boolean).join(', ')}</div>
-              )
+            {(master.address || hasPoint) && !isAddressLink && (
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '6px 0', fontSize: 15 }}>
+                <span style={{ color: 'var(--brand-ink)', display: 'flex' }}><BrandIcon name="pin" size={20} /></span>
+                <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span>{[cityLabel(master.city || '', lang), master.address].filter(Boolean).join(', ')}</span>
+                  {master.address_note && <span style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)' }}>{master.address_note}</span>}
+                </span>
+              </div>
+            )}
+            {hasPoint && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, marginTop: 6 }}>
+                <button type="button" onClick={() => openLink(links!.yandex)} style={mapBtn}>{t('mp_yandex')}</button>
+                <button type="button" onClick={() => openLink(links!.google)} style={mapBtn}>{t('mp_google')}</button>
+              </div>
+            )}
+            {!hasPoint && isAddressLink && (
+              <button type="button" onClick={() => openLink(master.address!)}
+                style={{ border: 'none', background: 'none', padding: '6px 0', cursor: 'pointer', color: 'var(--brand-ink)', fontWeight: 600, fontSize: 15, fontFamily: 'inherit' }}>
+                {t('open_in_map')}
+              </button>
             )}
             {master.phone && (
-              <a href={`tel:${master.phone}`} style={{ display: 'block', padding: '6px 0', fontSize: 15, fontWeight: 600, color: 'var(--brand-ink)', textDecoration: 'none' }}>
-                📞 {formatPhone(master.phone)}
+              <a href={`tel:${master.phone}`} style={{ display: 'block', padding: '8px 0 2px', fontSize: 15, fontWeight: 600, color: 'var(--brand-ink)', textDecoration: 'none' }}>
+                {formatPhone(master.phone)}
               </a>
             )}
           </div>
@@ -350,4 +369,8 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
       )}
     </div>
   );
+};
+const mapBtn: React.CSSProperties = {
+  height: 42, borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 700,
+  backgroundColor: 'var(--brand-soft)', color: 'var(--brand-ink)',
 };

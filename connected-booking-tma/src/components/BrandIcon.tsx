@@ -29,6 +29,11 @@ const GLYPHS = {
   logout: { d: ['M10 4H5v16h5', 'M14 8l4 4-4 4', 'M18 12H9'] },
   trash: { d: ['M4 7h16', 'M9 7V4h6v3', 'M6 7l1 13h10l1-13'] },
   chevron: { d: ['M9 5l7 7-7 7'] },
+  search: { d: ['M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14z', 'M20 20l-4-4'] },
+  pin: { d: ['M12 21s7-7.2 7-12.5A7 7 0 0 0 5 8.5C5 13.8 12 21 12 21z'], dot: [12, 8.7, 2.4] },
+  locate: { d: ['M12 19a7 7 0 1 0 0-14 7 7 0 0 0 0 14z', 'M12 2v3M12 19v3M2 12h3M19 12h3'], dot: [12, 12, 2.4] },
+  camera: { d: ['M4 8h3l1.8-3h6.4L17 8h3v11H4z', 'M9 13.5a3 3 0 1 0 6 0 3 3 0 0 0-6 0z'] },
+  plus: { d: ['M12 5v14M5 12h14'] },
 } satisfies Record<string, Glyph>;
 
 export type BrandIconName = keyof typeof GLYPHS;

@@ -9,7 +9,7 @@ import {
 import { CLASS_FIRST, professionOf } from '../helpers/professions';
 import { useLanguage } from '../helpers/LanguageContext';
 import { fill, pluralize } from '../helpers/translationsBusiness';
-import { clientLink, shareToTelegram } from '../helpers/links';
+import { masterShortLink, shareToTelegram } from '../helpers/links';
 import { Konnektik } from '../components/Konnektik';
 import { Avatar, Badge, PrimaryButton, Sheet, card, localeFor, money, tashkent } from '../components/ui';
 import { ManualBookingSheet, ServiceSheet } from '../components/MasterSheets';
@@ -584,7 +584,7 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
             <Konnektik mood="happy" size={100} />
             <div style={{ fontSize: 20, fontWeight: 800, marginTop: 8 }}>{fill(t('md_new_client_title'), { name: newClient })}</div>
             <div style={{ fontSize: 14, color: 'var(--tg-theme-hint-color)', margin: '6px 0 16px' }}>{t('md_new_client_text')}</div>
-            <PrimaryButton onClick={() => { shareToTelegram(clientLink('m', me.slug), t('links_share_master')); setNewClient(null); }}>
+            <PrimaryButton onClick={() => { shareToTelegram(masterShortLink(me), t('links_share_master')); setNewClient(null); }}>
               {t('md_send_link')}
             </PrimaryButton>
           </div>

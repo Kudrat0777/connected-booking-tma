@@ -4,7 +4,7 @@ import type { CurrentMaster } from '../helpers/api';
 import { professionLabel, professionOf } from '../helpers/professions';
 import { useLanguage } from '../helpers/LanguageContext';
 import { LangCode } from '../helpers/translations';
-import { clientLink, copyText, shareToTelegram } from '../helpers/links';
+import { copyText, masterShortLink, shareToTelegram } from '../helpers/links';
 import { Avatar, Badge, card } from './ui';
 import { BrandIcon, BrandIconName } from './BrandIcon';
 import { ProfessionGlyph } from './ProfessionIcon';
@@ -41,7 +41,7 @@ export const MasterProfileTab: React.FC<Props> = (p) => {
   const profession = professionOf(me);
 
   const subtitle = [me ? professionLabel(t, me) : '', isTeam ? me?.business?.name : '', me?.city].filter(Boolean).join(' · ');
-  const myLink = me ? clientLink('m', me.slug) : '';
+  const myLink = me ? masterShortLink(me) : '';
   const share = async () => {
     haptic();
     if (!myLink) return;
@@ -57,7 +57,8 @@ export const MasterProfileTab: React.FC<Props> = (p) => {
   const tiles: Tile[] = classes ? [
     { icon: 'calendar', title: t('gc_manage'), hint: t('pf_groups_hint'), onClick: p.onOpenGroups, show: true },
     { icon: 'qr', title: t('prof_links'), hint: t('mp_tile_links'), onClick: p.onOpenLinks, show: true },
-    { icon: 'sun', title: t('pf_timeoff'), hint: t('pf_timeoff_hint'), onClick: p.onOpenSchedule, show: true },
+    // Расписание групп задаётся в группах, праздники — во вкладке «Перерывы»; часы нужны только для личных услуг
+    { icon: 'clock', title: t('pf_private_hours'), hint: t('pf_private_hours_hint'), onClick: p.onOpenSchedule, show: p.servicesCount > 0 },
     { icon: 'team', title: cap(t(`pt_${profession}`)), hint: t('pf_team_hint'), onClick: p.onOpenTeam, show: isTeam || canManage },
   ] : [
     { icon: 'clock', title: t('m_manage_schedule'), hint: t('mp_tile_schedule'), onClick: p.onOpenSchedule, show: true },
