@@ -164,6 +164,8 @@ const AppContent: React.FC = () => {
   const [targetBusinessForNewClient, setTargetBusinessForNewClient] = useState<string | null>(null);
   // Занятие, список которого мастер открыл кнопкой из бота
   const [classTarget, setClassTarget] = useState<{ group: number; date: string } | null>(null);
+  // С какой вкладки открыть «Группы и программы» (из кабинета инструктора — сразу программы)
+  const [groupsTab, setGroupsTab] = useState<'days' | 'programs'>('days');
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   // Владелец/админ редактирует график мастера своей команды
   const [scheduleMasterId, setScheduleMasterId] = useState<number | null>(null);
@@ -552,11 +554,11 @@ const AppContent: React.FC = () => {
           onOpenTeam={() => pushScreen('master_team')}
           onOpenSalonCalendar={() => pushScreen('salon_calendar')}
           onOpenClients={() => pushScreen('master_clients')}
-          onOpenGroups={() => pushScreen('master_groups')}
+          onOpenGroups={(tab?: unknown) => { setGroupsTab(tab === 'programs' ? 'programs' : 'days'); pushScreen('master_groups'); }}
         />
       )}
 
-      {screen === 'master_groups' && <MasterGroupsScreen onBack={() => goBack('master_dashboard')} />}
+      {screen === 'master_groups' && <MasterGroupsScreen key={groupsTab} initialTab={groupsTab} onBack={() => goBack('master_dashboard')} />}
 
       {screen === 'master_clients' && (
         <MasterClientsScreen
