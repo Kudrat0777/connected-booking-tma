@@ -15,6 +15,7 @@ import { ClassSchedule } from '../components/ClassSchedule';
 import { PhotoGallery } from '../components/PhotoGallery';
 
 // ИМПОРТИРУЕМ ХУК ЛОКАЛИЗАЦИИ
+import { professionLabel } from '../helpers/professions';
 import { useLanguage } from '../helpers/LanguageContext';
 
 const LottieIcon = KonnektikSticker;
@@ -178,10 +179,7 @@ export const MasterPublicProfileScreen: React.FC<Props> = ({ masterId, onBack, o
 
   const isAddressLink = master.address && master.address.includes('http');
   const today = master.today;
-  const CATS = ['Барбершоп', 'Салон красоты', 'Массаж', 'Маникюр / Педикюр', 'Брови и Ресницы',
-    'Медицина', 'Спорт / Фитнес', 'Автосервис', 'Другое'];
-  const catIndex = CATS.indexOf(master.category || '');
-  const category = catIndex >= 0 ? t(`cat_${catIndex}`) : (master.category || '');
+  const category = professionLabel(t, master);
 
   // Статус «работает сейчас» — только по настоящему графику мастера
   const statusChip = (() => {

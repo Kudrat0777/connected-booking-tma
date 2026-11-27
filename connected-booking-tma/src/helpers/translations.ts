@@ -1052,3 +1052,8 @@ import { businessTranslations } from './translationsBusiness';
 (Object.keys(businessTranslations) as LangCode[]).forEach((code) => {
   Object.assign(translations[code], businessTranslations[code]);
 });
+// Профессии: подписи, тексты регистрации
+import { professionTranslations } from './professions';
+(Object.keys(professionTranslations) as LangCode[]).forEach((code) => {
+  Object.assign(translations[code], professionTranslations[code]);
+});

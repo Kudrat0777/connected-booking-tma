@@ -627,6 +627,7 @@ const AppContent: React.FC = () => {
              address: currentMaster.address,
              city: currentMaster.city,
              category: currentMaster.category,
+             profession: currentMaster.profession,
              experience_years: currentMaster.experience_years,
           } : undefined}
           onBack={() => goBack('master_dashboard')}
