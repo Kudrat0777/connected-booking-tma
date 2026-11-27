@@ -27,6 +27,7 @@ export function sourceLabel(id: string, t: (key: string) => string): string {
   if (!id || id === 'direct') return t('src_direct');
   if (id === 'manual') return t('src_manual');
   if (id === REBOOK_SOURCE) return t('src_rebook');
+  if (id === 'push') return t('ca_src_push'); // запись после сообщения о программе дня
   const known = LINK_SOURCES.find((s) => s.id === id);
   return known ? t(known.labelKey) : id;
 }

@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Title, Text, Button, Spinner } from '@telegram-apps/telegram-ui';
-import { Icon28CopyOutline, Icon28ShareOutline } from '@vkontakte/icons';
+import { Text, Spinner } from '@telegram-apps/telegram-ui';
 import QRCode from 'qrcode';
 
 import { fetchCurrentMaster, fetchMasterAnalytics, setShortName, CurrentMaster, SourceStat } from '../helpers/api';
 import { LINK_SOURCES, clientLink, copyText, masterShortLink, shareToTelegram, sourceLabel } from '../helpers/links';
 import { Konnektik } from '../components/Konnektik';
+import { professionLabel } from '../helpers/professions';
 import { BrandIcon } from '../components/BrandIcon';
-import { PrimaryButton, Sheet, inputStyle } from '../components/ui';
+import { Avatar, PrimaryButton, Sheet, inputStyle } from '../components/ui';
 import { useLanguage } from '../helpers/LanguageContext';
 import { fill } from '../helpers/translationsBusiness';
 
@@ -120,50 +120,36 @@ export const MasterLinksScreen: React.FC<Props> = ({ onBack, onOpenAnalytics }) 
   const totalVisits = stats.reduce((s, r) => s + r.visits, 0);
   const totalBookings = stats.reduce((s, r) => s + r.bookings, 0);
 
+  const sub = [professionLabel(t, me), me.city].filter(Boolean).join(' · ');
+  const btn = (primary: boolean): React.CSSProperties => ({
+    flex: 1, height: 46, borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 15, fontWeight: 700,
+    backgroundColor: primary ? 'var(--brand-accent)' : 'var(--brand-soft)', color: primary ? 'var(--brand-on-accent)' : 'var(--brand-ink)',
+  });
+  const h2: React.CSSProperties = { fontSize: 15, fontWeight: 800 };
+  const hint: React.CSSProperties = { fontSize: 13, color: 'var(--tg-theme-hint-color)', lineHeight: 1.4 };
+
   return (
     <div style={{ backgroundColor: 'var(--tg-theme-secondary-bg-color)', minHeight: '100vh', paddingBottom: 40, color: 'var(--tg-theme-text-color)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '24px 20px 8px' }}>
-        <Konnektik mood="explain" size={84} />
-        <div>
-          <Title level="2" weight="1" style={{ marginBottom: 4 }}>{t('links_title')}</Title>
-          <Text style={{ color: 'var(--tg-theme-hint-color)', fontSize: 14, lineHeight: 1.35 }}>
-            {t('links_desc')}
-          </Text>
-        </div>
+      <div style={{ padding: '24px 16px 0', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ fontSize: 26, fontWeight: 800 }}>{t('links_title')}</div>
+        <div style={{ ...hint, fontSize: 15 }}>{target === 'master' ? t('sl_desc') : t('links_desc')}</div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '12px 16px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '14px 16px' }}>
         {isTeam && (
           <div style={{ display: 'flex', gap: 8, backgroundColor: 'var(--tg-theme-bg-color)', padding: 4, borderRadius: 12 }}>
             {(['business', 'master'] as Target[]).map((tgt) => (
-              <button
-                key={tgt}
-                type="button"
-                onClick={() => { haptic(); setTarget(tgt); }}
-                style={{ ...chip(target === tgt), flex: 1, borderRadius: 10, boxShadow: 'none' }}
-              >
-                {tgt === 'business' ? `🏠 ${me.business?.name}` : `👤 ${t('links_my_page')}`}
+              <button key={tgt} type="button" onClick={() => { haptic(); setTarget(tgt); }}
+                style={{ ...chip(target === tgt), flex: 1, borderRadius: 10, boxShadow: 'none' }}>
+                {tgt === 'business' ? me.business?.name : t('links_my_page')}
               </button>
             ))}
           </div>
         )}
 
-        <div>
-          <Text style={{ display: 'block', fontSize: 13, color: 'var(--tg-theme-hint-color)', margin: '4px 4px 8px' }}>
-            {t('links_where')}
-          </Text>
-          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-            {LINK_SOURCES.map((s) => (
-              <button key={s.id || 'none'} type="button" style={chip(source === s.id)} onClick={() => { haptic(); setSource(s.id); }}>
-                {s.emoji} {t(s.labelKey)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div style={card}>
+        <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 12 }}>
           {target === 'master' ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: 'var(--tg-theme-secondary-bg-color)', padding: '12px 12px 12px 14px', borderRadius: 14, marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: 'var(--tg-theme-secondary-bg-color)', padding: '12px 12px 12px 14px', borderRadius: 14 }}>
               <span style={{ flex: 1, minWidth: 0, fontSize: 20, fontWeight: 800, wordBreak: 'break-all' }}>{link.replace(/^https?:\/\//, '')}</span>
               <button type="button" aria-label={t('sl_edit')} onClick={() => { setNameDraft(me.short_name || me.slug); setNameError(''); setNameOpen(true); }} style={{
                 width: 36, height: 36, flex: '0 0 auto', borderRadius: 10, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -171,38 +157,60 @@ export const MasterLinksScreen: React.FC<Props> = ({ onBack, onOpenAnalytics }) 
               }}><BrandIcon name="edit" size={18} strokeWidth={1.9} /></button>
             </div>
           ) : (
-            <div style={{ fontSize: 13, color: 'var(--tg-theme-link-color)', wordBreak: 'break-all', backgroundColor: 'var(--tg-theme-secondary-bg-color)', padding: '10px 12px', borderRadius: 10, marginBottom: 12 }}>
+            <div style={{ fontSize: 13, color: 'var(--tg-theme-link-color)', wordBreak: 'break-all', backgroundColor: 'var(--tg-theme-secondary-bg-color)', padding: '10px 12px', borderRadius: 10 }}>
               {link}
             </div>
           )}
+          {target === 'master' && <div style={hint}>{t('sl_name_hint')}</div>}
+          <div style={{ ...hint, fontWeight: 700 }}>{t('links_where')}</div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {LINK_SOURCES.map((s) => (
+              <button key={s.id || 'none'} type="button" style={{ ...chip(source === s.id), boxShadow: 'none' }} onClick={() => { haptic(); setSource(s.id); }}>
+                {s.id ? t(s.labelKey) : t('sl_everywhere')}
+              </button>
+            ))}
+          </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <Button size="m" mode="bezeled" stretched before={<Icon28CopyOutline width={20} height={20} />} onClick={onCopy}>
-              {t('btn_copy')}
-            </Button>
-            <Button size="m" mode="filled" stretched before={<Icon28ShareOutline width={20} height={20} />} onClick={() => { haptic(); shareToTelegram(link, shareText); }}>
-              {t('btn_share')}
-            </Button>
+            <button type="button" onClick={onCopy} style={btn(false)}>{t('btn_copy')}</button>
+            <button type="button" onClick={() => { haptic(); shareToTelegram(link, shareText); }} style={btn(true)}>{t('btn_share')}</button>
           </div>
         </div>
 
+        {target === 'master' && (
+          <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={h2}>{t('sl_preview_title')}</div>
+            <div style={{ alignSelf: 'flex-end', maxWidth: 300, padding: '10px 12px', borderRadius: '16px 16px 4px 16px', backgroundColor: '#2B5278', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <span style={{ fontSize: 15, color: '#E8F1FB', wordBreak: 'break-all' }}>{link.replace(/^https?:\/\//, '')}</span>
+              <div style={{ borderLeft: '3px solid #7FB3FF', paddingLeft: 8, display: 'flex', gap: 10 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1, minWidth: 0 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#7FB3FF' }}>CTime</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: '#F5F5F5' }}>{me.name}{sub ? ` — ${sub}` : ''}</span>
+                  <span style={{ fontSize: 13, color: '#C9D6E3' }}>{(me.bio || '').slice(0, 90) || t('sl_preview_desc')}</span>
+                </div>
+                <Avatar src={me.avatar_url} name={me.name} size={54} radius={10} />
+              </div>
+            </div>
+            <div style={hint}>{t('sl_preview_hint')}</div>
+          </div>
+        )}
+
         {qr && (
-          <div style={{ ...card, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-            <img src={qr} alt={t('links_qr_alt')} style={{ width: 220, height: 220, borderRadius: 12, background: '#fff' }} />
-            <Text style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)', textAlign: 'center' }}>
-              {t('links_qr_hint')}
-            </Text>
+          <div style={{ ...card, display: 'flex', alignItems: 'center', gap: 14 }}>
+            <img src={qr} alt={t('links_qr_alt')} style={{ width: 120, height: 120, borderRadius: 12, background: '#fff', flex: '0 0 auto' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={h2}>{t('sl_qr_title')}</div>
+              <div style={hint}>{t('links_qr_hint')}</div>
+            </div>
           </div>
         )}
 
         <div style={card}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
-            <div style={{ fontWeight: 700 }}>{t('links_sources_title')}</div>
+            <div style={h2}>{t('links_sources_title')}</div>
             <div style={{ fontSize: 12, color: 'var(--tg-theme-hint-color)' }}>{t('links_month')}</div>
           </div>
           {stats.length === 0 ? (
-            <Text style={{ fontSize: 14, color: 'var(--tg-theme-hint-color)' }}>
-              {t('links_no_visits')}
-            </Text>
+            <div style={{ ...hint, fontSize: 14 }}>{t('links_no_visits')}</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {stats.map((r) => {
@@ -214,19 +222,17 @@ export const MasterLinksScreen: React.FC<Props> = ({ onBack, onOpenAnalytics }) 
                       <span style={{ color: 'var(--tg-theme-hint-color)' }}>{fill(t('links_row'), { visits: r.visits, bookings: r.bookings })}</span>
                     </div>
                     <div style={{ height: 6, borderRadius: 3, backgroundColor: 'var(--tg-theme-secondary-bg-color)' }}>
-                      <div style={{ width: `${Math.max(share, 3)}%`, height: '100%', borderRadius: 3, backgroundColor: 'var(--tg-theme-button-color)' }} />
+                      <div style={{ width: `${Math.max(share, 3)}%`, height: '100%', borderRadius: 3, backgroundColor: 'var(--brand-accent)' }} />
                     </div>
                   </div>
                 );
               })}
-              <Text style={{ fontSize: 13, color: 'var(--tg-theme-hint-color)' }}>
-                {fill(t('links_total'), { visits: totalVisits, bookings: totalBookings })}
-              </Text>
+              <div style={hint}>{fill(t('links_total'), { visits: totalVisits, bookings: totalBookings })}</div>
             </div>
           )}
-          <div style={{ marginTop: 12 }}>
-            <Button size="s" mode="plain" onClick={onOpenAnalytics}>{t('links_all_stats')}</Button>
-          </div>
+          <button type="button" onClick={onOpenAnalytics} style={{ marginTop: 12, padding: 0, border: 'none', background: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: 'var(--brand-ink)' }}>
+            {t('links_all_stats')}
+          </button>
         </div>
       </div>
       {nameOpen && me && (

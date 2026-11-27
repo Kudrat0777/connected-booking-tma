@@ -192,7 +192,7 @@ export const ClassAnalyticsScreen: React.FC<Props> = ({ onBack, embedded }) => {
               return (
                 <div key={s.source || 'direct'} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                    <span style={{ fontWeight: 600 }}>{s.source === 'push' ? t('ca_src_push') : sourceLabel(s.source, t)}</span><span style={hint}>{pct}%</span>
+                    <span style={{ fontWeight: 600 }}>{sourceLabel(s.source, t)}</span><span style={hint}>{pct}%</span>
                   </div>
                   <div style={{ ...track, height: 6 }}><div style={{ width: `${pct}%`, height: '100%', backgroundColor: '#5B9BF0' }} /></div>
                 </div>
