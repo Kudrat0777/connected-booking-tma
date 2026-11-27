@@ -39,12 +39,12 @@ const Switch: React.FC<{ on: boolean; label: string; onChange: (v: boolean) => v
   </button>
 );
 
-export const MasterGroupsScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+export const MasterGroupsScreen: React.FC<{ onBack: () => void; initialTab?: 'days' | 'groups' | 'programs' }> = ({ onBack, initialTab }) => {
   const { t, lang } = useLanguage();
   const locale = localeFor(lang);
   const [data, setData] = useState<ClassManage | null>(null);
   const [failed, setFailed] = useState(false);
-  const [tab, setTab] = useState<Tab>('days');
+  const [tab, setTab] = useState<Tab>(initialTab ?? 'days');
   const [editor, setEditor] = useState<Editor>(null);
   const [busy, setBusy] = useState(false);
 
