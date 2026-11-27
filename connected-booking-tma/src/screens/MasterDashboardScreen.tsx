@@ -17,7 +17,7 @@ import { MasterProfileTab } from '../components/MasterProfileTab';
 import { ClassManage, ClassSession, fetchClassManage, setSessionCanceled } from '../helpers/classes';
 import { ask, tell } from '../components/ClassSchedule';
 import { Roster } from './MasterGroupsScreen';
-import { MasterClientsScreen } from './MasterClientsScreen';
+import { ClassStudentsScreen } from './ClassStudentsScreen';
 import { ClassAnalyticsScreen } from './ClassAnalyticsScreen';
 import { useWhen } from './ClientHomeScreen';
 
@@ -33,6 +33,7 @@ type Props = {
   initialTab?: DashboardTab;
   onTabChange?: (tab: DashboardTab) => void;
   onOpenClient?: (key: string) => void;
+  onOpenStudent?: (telegramId: number) => void;
   onOpenReviews: () => void;
   onLogout?: () => void;
   onOpenLinks?: () => void;
@@ -510,7 +511,7 @@ export const MasterDashboardScreen: React.FC<Props> = (props) => {
       <main style={{ height: '100%', overflowY: 'auto' }}>
         {tab === 'bookings' && (classFirst ? renderClasses() : renderBookings())}
         {tab === 'services' && renderServices()}
-        {tab === 'students' && <MasterClientsScreen embedded onBack={() => setTab('bookings')} onOpenClient={(k) => props.onOpenClient?.(k)} />}
+        {tab === 'students' && <ClassStudentsScreen onOpenStudent={(id) => props.onOpenStudent?.(id)} />}
         {tab === 'analytics' && <ClassAnalyticsScreen embedded onBack={() => setTab('bookings')} />}
         {tab === 'profile' && (
           <MasterProfileTab
