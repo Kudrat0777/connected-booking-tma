@@ -13,13 +13,13 @@ import { Avatar, Chip, PrimaryButton, card, localeFor, page } from '../component
 type Period = ClassAnalytics['period'];
 const PERIODS: Period[] = ['week', 'month', 'half'];
 
-type Props = { onBack: () => void };
+type Props = { onBack: () => void; /** Вкладка кабинета: назад не нужен, снизу меню */ embedded?: boolean };
 
 const h2: React.CSSProperties = { margin: 0, fontSize: 17, fontWeight: 800 };
 const hint: React.CSSProperties = { fontSize: 13, color: 'var(--tg-theme-hint-color)' };
 const track: React.CSSProperties = { height: 8, borderRadius: 4, backgroundColor: 'rgba(127,127,127,0.18)', overflow: 'hidden' };
 
-export const ClassAnalyticsScreen: React.FC<Props> = ({ onBack }) => {
+export const ClassAnalyticsScreen: React.FC<Props> = ({ onBack, embedded }) => {
   const { t, lang } = useLanguage();
   const locale = localeFor(lang);
   const [period, setPeriod] = useState<Period>('month');
@@ -31,12 +31,12 @@ export const ClassAnalyticsScreen: React.FC<Props> = ({ onBack }) => {
   backRef.current = onBack;
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
-    if (!tg?.BackButton) return;
+    if (!tg?.BackButton || embedded) return;
     const h = () => backRef.current();
     tg.BackButton.show();
     tg.BackButton.onClick(h);
     return () => tg.BackButton.offClick(h);
-  }, []);
+  }, [embedded]);
 
   useEffect(() => {
     let alive = true;
